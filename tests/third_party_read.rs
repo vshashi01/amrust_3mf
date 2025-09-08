@@ -1,3 +1,4 @@
+#[cfg(feature = "io")]
 #[cfg(test)]
 pub mod tests {
 
@@ -8,6 +9,8 @@ pub mod tests {
     use amrust_3mf::io::ThreemfPackage;
     use amrust_3mf::io::ThreemfUnpacked;
     use amrust_3mf::io::error::Error;
+
+    #[cfg(feature = "thumbnail")]
     use amrust_3mf::io::thumbnail;
 
     use std::cmp::Ordering;
@@ -19,6 +22,7 @@ pub mod tests {
         #[error("Failed to generate image for file {0}")]
         ThumbnailGenerationFailed(#[from] Error),
 
+        #[cfg(feature = "thumbnail")]
         #[error("Image dont match for file {0} with a Mean error {1}")]
         ThumbnailComparisonFailed(PathBuf, f32),
     }
@@ -51,18 +55,12 @@ pub mod tests {
                     assert!(!threemf.relationships.is_empty());
                     assert!(!threemf.root.build.item.is_empty());
 
-                    if golden_thumbnail_path.is_file() {
-                        match run_image_comparison(golden_thumbnail_path, threemf, fixture.filepath)
-                        {
-                            Ok(_) => {}
-                            Err(err) => failed_conditions.push(err),
-                        }
-                    } else {
-                        println!(
-                            "Skipped thumbnail comparison for: {:?}",
-                            golden_thumbnail_path
-                        );
-                    }
+                    image_comparison(
+                        &mut failed_conditions,
+                        fixture,
+                        golden_thumbnail_path,
+                        threemf,
+                    );
                 }
                 Err(err) => {
                     panic!(
@@ -109,6 +107,36 @@ pub mod tests {
         }
     }
 
+    #[cfg(not(feature = "thumbnail"))]
+    fn image_comparison(
+        _: &mut Vec<ImageTestError>,
+        _: test_utilities::TestFixture,
+        _: PathBuf,
+        _: ThreemfPackage,
+    ) {
+    }
+
+    #[cfg(feature = "thumbnail")]
+    fn image_comparison(
+        failed_conditions: &mut Vec<ImageTestError>,
+        fixture: test_utilities::TestFixture,
+        golden_thumbnail_path: PathBuf,
+        threemf: ThreemfPackage,
+    ) {
+        if golden_thumbnail_path.is_file() {
+            match run_image_comparison(golden_thumbnail_path, threemf, fixture.filepath) {
+                Ok(_) => {}
+                Err(err) => failed_conditions.push(err),
+            }
+        } else {
+            println!(
+                "Skipped thumbnail comparison for: {:?}",
+                golden_thumbnail_path
+            );
+        }
+    }
+
+    #[cfg(feature = "thumbnail")]
     fn run_image_comparison(
         path: PathBuf,
         threemf: ThreemfPackage,

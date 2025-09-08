@@ -2,6 +2,7 @@ use image::ImageError;
 use thiserror::Error;
 use zip::result::ZipError;
 
+#[cfg(feature = "thumbnail")]
 use crate::io::thumbnail::DbFrom3mfError;
 
 /// An error that can occur while writing a 3MF file
@@ -30,6 +31,7 @@ pub enum Error {
     #[error("Thumbnail error: {0}")]
     ThumbnailError(String),
 
+    #[cfg(feature = "thumbnail")]
     #[error("Db from 3mf error {0}")]
     DbFrom3mfError(#[from] DbFrom3mfError),
 }
