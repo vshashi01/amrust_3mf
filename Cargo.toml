@@ -10,14 +10,23 @@ description = "3MF (3D Manufacturing Format) file format support"
 keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
+[features]
+default = ["io"]
+io = ["dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
+thumbnail = ["dep:amrust_render", "io"]
+
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
-image = { version = "0.25.5", default-features = false }
-thiserror = { version = "2.0.3" }
-glam = { version = "0.30.3" }
-zip = { version = "4.4.0", default-features = false, features = ["deflate"] }
+image = { version = "0.25.5", default-features = false, features = [
+    "png",
+], optional = true }
+thiserror = { version = "2.0.3", optional = true }
+glam = { version = "0.30.3", optional = true }
+zip = { version = "4.4.0", default-features = false, features = [
+    "deflate",
+], optional = true }
 
-amrust_render = { path = "../amrust/amrust_render" }
+amrust_render = { path = "../amrust/amrust_render", optional = true }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.4.1" }

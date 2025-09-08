@@ -23,6 +23,10 @@
 //! [Open Packaging Conventions]: https://standards.iso.org/ittf/PubliclyAvailableStandards/c061796_ISO_IEC_29500-2_2012.zip
 
 pub mod core;
-pub mod io;
-pub mod query;
 pub mod threemf_namespaces;
+
+#[cfg(feature = "io")]
+pub mod io;
+
+#[cfg(feature = "io")]
+pub mod query;
