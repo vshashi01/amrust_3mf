@@ -1,0 +1,39 @@
+[package]
+name = "amrust_3mf"
+version = "0.1.0"
+rust-version = "1.89"
+edition = "2024"
+license = "MIT or Apache-2.0"
+
+
+description = "3MF (3D Manufacturing Format) file format support"
+keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
+categories = ["encoding", "rendering::data-formats"]
+
+[dependencies]
+instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
+image = { version = "0.25.5", default-features = false }
+thiserror = { version = "2.0.3" }
+glam = { version = "0.30.3" }
+zip = { version = "4.4.0", default-features = false, features = ["deflate"] }
+
+amrust_render = { path = "../amrust/amrust_render" }
+
+[dev-dependencies]
+pretty_assertions = { version = "1.4.1" }
+collapse = { version = "0.1.2" }
+nv-flip = { version = "0.1.2" }
+pollster = { version = "0.4.0" }
+criterion = { version = "0.7.0" }
+roxmltree = { version = "0.20.0" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140" }
+
+
+[[bench]]
+name = "reader"
+harness = false
+
+
+# [patch.crates-io]
+# instant-xml = { git = "https://github.com/djc/instant-xml.git" }
