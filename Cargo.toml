@@ -17,6 +17,7 @@ thumbnail = ["dep:amrust_render", "io"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
+regex = { version = "1.11.2" }
 image = { version = "0.25.5", default-features = false, features = [
     "png",
 ], optional = true }

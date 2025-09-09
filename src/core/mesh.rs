@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use instant_xml::*;
+use regex::Regex;
 
 use crate::core::triangle_set::TriangleSets;
 use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
@@ -32,10 +35,64 @@ pub struct Mesh {
 }
 
 /// A list of vertices, as a struct mainly to comply with easier serde xml
-#[derive(FromXml, ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "vertices")]
+#[derive(PartialEq, Clone, Debug)]
+// #[xml(ns(CORE_NS), rename = "vertices")]
 pub struct Vertices {
     pub vertex: Vec<Vertex>,
+}
+
+impl<'xml> FromXml<'xml> for Vertices {
+    fn matches(id: Id<'_>, field: Option<Id<'_>>) -> bool {
+        match field {
+            Some(field) => field.name == "vertices" && field.ns == CORE_NS,
+            None => false,
+        }
+    }
+
+    fn deserialize<'cx>(
+        into: &mut Self::Accumulator,
+        field: &'static str,
+        deserializer: &mut Deserializer<'cx, 'xml>,
+    ) -> Result<(), Error> {
+        if into.is_some() {
+            return Err(Error::DuplicateValue(field));
+        }
+
+        deserializer.;
+
+        let value = match deserializer.take_str()? {
+            Some(value) => value,
+            None => return Err(Error::MissingValue("No vertices values found")),
+        };
+
+        println!("Vertices value are {}", value);
+        Ok(())
+    }
+
+    type Accumulator = Option<Self>;
+
+    const KIND: Kind = Kind::Element;
+}
+
+impl ToXml for Vertices {
+    fn serialize<W: std::fmt::Write + ?Sized>(
+        &self,
+        field: Option<Id<'_>>,
+        serializer: &mut Serializer<W>,
+    ) -> Result<(), Error> {
+        serializer.write_start("vertices", CORE_NS)?;
+        serializer.end_start()?;
+
+        self.vertex.iter().for_each(|v| {
+            let _ = serializer.write_str(&format!(
+                "<vertex x=\"{}\" y=\"{}\" z=\"{}\" />",
+                v.x, v.y, v.z
+            ));
+        });
+        serializer.write_close(None, "vertices")?;
+
+        Ok(())
+    }
 }
 
 /// A vertex in a triangle mesh
@@ -154,7 +211,8 @@ pub mod tests {
     pub fn fromxml_vertices_test() {
         let xml_string = format!(
             r#"<vertices xmlns="{}"><vertex x="100" y="110.5" z="0" /><vertex x="0.156" y="55.6896" z="-10" /></vertices>"#,
-            CORE_NS
+            // CORE_NS
+            ""
         );
         let vertices = from_str::<Vertices>(&xml_string).unwrap();
 

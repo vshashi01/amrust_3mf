@@ -45,6 +45,7 @@ dependencies = [
  "nv-flip",
  "pollster",
  "pretty_assertions",
+ "regex",
  "roxmltree",
  "serde",
  "serde_json",
