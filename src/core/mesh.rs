@@ -36,17 +36,13 @@ pub struct Mesh {
 
 /// A list of vertices, as a struct mainly to comply with easier serde xml
 #[derive(PartialEq, Clone, Debug)]
-// #[xml(ns(CORE_NS), rename = "vertices")]
 pub struct Vertices {
     pub vertex: Vec<Vertex>,
 }
 
 impl<'xml> FromXml<'xml> for Vertices {
-    fn matches(id: Id<'_>, field: Option<Id<'_>>) -> bool {
-        match field {
-            Some(field) => field.name == "vertices" && field.ns == CORE_NS,
-            None => false,
-        }
+    fn matches(id: Id<'_>, _field: Option<Id<'_>>) -> bool {
+        id.name == "vertices" && id.ns == CORE_NS
     }
 
     fn deserialize<'cx>(
@@ -58,14 +54,66 @@ impl<'xml> FromXml<'xml> for Vertices {
             return Err(Error::DuplicateValue(field));
         }
 
-        deserializer.;
+        let mut vertices: Vec<Vertex> = vec![];
+        vertices.reserve(10000);
+        loop {
+            let node = match deserializer.next() {
+                Some(node) => match node {
+                    Ok(node) => Some(node),
+                    Err(err) => {
+                        //println!("Issue in deserialized next: {err:?}");
+                        None
+                    }
+                },
+                None => break,
+            };
 
-        let value = match deserializer.take_str()? {
-            Some(value) => value,
-            None => return Err(Error::MissingValue("No vertices values found")),
-        };
+            match node {
+                Some(n) => {
+                    match n {
+                        de::Node::Attribute(attribute) => {
+                            //println!("This is Attribute value {:?}", attribute);
+                        }
+                        de::Node::AttributeValue(cow) => {
+                            //println!("This is AttributeValue value {:?}", cow);
+                        }
+                        de::Node::Close { prefix, local } => {
+                            //println!("This is close value: {:?}", local);
+                        }
+                        de::Node::Text(cow) => {
+                           // println!("This is text value {:?}", cow);
+                        }
+                        de::Node::Open(element) => {
+                            //println!("This is element value {:?}", element);
+                            let mut vertex_value: Option<Vertex> = None;
+                            let mut nested = deserializer.nested(element);
+                            let vertex_de =
+                                Vertex::deserialize(&mut vertex_value, field, &mut nested);
 
-        println!("Vertices value are {}", value);
+                            match vertex_de {
+                                Ok(_) => {
+                                    //println!("Some value: {vertex_value:?}");
+                                    if (vertices.len() % 10000) == 0 {
+                                        vertices.reserve(10000);
+                                    }
+                                    if let Some(vertex) = vertex_value {
+                                        vertices.push(vertex);
+                                    }
+                                }
+                                Err(err) => {
+                                    println!("{err:?}")
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+
+        vertices.shrink_to_fit();
+        *into = Some(Vertices { vertex: vertices });
+
         Ok(())
     }
 
@@ -110,10 +158,112 @@ pub struct Vertex {
 }
 
 /// A list of triangles, as a struct mainly to comply with easier serde xml
-#[derive(FromXml, ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "triangles")]
+#[derive(PartialEq, Clone, Debug)]
+//#[xml(ns(CORE_NS), rename = "triangles")]
 pub struct Triangles {
     pub triangle: Vec<Triangle>,
+}
+
+impl<'xml> FromXml<'xml> for Triangles {
+    fn matches(id: Id<'_>, _field: Option<Id<'_>>) -> bool {
+        id.name == "triangles" && id.ns == CORE_NS
+    }
+
+    fn deserialize<'cx>(
+        into: &mut Self::Accumulator,
+        field: &'static str,
+        deserializer: &mut Deserializer<'cx, 'xml>,
+    ) -> Result<(), Error> {
+        if into.is_some() {
+            return Err(Error::DuplicateValue(field));
+        }
+
+        let mut triangles: Vec<Triangle> = vec![];
+        triangles.reserve(10000);
+        loop {
+            let node = match deserializer.next() {
+                Some(node) => match node {
+                    Ok(node) => Some(node),
+                    Err(err) => {
+                        //println!("Issue in deserialized next: {err:?}");
+                        None
+                    }
+                },
+                None => break,
+            };
+
+            match node {
+                Some(n) => {
+                    match n {
+                        de::Node::Attribute(attribute) => {
+                            //println!("This is Attribute value {:?}", attribute);
+                        }
+                        de::Node::AttributeValue(cow) => {
+                            //println!("This is AttributeValue value {:?}", cow);
+                        }
+                        de::Node::Close { prefix, local } => {
+                            //println!("This is close value: {:?}", local);
+                        }
+                        de::Node::Text(cow) => {
+                           // println!("This is text value {:?}", cow);
+                        }
+                        de::Node::Open(element) => {
+                            //println!("This is element value {:?}", element);
+                            let mut triangle_value: Option<Triangle> = None;
+                            let mut nested = deserializer.nested(element);
+                            let vertex_de =
+                                Triangle::deserialize(&mut triangle_value, field, &mut nested);
+
+                            match vertex_de {
+                                Ok(_) => {
+                                    //println!("Some value: {vertex_value:?}");
+                                    if (triangles.len() % 10000) == 0 {
+                                        triangles.reserve(10000);
+                                    }
+                                    if let Some(vertex) = triangle_value {
+                                        triangles.push(vertex);
+                                    }
+                                }
+                                Err(err) => {
+                                    println!("{err:?}")
+                                }
+                            }
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+
+        triangles.shrink_to_fit();
+        *into = Some(Triangles { triangle: triangles });
+
+        Ok(())
+    }
+
+    type Accumulator = Option<Self>;
+
+    const KIND: Kind = Kind::Element;
+}
+
+impl ToXml for Triangles {
+    fn serialize<W: std::fmt::Write + ?Sized>(
+        &self,
+        field: Option<Id<'_>>,
+        serializer: &mut Serializer<W>,
+    ) -> Result<(), Error> {
+        serializer.write_start("triangles", CORE_NS)?;
+        serializer.end_start()?;
+
+        self.triangle.iter().for_each(|v| {
+            //let _ = v.serialize(Some(Id { ns: CORE_NS, name: "triangle" }), serializer);
+            //let _ = v.serialize(None, serializer);
+            let _ = serializer.write_str(&format!("<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />", v.v1, v.v2, v.v3));
+        });
+        serializer.write_close(None, "triangles")?;
+
+        Ok(())
+    }
 }
 
 /// A triangle in a triangle mesh
@@ -211,8 +361,7 @@ pub mod tests {
     pub fn fromxml_vertices_test() {
         let xml_string = format!(
             r#"<vertices xmlns="{}"><vertex x="100" y="110.5" z="0" /><vertex x="0.156" y="55.6896" z="-10" /></vertices>"#,
-            // CORE_NS
-            ""
+            CORE_NS
         );
         let vertices = from_str::<Vertices>(&xml_string).unwrap();
 
