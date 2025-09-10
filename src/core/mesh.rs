@@ -54,60 +54,20 @@ impl<'xml> FromXml<'xml> for Vertices {
             return Err(Error::DuplicateValue(field));
         }
 
-        let mut vertices: Vec<Vertex> = vec![];
-        vertices.reserve(10000);
-        loop {
-            let node = match deserializer.next() {
-                Some(node) => match node {
-                    Ok(node) => Some(node),
-                    Err(err) => {
-                        //println!("Issue in deserialized next: {err:?}");
-                        None
-                    }
-                },
-                None => break,
-            };
+        let mut vertices: Vec<Vertex> = Vec::with_capacity(30000);
 
-            match node {
-                Some(n) => {
-                    match n {
-                        de::Node::Attribute(attribute) => {
-                            //println!("This is Attribute value {:?}", attribute);
-                        }
-                        de::Node::AttributeValue(cow) => {
-                            //println!("This is AttributeValue value {:?}", cow);
-                        }
-                        de::Node::Close { prefix, local } => {
-                            //println!("This is close value: {:?}", local);
-                        }
-                        de::Node::Text(cow) => {
-                           // println!("This is text value {:?}", cow);
-                        }
-                        de::Node::Open(element) => {
-                            //println!("This is element value {:?}", element);
-                            let mut vertex_value: Option<Vertex> = None;
-                            let mut nested = deserializer.nested(element);
-                            let vertex_de =
-                                Vertex::deserialize(&mut vertex_value, field, &mut nested);
-
-                            match vertex_de {
-                                Ok(_) => {
-                                    //println!("Some value: {vertex_value:?}");
-                                    if (vertices.len() % 10000) == 0 {
-                                        vertices.reserve(10000);
-                                    }
-                                    if let Some(vertex) = vertex_value {
-                                        vertices.push(vertex);
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("{err:?}")
-                                }
-                            }
-                        }
-                    }
-                }
-                None => {}
+        while let Some(node) = deserializer.next() {
+            if let Ok(n) = node
+                && let de::Node::Open(element) = n
+            {
+                //println!("This is element value {:?}", element);
+                let mut vertex_value: Option<Vertex> = None;
+                let mut nested = deserializer.nested(element);
+                if Vertex::deserialize(&mut vertex_value, "vertex", &mut nested).is_ok()
+                    && let Some(vertex) = vertex_value
+                {
+                    vertices.push(vertex);
+                };
             }
         }
 
@@ -119,7 +79,7 @@ impl<'xml> FromXml<'xml> for Vertices {
 
     type Accumulator = Option<Self>;
 
-    const KIND: Kind = Kind::Element;
+    const KIND: Kind = Kind::Scalar;
 }
 
 impl ToXml for Vertices {
@@ -157,6 +117,39 @@ pub struct Vertex {
     pub z: f64,
 }
 
+// impl<'xml> FromXml<'xml> for Vertex {
+//     fn matches(id: Id<'_>, field: Option<Id<'_>>) -> bool {
+//         match field {
+//             Some(field) => field == id,
+//             None => id.ns == CORE_NS && id.name == "vertex",
+//         }
+//         // true
+//     }
+
+//     fn deserialize<'cx>(
+//         into: &mut Self::Accumulator,
+//         field: &'static str,
+//         deserializer: &mut Deserializer<'cx, 'xml>,
+//     ) -> Result<(), Error> {
+//         if into.is_some() {
+//             return Err(Error::DuplicateValue("Vertex already exists"));
+//         }
+
+//         let value = match deserializer.take_str()? {
+//             Some(value) => value,
+//             None => return Err(Error::MissingValue("Missing vertex attributes")),
+//         };
+
+//         println!("The value is {value:?}");
+
+//         Ok(())
+//     }
+
+//     type Accumulator = Option<Self>;
+
+//     const KIND: Kind = Kind::Scalar;
+// }
+
 /// A list of triangles, as a struct mainly to comply with easier serde xml
 #[derive(PartialEq, Clone, Debug)]
 //#[xml(ns(CORE_NS), rename = "triangles")]
@@ -178,65 +171,26 @@ impl<'xml> FromXml<'xml> for Triangles {
             return Err(Error::DuplicateValue(field));
         }
 
-        let mut triangles: Vec<Triangle> = vec![];
-        triangles.reserve(10000);
-        loop {
-            let node = match deserializer.next() {
-                Some(node) => match node {
-                    Ok(node) => Some(node),
-                    Err(err) => {
-                        //println!("Issue in deserialized next: {err:?}");
-                        None
-                    }
-                },
-                None => break,
-            };
-
-            match node {
-                Some(n) => {
-                    match n {
-                        de::Node::Attribute(attribute) => {
-                            //println!("This is Attribute value {:?}", attribute);
-                        }
-                        de::Node::AttributeValue(cow) => {
-                            //println!("This is AttributeValue value {:?}", cow);
-                        }
-                        de::Node::Close { prefix, local } => {
-                            //println!("This is close value: {:?}", local);
-                        }
-                        de::Node::Text(cow) => {
-                           // println!("This is text value {:?}", cow);
-                        }
-                        de::Node::Open(element) => {
-                            //println!("This is element value {:?}", element);
-                            let mut triangle_value: Option<Triangle> = None;
-                            let mut nested = deserializer.nested(element);
-                            let vertex_de =
-                                Triangle::deserialize(&mut triangle_value, field, &mut nested);
-
-                            match vertex_de {
-                                Ok(_) => {
-                                    //println!("Some value: {vertex_value:?}");
-                                    if (triangles.len() % 10000) == 0 {
-                                        triangles.reserve(10000);
-                                    }
-                                    if let Some(vertex) = triangle_value {
-                                        triangles.push(vertex);
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("{err:?}")
-                                }
-                            }
-                        }
-                    }
+        let mut triangles: Vec<Triangle> = Vec::with_capacity(10000);
+        while let Some(node) = deserializer.next() {
+            if let Ok(n) = node
+                && let de::Node::Open(element) = n
+            {
+                //println!("This is element value {:?}", element);
+                let mut triangle_value: Option<Triangle> = None;
+                let mut nested = deserializer.nested(element);
+                if Triangle::deserialize(&mut triangle_value, field, &mut nested).is_ok()
+                    && let Some(vertex) = triangle_value
+                {
+                    triangles.push(vertex);
                 }
-                None => {}
             }
         }
 
         triangles.shrink_to_fit();
-        *into = Some(Triangles { triangle: triangles });
+        *into = Some(Triangles {
+            triangle: triangles,
+        });
 
         Ok(())
     }
@@ -258,7 +212,10 @@ impl ToXml for Triangles {
         self.triangle.iter().for_each(|v| {
             //let _ = v.serialize(Some(Id { ns: CORE_NS, name: "triangle" }), serializer);
             //let _ = v.serialize(None, serializer);
-            let _ = serializer.write_str(&format!("<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />", v.v1, v.v2, v.v3));
+            let _ = serializer.write_str(&format!(
+                "<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />",
+                v.v1, v.v2, v.v3
+            ));
         });
         serializer.write_close(None, "triangles")?;
 
