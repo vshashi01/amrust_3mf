@@ -13,7 +13,7 @@ categories = ["encoding", "rendering::data-formats"]
 [features]
 default = ["io"]
 io = ["dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
-thumbnail = ["dep:amrust_render", "io"]
+thumbnail = ["dep:amrust_render","dep:three-d","dep:three-d-asset", "io"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
@@ -25,6 +25,8 @@ glam = { version = "0.30.3", optional = true }
 zip = { version = "4.4.0", default-features = false, features = [
     "deflate",
 ], optional = true }
+three-d = { version = "0.18.2", features = ["headless"], optional = true}
+three-d-asset = {version = "*", features = ["png"], optional = true}
 
 amrust_render = { path = "../amrust/amrust_render", optional = true }
 

@@ -6,9 +6,12 @@ use amrust_render::material::Material;
 use amrust_render::transformation::Transformation;
 use amrust_render::vertex::Position;
 use amrust_render::{RenderObject, renderer};
-use glam::{Mat4, Vec3};
+//use glam::{Mat4, Vec3};
 use image::Rgba;
 use thiserror::Error;
+use three_d::*;
+use three_d::prelude::*;
+use three_d_asset::Camera;
 
 use crate::core::component::Components;
 use crate::core::transform::Transform;
@@ -18,7 +21,7 @@ use crate::query::get_object_ref_from_id;
 pub use super::ThreemfPackage;
 pub use super::error::Error;
 
-use core::f32;
+use std::f32;
 use std::collections::HashMap;
 
 type ObjectId = usize;
@@ -104,6 +107,22 @@ fn process_mesh_object(
 
     let gpu_data = create_gpu_data(renderer, &vertices, &triangles);
 
+    let mut model = Gm::new(
+        Mesh::new(
+            &context,
+            &CpuMesh {
+                positions: Positions::F32(&vertices.clone()),
+                colors: Some(vec![
+                    Srgba::new(255, 0, 0, 255), // bottom right
+                    Srgba::new(0, 255, 0, 255), // bottom left
+                    Srgba::new(0, 0, 255, 255), // top
+                ]),
+                ..Default::default()
+            },
+        ),
+        ColorMaterial::default(),
+    );
+
     let mesh = PartRep::Mesh {
         vertices,
         triangles,
@@ -161,14 +180,114 @@ fn process_composed_object(
     Ok(object_id)
 }
 
+// pub async fn render_package_thumbnail(
+//     package: &ThreemfPackage,
+//     width: u32,
+//     height: u32,
+// ) -> Result<image::ImageBuffer<Rgba<u8>, Vec<u8>>, Error> {
+//     let mut renderer = renderer::Renderer::from_new_device(width, height)
+//         .await
+//         .map_err(|e| Error::ThumbnailError(e.to_string()))?;
+
+//     let mut db = RenderDb {
+//         object_id_to_repdata: HashMap::new(),
+//         object_id_to_gpudata: HashMap::new(),
+//     };
+
+//     let mut item_we_care_about = vec![];
+
+//     for item in &package.root.build.item {
+//         let transform = {
+//             if let Some(transform) = &item.transform {
+//                 Transformation(convert_transform_to_glam_matrix(transform))
+//             } else {
+//                 Transformation(glam::Mat4::IDENTITY)
+//             }
+//         };
+
+//         let id = process_object_and_register_part_rep_data(
+//             &mut db,
+//             item.objectid,
+//             package,
+//             &mut renderer,
+//             &transform,
+//             &None,
+//             &None,
+//         )?;
+
+//         item_we_care_about.push(id);
+//     }
+
+//     let mut total_bbox = BoundingBox::default();
+
+//     //match instance data to the gpu data
+//     for (id, data) in &db.object_id_to_repdata {
+//         match &data.part_rep {
+//             PartRep::Mesh {
+//                 vertices,
+//                 triangles: _,
+//             } => {
+//                 if let Some(gpu_mesh_id) = db.object_id_to_gpudata.get(id) {
+//                     add_mesh_render_object(&mut renderer, *gpu_mesh_id, &data.transforms);
+//                     for transform in &data.transforms {
+//                         let bbox = compute_transformed_bounding_box_from_mesh(vertices, transform);
+//                         total_bbox.unite(&bbox);
+//                     }
+//                 }
+//             }
+//             PartRep::ComposedPart(items) => {
+//                 for transform in &data.transforms {
+//                     process_composed_part_items(
+//                         &mut renderer,
+//                         &db,
+//                         id,
+//                         items,
+//                         &mut total_bbox,
+//                         transform,
+//                     );
+//                 }
+//             }
+//         }
+//     }
+
+//     add_bounding_box_wireframe(&mut renderer, &total_bbox);
+
+//     let top_left_corner = Vec3::new(total_bbox.min.x, total_bbox.min.y, total_bbox.max.z);
+//     let mut camera_data = OrthographicCameraData {
+//         eye_position: top_left_corner,
+//         target_position: total_bbox.center(),
+//         up_vector: Vec3::Z,
+//         aspect_ratio: width as f32 / height as f32,
+//         ..Default::default()
+//     };
+
+//     let view_matrix = camera_data.get_view_matrix();
+//     let max_extent = calculate_max_extent_in_camera_space(&total_bbox, &view_matrix);
+//     // println!("max_extent: {}", max_extent);
+//     if max_extent == f32::NAN {
+//         return Err(Error::ThumbnailError("Maximum extent is NAN".to_owned()));
+//     }
+
+//     camera_data.zoom = 2.0 / max_extent;
+
+//     renderer.update_camera(&camera_data);
+//     renderer.render().await.unwrap();
+
+//     let image_buffer = renderer.present().await;
+
+//     Ok(image_buffer)
+// }
+
 pub async fn render_package_thumbnail(
     package: &ThreemfPackage,
     width: u32,
     height: u32,
 ) -> Result<image::ImageBuffer<Rgba<u8>, Vec<u8>>, Error> {
-    let mut renderer = renderer::Renderer::from_new_device(width, height)
-        .await
-        .map_err(|e| Error::ThumbnailError(e.to_string()))?;
+    let mut viewport = Viewport::new_at_origo(width, height);
+    let context = HeadlessContext::new().unwrap();
+    // let mut renderer = renderer::Renderer::from_new_device(width, height)
+    //     .await
+    //     .map_err(|e| Error::ThumbnailError(e.to_string()))?;
 
     let mut db = RenderDb {
         object_id_to_repdata: HashMap::new(),
@@ -234,13 +353,14 @@ pub async fn render_package_thumbnail(
     add_bounding_box_wireframe(&mut renderer, &total_bbox);
 
     let top_left_corner = Vec3::new(total_bbox.min.x, total_bbox.min.y, total_bbox.max.z);
-    let mut camera_data = OrthographicCameraData {
-        eye_position: top_left_corner,
-        target_position: total_bbox.center(),
-        up_vector: Vec3::Z,
-        aspect_ratio: width as f32 / height as f32,
-        ..Default::default()
-    };
+    let mut camera = Camera::new_orthographic(viewport, top_left_corner, total_bbox.center(), Vec3::unit_z(), height, 0.01, 5000.00);
+    // let mut camera_data = OrthographicCameraData {
+    //     eye_position: top_left_corner,
+    //     target_position: total_bbox.center(),
+    //     up_vector: Vec3::Z,
+    //     aspect_ratio: width as f32 / height as f32,
+    //     ..Default::default()
+    // };
 
     let view_matrix = camera_data.get_view_matrix();
     let max_extent = calculate_max_extent_in_camera_space(&total_bbox, &view_matrix);
@@ -374,6 +494,13 @@ fn get_transformation(transform: &Option<Transform>) -> Transformation {
 }
 
 fn convert_3mf_vertices_to_mesh_vertices(vertices: &[Vertex]) -> Vec<Vec3> {
+    vertices
+        .iter()
+        .map(|v| Vec3::new(v.x as f32, v.y as f32, v.z as f32))
+        .collect()
+}
+
+fn convert_3mf_vertices_to_3D_vertices(vertices: &[Vertex]) -> Vec<Vec3> {
     vertices
         .iter()
         .map(|v| Vec3::new(v.x as f32, v.y as f32, v.z as f32))
