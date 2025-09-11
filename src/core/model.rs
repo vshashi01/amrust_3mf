@@ -2,16 +2,13 @@ use instant_xml::{FromXml, ToXml};
 
 use crate::{
     core::{
-        Mesh,
-        build::{Build, Item},
+        build::Build,
         metadata::Metadata,
-        object::{Object, ObjectType},
         resources::Resources,
     },
     threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, PROD_NS},
 };
 
-use std::vec;
 
 #[derive(FromXml, ToXml, Debug, PartialEq)]
 #[xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS), rename = "model")]
@@ -46,56 +43,6 @@ pub enum Unit {
     Inch,
     Foot,
     Meter,
-}
-
-impl Default for Model {
-    fn default() -> Self {
-        Self {
-            xmlns: Some(CORE_NS.to_owned()),
-            requiredextensions: None,
-            recommendedextensions: None,
-            metadata: Vec::new(),
-            resources: Resources::default(),
-            build: Build::default(),
-            unit: Some(Unit::default()),
-        }
-    }
-}
-
-impl From<Mesh> for Model {
-    fn from(mesh: Mesh) -> Self {
-        let object = Object {
-            id: 1,
-            objecttype: Some(ObjectType::Model),
-            thumbnail: None,
-            partnumber: None,
-            name: Some("Mesh".to_owned()),
-            pid: None,
-            pindex: None,
-            uuid: None,
-            mesh: Some(mesh),
-            components: None,
-        };
-        let resources = Resources {
-            object: vec![object],
-            basematerials: vec![],
-        };
-        let build = Build {
-            uuid: None,
-            item: vec![Item {
-                objectid: 1,
-                transform: None,
-                partnumber: None,
-                path: None,
-                uuid: None,
-            }],
-        };
-        Model {
-            resources,
-            build,
-            ..Default::default()
-        }
-    }
 }
 
 #[cfg(test)]

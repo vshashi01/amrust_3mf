@@ -11,9 +11,10 @@ keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
 [features]
-default = ["io"]
-io = ["dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
-thumbnail = ["dep:amrust_render", "io"]
+default = ["core", "io"]
+core = []
+io = ["core","dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
+thumbnail = ["core", "dep:amrust_render", "io"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
