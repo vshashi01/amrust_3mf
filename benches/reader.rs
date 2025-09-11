@@ -1,11 +1,18 @@
-use amrust_3mf::core::model::Model;
 use criterion::{Criterion, criterion_group, criterion_main};
 use instant_xml::from_str;
 use roxmltree::Document;
 
+use amrust_3mf::core::model::Model;
+
+use std::path::PathBuf;
+
+
 pub fn read_instant_xml(c: &mut Criterion) {
+    let path = PathBuf::from("benches/3dmodel.model")
+        .canonicalize()
+        .unwrap();
     let text = std::fs::read_to_string(
-        "C:/Users/thara/Development/amrust/amrust_3mf/benches/3dmodel.model",
+        path,
     )
     .unwrap();
     let mut c = c.benchmark_group("read_group");
