@@ -7,7 +7,7 @@ use amrust_render::material::Material;
 use amrust_render::vertex::Position;
 use amrust_render::{RenderObject, renderer};
 //use glam::{Mat4, Vec3};
-use image::Rgba;
+use image::{ImageBuffer, Rgba};
 use thiserror::Error;
 use three_d::*;
 use three_d::{Transform, prelude::*};
@@ -55,7 +55,7 @@ struct RenderDb {
     object_id_to_repdata: HashMap<usize, Data>,
     object_id_to_gpudata: HashMap<usize, usize>, //mesh object id to gpu_mesh_id
     cpu_mesh_collection: Vec<CpuMesh>,
-    gm_collection: Vec<Gm<InstancedMesh, ColorMaterial>>,
+    //gm_collection: Vec<Gm<InstancedMesh, ColorMaterial>>,
 }
 
 fn process_object_and_register_part_rep_data(
@@ -287,10 +287,11 @@ pub async fn render_package_thumbnail(
         object_id_to_repdata: HashMap::new(),
         object_id_to_gpudata: HashMap::new(),
         cpu_mesh_collection: vec![],
-        gm_collection: vec![],
+        //gm_collection: vec![],
     };
 
     let mut item_we_care_about = vec![];
+    let mut gm_collection: Vec<Gm<InstancedMesh, three_d::ColorMaterial>> = vec![];
 
     for item in &package.root.build.item {
         let transform = {
@@ -305,7 +306,7 @@ pub async fn render_package_thumbnail(
             &mut db,
             item.objectid,
             package,
-            &mut context,
+            &context,
             &transform,
             &None,
             &None,
@@ -324,7 +325,8 @@ pub async fn render_package_thumbnail(
                 triangles: _,
             } => {
                 if let Some(gpu_mesh_id) = db.object_id_to_gpudata.get(id) {
-                    add_mesh_render_object(&context, &mut db, *gpu_mesh_id, &data.transforms);
+                    let gm = add_mesh_render_object(&context, &db, *gpu_mesh_id, &data.transforms);
+                    gm_collection.push(gm);
                     for transform in &data.transforms {
                         let bbox = compute_transformed_bounding_box_from_mesh(vertices, transform);
                         total_bbox.unite(&bbox);
@@ -335,7 +337,7 @@ pub async fn render_package_thumbnail(
                 for transform in &data.transforms {
                     process_composed_part_items(
                         &context,
-                        &mut db,
+                        &db,
                         id,
                         items,
                         &mut total_bbox,
@@ -383,7 +385,7 @@ pub async fn render_package_thumbnail(
     // renderer.render().await.unwrap();
 
     // Create a color texture to render into
-    let texture = Texture2D::new_empty::<[u8; 4]>(
+    let mut texture = Texture2D::new_empty::<[u8; 4]>(
         &context,
         viewport.width,
         viewport.height,
@@ -395,7 +397,7 @@ pub async fn render_package_thumbnail(
     );
 
     // Also create a depth texture to support depth testing
-    let depth_texture = DepthTexture2D::new::<f32>(
+    let mut depth_texture = DepthTexture2D::new::<f32>(
         &context,
         viewport.width,
         viewport.height,
@@ -407,11 +409,11 @@ pub async fn render_package_thumbnail(
     let pixels = RenderTarget::new(
         texture.as_color_target(None),
         depth_texture.as_depth_target(),
-    )
+    );
     // Clear color and depth of the render target
-    .clear(ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0));
+    pixels.clear(ClearState::color_and_depth(0.8, 0.8, 0.8, 1.0, 1.0));
 
-    for gm in db.gm_collection {
+    for gm in gm_collection {
         pixels.render(&camera, &gm, &[]);
     }
 
@@ -419,59 +421,64 @@ pub async fn render_package_thumbnail(
 
     //let image_buffer = renderer.present().await;
     // Save the rendered image
-    use three_d_asset::io::Serialize;
+    // use three_d_asset::io::Serialize;
 
-    three_d_asset::io::save(
-        &CpuTexture {
-            data: TextureData::RgbaU8(color),
-            width: texture.width(),
-            height: texture.height(),
-            ..Default::default()
-        }
-        .serialize(format!("headless-{}.png", ""))
-        .unwrap(),
-    )
-    .unwrap();
+    // three_d_asset::io::save(
+    //     &CpuTexture {
+    //         data: TextureData::RgbaU8(color),
+    //         width: texture.width(),
+    //         height: texture.height(),
+    //         ..Default::default()
+    //     }
+    //     .serialize(format!("headless-{}.png", ""))
+    //     .unwrap(),
+    // )
+    // .unwrap();
 
-    Ok(image_buffer)
+    let flat: Vec<u8> = color
+        .iter()
+        .flat_map(|px: &[u8; 4]| px.iter().copied())
+        .collect();
+
+    let image_buffer = ImageBuffer::from_vec(width, height, flat);
+
+    match image_buffer {
+        Some(image) => Ok(image),
+        None => Err(Error::ThumbnailError("Failed to generate".to_owned())),
+    }
+    // Ok(image_buffer)
 }
 
 fn process_composed_part_items(
     context: &Context,
-    db: &mut RenderDb,
+    db: &RenderDb,
     id: &usize,
     items: &Vec<usize>,
     bbox: &mut BoundingBox,
     parent_transformation: &Transformation,
 ) {
-    let repdata: Vec<(&ObjectId, &Data)> = db.object_id_to_repdata.iter().collect();
-
-    for (id, data) in repdata {
-        match &data.part_rep {
-            PartRep::Mesh {
-                vertices,
-                triangles: _,
-            } => {
-                // Now you can mutably borrow db
-                let gm = add_mesh_render_object(context, db, *id, &data.transforms);
-                db.gm_collection.push(gm);
-                let part_bbox =
-                    compute_transformed_bounding_box_from_mesh(vertices, parent_transformation);
-                bbox.unite(&part_bbox);
-            }
-            PartRep::ComposedPart(items) => {
-                process_composed_part_items(
-                    context,
-                    db,
-                    id,
-                    items,
-                    bbox,
-                    data.transforms.first().unwrap(),
-                );
+    for item in items {
+        if let Some(data) = &db.object_id_to_repdata.get(item) {
+            match &data.part_rep {
+                PartRep::Mesh {
+                    vertices,
+                    triangles: _,
+                } => {
+                    if let Some(gpu_mesh_id) = db.object_id_to_gpudata.get(id) {
+                        let gm =
+                            add_mesh_render_object(context, db, *gpu_mesh_id, &data.transforms);
+                        let part_bbox = compute_transformed_bounding_box_from_mesh(
+                            vertices,
+                            parent_transformation,
+                        );
+                        bbox.unite(&part_bbox);
+                    }
+                }
+                PartRep::ComposedPart(items) => {}
             }
         }
     }
-    // ...existing code...
+
     // for item in items {
     //     if let Some(data) = &db.object_id_to_repdata.get(item) {
     //         match &data.part_rep {
