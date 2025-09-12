@@ -1,6 +1,3 @@
-use std::path::PathBuf;
-
-use amrust_3mf::core::model::Model;
 use criterion::{Criterion, criterion_group, criterion_main};
 use instant_xml::from_str;
 use roxmltree::Document;
