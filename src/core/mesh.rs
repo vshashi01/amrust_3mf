@@ -151,77 +151,77 @@ pub struct Vertex {
 // }
 
 /// A list of triangles, as a struct mainly to comply with easier serde xml
-#[derive(PartialEq, Clone, Debug)]
-//#[xml(ns(CORE_NS), rename = "triangles")]
+#[derive(FromXml, ToXml, PartialEq, Clone, Debug)]
+#[xml(ns(CORE_NS), rename = "triangles")]
 pub struct Triangles {
     pub triangle: Vec<Triangle>,
 }
 
-impl<'xml> FromXml<'xml> for Triangles {
-    fn matches(id: Id<'_>, _field: Option<Id<'_>>) -> bool {
-        id.name == "triangles" && id.ns == CORE_NS
-    }
+// impl<'xml> FromXml<'xml> for Triangles {
+//     fn matches(id: Id<'_>, _field: Option<Id<'_>>) -> bool {
+//         id.name == "triangles" && id.ns == CORE_NS
+//     }
 
-    fn deserialize<'cx>(
-        into: &mut Self::Accumulator,
-        field: &'static str,
-        deserializer: &mut Deserializer<'cx, 'xml>,
-    ) -> Result<(), Error> {
-        if into.is_some() {
-            return Err(Error::DuplicateValue(field));
-        }
+//     fn deserialize<'cx>(
+//         into: &mut Self::Accumulator,
+//         field: &'static str,
+//         deserializer: &mut Deserializer<'cx, 'xml>,
+//     ) -> Result<(), Error> {
+//         if into.is_some() {
+//             return Err(Error::DuplicateValue(field));
+//         }
 
-        let mut triangles: Vec<Triangle> = Vec::with_capacity(10000);
-        while let Some(node) = deserializer.next() {
-            if let Ok(n) = node
-                && let de::Node::Open(element) = n
-            {
-                //println!("This is element value {:?}", element);
-                let mut triangle_value: Option<Triangle> = None;
-                let mut nested = deserializer.nested(element);
-                if Triangle::deserialize(&mut triangle_value, field, &mut nested).is_ok()
-                    && let Some(vertex) = triangle_value
-                {
-                    triangles.push(vertex);
-                }
-            }
-        }
+//         let mut triangles: Vec<Triangle> = Vec::with_capacity(10000);
+//         while let Some(node) = deserializer.next() {
+//             if let Ok(n) = node
+//                 && let de::Node::Open(element) = n
+//             {
+//                 //println!("This is element value {:?}", element);
+//                 let mut triangle_value: Option<Triangle> = None;
+//                 let mut nested = deserializer.nested(element);
+//                 if Triangle::deserialize(&mut triangle_value, field, &mut nested).is_ok()
+//                     && let Some(vertex) = triangle_value
+//                 {
+//                     triangles.push(vertex);
+//                 }
+//             }
+//         }
 
-        triangles.shrink_to_fit();
-        *into = Some(Triangles {
-            triangle: triangles,
-        });
+//         triangles.shrink_to_fit();
+//         *into = Some(Triangles {
+//             triangle: triangles,
+//         });
 
-        Ok(())
-    }
+//         Ok(())
+//     }
 
-    type Accumulator = Option<Self>;
+//     type Accumulator = Option<Self>;
 
-    const KIND: Kind = Kind::Element;
-}
+//     const KIND: Kind = Kind::Element;
+// }
 
-impl ToXml for Triangles {
-    fn serialize<W: std::fmt::Write + ?Sized>(
-        &self,
-        field: Option<Id<'_>>,
-        serializer: &mut Serializer<W>,
-    ) -> Result<(), Error> {
-        serializer.write_start("triangles", CORE_NS)?;
-        serializer.end_start()?;
+// impl ToXml for Triangles {
+//     fn serialize<W: std::fmt::Write + ?Sized>(
+//         &self,
+//         field: Option<Id<'_>>,
+//         serializer: &mut Serializer<W>,
+//     ) -> Result<(), Error> {
+//         serializer.write_start("triangles", CORE_NS)?;
+//         serializer.end_start()?;
 
-        self.triangle.iter().for_each(|v| {
-            //let _ = v.serialize(Some(Id { ns: CORE_NS, name: "triangle" }), serializer);
-            //let _ = v.serialize(None, serializer);
-            let _ = serializer.write_str(&format!(
-                "<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />",
-                v.v1, v.v2, v.v3
-            ));
-        });
-        serializer.write_close(None, "triangles")?;
+//         self.triangle.iter().for_each(|v| {
+//             //let _ = v.serialize(Some(Id { ns: CORE_NS, name: "triangle" }), serializer);
+//             //let _ = v.serialize(None, serializer);
+//             let _ = serializer.write_str(&format!(
+//                 "<triangle v1=\"{}\" v2=\"{}\" v3=\"{}\" />",
+//                 v.v1, v.v2, v.v3
+//             ));
+//         });
+//         serializer.write_close(None, "triangles")?;
 
-        Ok(())
-    }
-}
+//         Ok(())
+//     }
+// }
 
 /// A triangle in a triangle mesh
 ///
