@@ -13,8 +13,9 @@ categories = ["encoding", "rendering::data-formats"]
 [features]
 default = ["core", "io"]
 core = []
-io = ["core","dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
+io = ["core", "dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
 thumbnail = ["core", "dep:amrust_render", "io"]
+speedup = ["core"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
@@ -30,6 +31,7 @@ zip = { version = "4.4.0", default-features = false, features = [
 
 amrust_render = { path = "../amrust/amrust_render", optional = true }
 
+
 [dev-dependencies]
 pretty_assertions = { version = "1.4.1" }
 collapse = { version = "0.1.2" }
@@ -39,6 +41,8 @@ criterion = { version = "0.7.0" }
 roxmltree = { version = "0.20.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140" }
+#optional for the purposes of benchmarking only
+# lib3mf_rs = { path = "../lib3mf_rs" }
 
 
 [[bench]]
