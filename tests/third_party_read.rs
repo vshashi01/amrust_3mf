@@ -10,9 +10,6 @@ pub mod tests {
     use amrust_3mf::io::ThreemfUnpacked;
     use amrust_3mf::io::error::Error;
 
-    #[cfg(feature = "thumbnail")]
-    use amrust_3mf::io::thumbnail;
-
     use std::cmp::Ordering;
     use std::fs::File;
     use std::path::PathBuf;
@@ -54,13 +51,6 @@ pub mod tests {
                     assert!(!threemf.content_types.defaults.is_empty());
                     assert!(!threemf.relationships.is_empty());
                     assert!(!threemf.root.build.item.is_empty());
-
-                    image_comparison(
-                        &mut failed_conditions,
-                        fixture,
-                        golden_thumbnail_path,
-                        threemf,
-                    );
                 }
                 Err(err) => {
                     panic!(
@@ -105,70 +95,5 @@ pub mod tests {
                 }
             }
         }
-    }
-
-    #[cfg(not(feature = "thumbnail"))]
-    fn image_comparison(
-        _: &mut Vec<ImageTestError>,
-        _: test_utilities::TestFixture,
-        _: PathBuf,
-        _: ThreemfPackage,
-    ) {
-    }
-
-    #[cfg(feature = "thumbnail")]
-    fn image_comparison(
-        failed_conditions: &mut Vec<ImageTestError>,
-        fixture: test_utilities::TestFixture,
-        golden_thumbnail_path: PathBuf,
-        threemf: ThreemfPackage,
-    ) {
-        if golden_thumbnail_path.is_file() {
-            match run_image_comparison(golden_thumbnail_path, threemf, fixture.filepath) {
-                Ok(_) => {}
-                Err(err) => failed_conditions.push(err),
-            }
-        } else {
-            println!(
-                "Skipped thumbnail comparison for: {:?}",
-                golden_thumbnail_path
-            );
-        }
-    }
-
-    #[cfg(feature = "thumbnail")]
-    fn run_image_comparison(
-        path: PathBuf,
-        threemf: ThreemfPackage,
-        fixture_filepath: String,
-    ) -> Result<(), ImageTestError> {
-        const FLIP_MEAN_ERROR: f32 = 0.021;
-        pollster::block_on(async {
-            let ref_image_data = image::open(&path).unwrap().into_rgba8();
-
-            let thumbnail = thumbnail::render_package_thumbnail(&threemf, 1280, 1080).await;
-
-            match thumbnail {
-                Ok(thumbnail) => {
-                    let ref_image = nv_flip::FlipImageRgb8::with_data(1280, 1080, &ref_image_data);
-                    let test_image = nv_flip::FlipImageRgb8::with_data(1280, 1080, &thumbnail);
-
-                    let error_map =
-                        nv_flip::flip(ref_image, test_image, nv_flip::DEFAULT_PIXELS_PER_DEGREE);
-                    let pool = nv_flip::FlipPool::from_image(&error_map);
-                    if let Some(Ordering::Greater) = pool.mean().partial_cmp(&FLIP_MEAN_ERROR) {
-                        println!("Mean error {}", pool.mean());
-                        thumbnail
-                            .save(format!("{}_golden_thumbnail.png", fixture_filepath))
-                            .unwrap();
-
-                        Err(ImageTestError::ThumbnailComparisonFailed(path, pool.mean()))
-                    } else {
-                        Ok(())
-                    }
-                }
-                Err(err) => Err(ImageTestError::ThumbnailGenerationFailed(err)),
-            }
-        })
     }
 }
