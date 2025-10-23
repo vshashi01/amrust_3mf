@@ -6,6 +6,3 @@ mod threemf_unpacked;
 
 pub use threemf_package::ThreemfPackage;
 pub use threemf_unpacked::ThreemfUnpacked;
-
-#[cfg(feature = "thumbnail")]
-pub mod thumbnail;
