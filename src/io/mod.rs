@@ -7,9 +7,6 @@ mod threemf_unpacked;
 pub use threemf_package::ThreemfPackage;
 pub use threemf_unpacked::ThreemfUnpacked;
 
-#[cfg(feature = "thumbnail")]
-pub mod thumbnail;
-
 #[non_exhaustive]
 #[derive(Debug, Copy, Clone)]
 pub enum ReadStrategy {
