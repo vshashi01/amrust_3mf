@@ -12,7 +12,7 @@ categories = ["encoding", "rendering::data-formats"]
 
 [features]
 default = ["io", "memory-optimized-read"]
-io = ["dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
+io = ["dep:image", "dep:zip", "dep:thiserror"]
 memory-optimized-read = []
 speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
 
@@ -22,22 +22,18 @@ image = { version = "0.25.5", default-features = false, features = [
     "png",
 ], optional = true }
 thiserror = { version = "2.0.3", optional = true }
-glam = { version = "0.30.3", optional = true }
 zip = { version = "4.4.0", default-features = false, features = [
     "deflate",
 ], optional = true }
 serde-roxmltree = { version = "0.10.0", optional = true }
-serde = { version = "1.0.228", optional = true }
+serde = { version = "1.0.228", optional = true, features = ["derive"] }
 
 
 [dev-dependencies]
 pretty_assertions = { version = "1.4.1" }
-collapse = { version = "0.1.2" }
-pollster = { version = "0.4.0" }
 criterion = { version = "0.7.0" }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.140" }
-
 
 [[bench]]
 name = "reader"

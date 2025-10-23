@@ -18,10 +18,11 @@ pub fn read_instant_xml(c: &mut Criterion) {
 }
 
 pub fn read_roxmltree(c: &mut Criterion) {
-    let text = std::fs::read_to_string(
-        "C:/Users/thara/Development/amrust/amrust_3mf/benches/3dmodel.model",
-    )
-    .unwrap();
+    let path = PathBuf::from("benches/3dmodel.model")
+        .canonicalize()
+        .unwrap();
+
+    let text = std::fs::read_to_string(path).unwrap();
     let mut c = c.benchmark_group("read_group");
     c.sample_size(10);
     c.measurement_time(std::time::Duration::from_secs(40));
@@ -30,5 +31,5 @@ pub fn read_roxmltree(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, read_instant_xml);
+criterion_group!(benches, read_instant_xml, read_roxmltree);
 criterion_main!(benches);

@@ -21,12 +21,9 @@ dependencies = [
 name = "amrust_3mf"
 version = "0.1.0"
 dependencies = [
- "collapse",
  "criterion",
- "glam",
  "image",
  "instant-xml",
- "pollster",
  "pretty_assertions",
  "serde",
  "serde-roxmltree",
@@ -166,12 +163,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
-name = "collapse"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba28d63cd46c3b6dc8d75b63f563b724dc9c5e09c59cf5b62f315a7ddfcc135a"
-
-[[package]]
 name = "crc32fast"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -292,12 +283,6 @@ dependencies = [
  "libz-rs-sys",
  "miniz_oxide",
 ]
-
-[[package]]
-name = "glam"
-version = "0.30.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2d1aab06663bdce00d6ca5e5ed586ec8d18033a771906c993a1e3755b368d85"
 
 [[package]]
 name = "half"
@@ -492,12 +477,6 @@ dependencies = [
  "flate2",
  "miniz_oxide",
 ]
-
-[[package]]
-name = "pollster"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
 
 [[package]]
 name = "pretty_assertions"
