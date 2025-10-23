@@ -68,7 +68,7 @@ impl From<String> for Unit {
 }
 
 #[cfg(test)]
-pub mod write_test {
+pub mod write_tests {
     use instant_xml::{ToXml, to_string};
     use pretty_assertions::assert_eq;
 
@@ -159,7 +159,7 @@ pub mod write_test {
 
 #[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
-pub mod memory_read_test {
+pub mod memory_optimized_read_tests {
     use instant_xml::FromXml;
     use instant_xml::from_str;
     use pretty_assertions::assert_eq;
@@ -322,7 +322,7 @@ pub mod memory_read_test {
 
 #[cfg(feature = "speed-optimized-read")]
 #[cfg(test)]
-pub mod speed_read_test {
+pub mod speed_optimized_read_tests {
     use pretty_assertions::assert_eq;
     use serde::Deserialize;
     use serde_roxmltree::from_str;

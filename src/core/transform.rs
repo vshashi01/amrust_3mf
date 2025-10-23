@@ -174,7 +174,7 @@ pub mod write_tests {
 
 #[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
-pub mod memory_read_tests {
+pub mod memory_optimized_read_tests {
     use instant_xml::{FromXml, from_str};
     use pretty_assertions::assert_eq;
 
@@ -232,7 +232,7 @@ pub mod memory_read_tests {
 
 #[cfg(feature = "speed-optimized-read")]
 #[cfg(test)]
-pub mod speed_read_tests {
+pub mod speed_optimized_read_tests {
     use pretty_assertions::assert_eq;
     use serde::Deserialize;
     use serde_roxmltree::from_str;
