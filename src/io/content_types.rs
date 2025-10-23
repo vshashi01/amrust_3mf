@@ -135,7 +135,7 @@ pub struct DefaultContentTypes {
 const CONTENT_TYPES_NS: &str = "http://schemas.openxmlformats.org/package/2006/content-types";
 
 #[cfg(test)]
-pub mod tests {
+pub mod write_tests {
     use instant_xml::to_string;
     use pretty_assertions::assert_eq;
 
