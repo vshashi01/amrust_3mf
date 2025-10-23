@@ -487,6 +487,8 @@ mod tests {
         path::{Path, PathBuf},
     };
 
+    use crate::io::ReadStrategy;
+
     fn test_data_path(rel: &str) -> PathBuf {
         let this_file = Path::new(file!());
         let dir = this_file.parent().unwrap();
@@ -503,7 +505,9 @@ mod tests {
             "../../tests/data/third-party/golden_thumbnails/meshmixer-bunny.3mf_golden_thumbnail.png",
         );
 
-        let package = super::ThreemfPackage::from_reader(threemf, true).unwrap();
+        let package =
+            super::ThreemfPackage::from_reader(threemf, true, ReadStrategy::MemoryOptimized)
+                .unwrap();
 
         const FLIP_MEAN_ERROR: f32 = 0.021;
         pollster::block_on(async {

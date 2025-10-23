@@ -12,7 +12,7 @@ mod tests {
             resources::Resources,
         },
         io::{
-            ThreemfPackage,
+            ReadStrategy, ThreemfPackage,
             content_types::{ContentTypes, DefaultContentTypeEnum, DefaultContentTypes},
             relationship::{Relationship, RelationshipType, Relationships},
         },
@@ -20,6 +20,7 @@ mod tests {
 
     use std::{collections::HashMap, io::Cursor};
 
+    #[cfg(feature = "memory-optimized-read")]
     #[test]
     fn roundtrip_threemfpackage_test() {
         let vertices = Vertices {
@@ -62,7 +63,7 @@ mod tests {
 
         let write_package = ThreemfPackage {
             root: Model {
-                xmlns: None,
+                // xmlns: None,
                 unit: Some(Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -125,7 +126,8 @@ mod tests {
         write_package
             .write(&mut buf)
             .expect("Error writing package");
-        let models = ThreemfPackage::from_reader(&mut buf, false).expect("Error reading package");
+        let models = ThreemfPackage::from_reader(&mut buf, false, ReadStrategy::MemoryOptimized)
+            .expect("Error reading package");
         assert_eq!(models, write_package);
     }
 }

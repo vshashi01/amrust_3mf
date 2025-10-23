@@ -11,10 +11,12 @@ keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
 [features]
-default = ["core", "io"]
-core = []
-io = ["core","dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
-thumbnail = ["core", "dep:amrust_render", "io"]
+default = ["io", "memory-optimized-read"]
+# core = []
+io = ["dep:image", "dep:zip", "dep:thiserror", "dep:glam"]
+thumbnail = ["dep:amrust_render", "io"]
+speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
+memory-optimized-read = []
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
@@ -26,6 +28,8 @@ glam = { version = "0.30.3", optional = true }
 zip = { version = "4.4.0", default-features = false, features = [
     "deflate",
 ], optional = true }
+serde-roxmltree = { version = "0.10.0", optional = true }
+serde = { version = "1.0.228", optional = true }
 
 amrust_render = { path = "../amrust/amrust_render", optional = true }
 

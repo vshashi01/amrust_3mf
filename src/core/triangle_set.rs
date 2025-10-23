@@ -1,11 +1,24 @@
-use instant_xml::{Error, FromXml, Id, Serializer, ToXml};
+use instant_xml::{Error, Id, Serializer, ToXml};
+
+#[cfg(feature = "memory-optimized-read")]
+use instant_xml::FromXml;
+
+#[cfg(feature = "speed-optimized-read")]
+use serde::Deserialize;
 
 use crate::threemf_namespaces::CORE_TRIANGLESET_NS;
 
-#[derive(FromXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets")]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(rename = "trianglesets"))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(
+    feature = "memory-optimized-read",
+    xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets")
+)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TriangleSets {
     // #[xml(ns(CORE_TRIANGLESET_NS))]
+    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "triangleset"))]
     pub trianglesets: Vec<TriangleSet>,
 }
 
@@ -51,19 +64,29 @@ impl ToXml for TriangleSets {
     }
 }
 
-#[derive(FromXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset")]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(rename = "triangleset"))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(
+    feature = "memory-optimized-read",
+    xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset")
+)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+// #[xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset")]
 pub struct TriangleSet {
-    #[xml(attribute)]
+    #[cfg_attr(feature = "memory-optimized-read", xml(attribute))]
+    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "name"))]
     pub name: String,
 
-    #[xml(attribute)]
+    #[cfg_attr(feature = "memory-optimized-read", xml(attribute))]
     pub identifier: String,
 
     // #[xml(ns(CORE_TRIANGLESET_NS))]
+    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "ref", default))]
     pub triangle_ref: Vec<TriangleRef>,
 
     // #[xml(ns(CORE_TRIANGLESET_NS))]
+    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "refrange", default))]
     pub triangle_refrange: Vec<TriangleRefRange>,
 }
 
@@ -109,14 +132,18 @@ impl ToXml for TriangleSet {
     }
 }
 
-#[derive(ToXml, FromXml, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
 #[xml(ns(CORE_TRIANGLESET_NS), rename = "ref")]
 pub struct TriangleRef {
     #[xml(attribute)]
     pub index: usize,
 }
 
-#[derive(ToXml, FromXml, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
 #[xml(ns(CORE_TRIANGLESET_NS), rename = "refrange")]
 pub struct TriangleRefRange {
     #[xml(attribute)]
@@ -127,8 +154,8 @@ pub struct TriangleRefRange {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use instant_xml::{from_str, to_string};
+pub mod write_tests {
+    use instant_xml::to_string;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -227,6 +254,62 @@ pub mod tests {
     }
 
     #[test]
+    pub fn toxml_trianglesets_test() {
+        let xml_string = format!(
+            r##"<trianglesets xmlns="{ns}"><triangleset name="Triangle Set 1" identifier="someUniqueID1"><ref index="2" /><refrange startindex="22" endindex="102" /></triangleset><triangleset name="Triangle Set 2" identifier="someUniqueID2"><refrange startindex="1" endindex="12" /><refrange startindex="100236" endindex="4566893" /></triangleset></trianglesets>"##,
+            ns = CORE_TRIANGLESET_NS
+        );
+        let trianglesets = TriangleSets {
+            trianglesets: vec![
+                TriangleSet {
+                    name: "Triangle Set 1".to_owned(),
+                    identifier: "someUniqueID1".to_owned(),
+                    triangle_ref: vec![TriangleRef { index: 2 }],
+                    triangle_refrange: vec![TriangleRefRange {
+                        startindex: 22,
+                        endindex: 102,
+                    }],
+                },
+                TriangleSet {
+                    name: "Triangle Set 2".to_owned(),
+                    identifier: "someUniqueID2".to_owned(),
+                    triangle_ref: vec![],
+                    triangle_refrange: vec![
+                        TriangleRefRange {
+                            startindex: 1,
+                            endindex: 12,
+                        },
+                        TriangleRefRange {
+                            startindex: 100236,
+                            endindex: 4566893,
+                        },
+                    ],
+                },
+            ],
+        };
+
+        let trianglesets_string = to_string(&trianglesets).unwrap();
+
+        assert_eq!(trianglesets_string, xml_string);
+    }
+}
+
+#[cfg(feature = "memory-optimized-read")]
+#[cfg(test)]
+pub mod memory_read_tests {
+    use instant_xml::from_str;
+
+    use pretty_assertions::assert_eq;
+
+    use crate::{
+        core::{
+            Mesh, Triangle, Triangles, Vertex, Vertices,
+            triangle_set::{TriangleRef, TriangleRefRange, TriangleSet, TriangleSets},
+        },
+        threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX},
+    };
+
+    #[test]
     pub fn fromxml_mesh_with_triangleset_test() {
         let xml_string = format!(
             r##"<mesh xmlns="{}" xmlns:{}="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles><t:trianglesets><t:triangleset name="Triangle Set 1" identifier="someUniqueID1"><t:ref index="2" /><t:refrange startindex="22" endindex="102" /></t:triangleset><t:triangleset name="Triangle Set 2" identifier="someUniqueID2"><t:refrange startindex="1" endindex="12" /><t:refrange startindex="100236" endindex="4566893" /></t:triangleset></t:trianglesets></mesh>"##,
@@ -317,43 +400,150 @@ pub mod tests {
     }
 
     #[test]
-    pub fn toxml_trianglesets_test() {
+    pub fn fromxml_trianglesets_test() {
         let xml_string = format!(
             r##"<trianglesets xmlns="{ns}"><triangleset name="Triangle Set 1" identifier="someUniqueID1"><ref index="2" /><refrange startindex="22" endindex="102" /></triangleset><triangleset name="Triangle Set 2" identifier="someUniqueID2"><refrange startindex="1" endindex="12" /><refrange startindex="100236" endindex="4566893" /></triangleset></trianglesets>"##,
             ns = CORE_TRIANGLESET_NS
         );
-        let trianglesets = TriangleSets {
-            trianglesets: vec![
-                TriangleSet {
-                    name: "Triangle Set 1".to_owned(),
-                    identifier: "someUniqueID1".to_owned(),
-                    triangle_ref: vec![TriangleRef { index: 2 }],
-                    triangle_refrange: vec![TriangleRefRange {
-                        startindex: 22,
-                        endindex: 102,
-                    }],
-                },
-                TriangleSet {
-                    name: "Triangle Set 2".to_owned(),
-                    identifier: "someUniqueID2".to_owned(),
-                    triangle_ref: vec![],
-                    triangle_refrange: vec![
-                        TriangleRefRange {
-                            startindex: 1,
-                            endindex: 12,
+        let trianglesets = from_str::<TriangleSets>(&xml_string).unwrap();
+
+        assert_eq!(
+            trianglesets,
+            TriangleSets {
+                trianglesets: vec![
+                    TriangleSet {
+                        name: "Triangle Set 1".to_owned(),
+                        identifier: "someUniqueID1".to_owned(),
+                        triangle_ref: vec![TriangleRef { index: 2 }],
+                        triangle_refrange: vec![TriangleRefRange {
+                            startindex: 22,
+                            endindex: 102,
+                        }],
+                    },
+                    TriangleSet {
+                        name: "Triangle Set 2".to_owned(),
+                        identifier: "someUniqueID2".to_owned(),
+                        triangle_ref: vec![],
+                        triangle_refrange: vec![
+                            TriangleRefRange {
+                                startindex: 1,
+                                endindex: 12,
+                            },
+                            TriangleRefRange {
+                                startindex: 100236,
+                                endindex: 4566893,
+                            },
+                        ],
+                    },
+                ],
+            }
+        );
+    }
+}
+
+#[cfg(feature = "speed-optimized-read")]
+#[cfg(test)]
+pub mod speed_read_tests {
+    use serde_roxmltree::from_str;
+
+    use pretty_assertions::assert_eq;
+
+    use crate::{
+        core::{
+            Mesh, Triangle, Triangles, Vertex, Vertices,
+            triangle_set::{TriangleRef, TriangleRefRange, TriangleSet, TriangleSets},
+        },
+        threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX},
+    };
+
+    #[test]
+    pub fn fromxml_mesh_with_triangleset_test() {
+        let xml_string = format!(
+            r##"<mesh xmlns="{}" xmlns:{}="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles><t:trianglesets><t:triangleset name="Triangle Set 1" identifier="someUniqueID1"><t:ref index="2" /><t:refrange startindex="22" endindex="102" /></t:triangleset><t:triangleset name="Triangle Set 2" identifier="someUniqueID2"><t:refrange startindex="1" endindex="12" /><t:refrange startindex="100236" endindex="4566893" /></t:triangleset></t:trianglesets></mesh>"##,
+            CORE_NS, CORE_TRIANGLESET_PREFIX, CORE_TRIANGLESET_NS
+        );
+
+        let mesh = from_str::<Mesh>(&xml_string).unwrap();
+
+        assert_eq!(
+            mesh,
+            Mesh {
+                vertices: Vertices {
+                    vertex: vec![
+                        Vertex {
+                            x: -1.0,
+                            y: -1.0,
+                            z: 0.0
                         },
-                        TriangleRefRange {
-                            startindex: 100236,
-                            endindex: 4566893,
+                        Vertex {
+                            x: 1.0,
+                            y: -1.0,
+                            z: 0.0
+                        },
+                        Vertex {
+                            x: 1.0,
+                            y: 1.0,
+                            z: 0.0
+                        },
+                        Vertex {
+                            x: -1.0,
+                            y: 1.0,
+                            z: 0.0
+                        }
+                    ]
+                },
+                triangles: Triangles {
+                    triangle: vec![
+                        Triangle {
+                            v1: 0,
+                            v2: 1,
+                            v3: 2,
+                            p1: None,
+                            p2: None,
+                            p3: None,
+                            pid: None,
+                        },
+                        Triangle {
+                            v1: 0,
+                            v2: 2,
+                            v3: 3,
+                            p1: None,
+                            p2: None,
+                            p3: None,
+                            pid: None,
+                        }
+                    ]
+                },
+                trianglesets: Some(TriangleSets {
+                    trianglesets: vec![
+                        TriangleSet {
+                            name: "Triangle Set 1".to_owned(),
+                            identifier: "someUniqueID1".to_owned(),
+                            triangle_ref: vec![TriangleRef { index: 2 }],
+                            triangle_refrange: vec![TriangleRefRange {
+                                startindex: 22,
+                                endindex: 102,
+                            }],
+                        },
+                        TriangleSet {
+                            name: "Triangle Set 2".to_owned(),
+                            identifier: "someUniqueID2".to_owned(),
+                            triangle_ref: vec![],
+                            triangle_refrange: vec![
+                                TriangleRefRange {
+                                    startindex: 1,
+                                    endindex: 12,
+                                },
+                                TriangleRefRange {
+                                    startindex: 100236,
+                                    endindex: 4566893,
+                                },
+                            ],
                         },
                     ],
-                },
-            ],
-        };
-
-        let trianglesets_string = to_string(&trianglesets).unwrap();
-
-        assert_eq!(trianglesets_string, xml_string);
+                })
+            }
+        )
     }
 
     #[test]
@@ -393,6 +583,25 @@ pub mod tests {
                         ],
                     },
                 ],
+            }
+        );
+    }
+
+    #[test]
+    pub fn fromxml_triangleset_test_correction() {
+        let xml_string = r##"<triangleset name="Triangle Set 1" identifier="someUniqueID1"><ref index="2" /><refrange startindex="22" endindex="102" /></triangleset>"##.to_string();
+        let trianglesets = from_str::<TriangleSet>(&xml_string).unwrap();
+
+        assert_eq!(
+            trianglesets,
+            TriangleSet {
+                name: "Triangle Set 1".to_owned(),
+                identifier: "someUniqueID1".to_owned(),
+                triangle_ref: vec![TriangleRef { index: 2 }],
+                triangle_refrange: vec![TriangleRefRange {
+                    startindex: 22,
+                    endindex: 102,
+                }],
             }
         );
     }

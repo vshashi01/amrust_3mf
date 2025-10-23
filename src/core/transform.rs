@@ -1,4 +1,10 @@
-use instant_xml::*;
+use instant_xml::{Error, Id, Serializer, ToXml};
+
+#[cfg(feature = "memory-optimized-read")]
+use instant_xml::{Deserializer, FromXml, Kind};
+
+#[cfg(feature = "speed-optimized-read")]
+use serde::Deserialize;
 
 use std::ops::Index;
 
@@ -12,6 +18,8 @@ const MATRIX_SIZE: usize = 12;
 // | m30 m31 m32 1.0 |
 //
 // the first 3 columns are represented as [m00, m01, m02, m10, m11, m12, m20, m21, m22, m30, m31, m32]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transform(pub [f64; MATRIX_SIZE]);
 
@@ -46,6 +54,7 @@ impl ToXml for Transform {
     }
 }
 
+#[cfg(feature = "memory-optimized-read")]
 impl<'xml> FromXml<'xml> for Transform {
     fn matches(id: Id<'_>, field: Option<Id<'_>>) -> bool {
         match field {
@@ -68,6 +77,18 @@ impl<'xml> FromXml<'xml> for Transform {
             None => return Err(Error::MissingValue("No transform string found")),
         };
 
+        let result = Transform::from(value.into_owned());
+        *into = Some(result);
+        Ok(())
+    }
+
+    type Accumulator = Option<Self>;
+
+    const KIND: Kind = Kind::Scalar;
+}
+
+impl From<String> for Transform {
+    fn from(value: String) -> Self {
         let values = value
             .split(" ")
             .map(|v| {
@@ -79,19 +100,9 @@ impl<'xml> FromXml<'xml> for Transform {
             })
             .collect::<Vec<f64>>();
 
-        if values.len() == MATRIX_SIZE {
-            *into = Some(Transform(values.try_into().unwrap()));
-            Ok(())
-        } else {
-            Err(Error::MissingValue(
-                "Not enough values to form a Transform Matrix",
-            ))
-        }
+        // write now it can always panic something to improve in the future
+        Self(values.try_into().unwrap())
     }
-
-    type Accumulator = Option<Self>;
-
-    const KIND: Kind = Kind::Scalar;
 }
 
 impl Index<usize> for Transform {
@@ -107,15 +118,15 @@ impl Index<usize> for Transform {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use instant_xml::{FromXml, ToXml, from_str, to_string};
+pub mod write_tests {
+    use instant_xml::{ToXml, to_string};
     use pretty_assertions::assert_eq;
 
     use super::Transform;
 
     // Transform is a transparent tuple struct, it can only be properly write/read to/from XML when
     //placed in a separate struct
-    #[derive(FromXml, ToXml, PartialEq, Debug)]
+    #[derive(ToXml, PartialEq, Debug)]
     struct TestTransform {
         transform: Transform,
     }
@@ -135,24 +146,8 @@ pub mod tests {
         assert_eq!(transform_string, xml_string);
     }
 
-    #[test]
-    #[rustfmt::skip]
-    fn fromxml_test_transform() {
-        let xml_string = "<TestTransform><transform>3.665893 -2718.281828 1618.033988 707.106781 -1414.213562 2236.067977 1442.249570 -866.025403 0.693556 1732.050807 -523.598775 577.215664</transform></TestTransform>";
-        let test_transform = from_str::<TestTransform>(xml_string).unwrap();
-
-        assert_eq!(
-            test_transform.transform,
-            Transform([
-            3.665893, -2718.281828, 1618.033988,
-            707.106781, -1414.213562, 2236.067977,
-            1442.249570, -866.025403, 0.693556,
-            1732.050807, -523.598775, 577.215664,
-        ]));
-    }
-
     // Transform rename
-    #[derive(FromXml, ToXml, PartialEq, Debug)]
+    #[derive(ToXml, PartialEq, Debug)]
     #[xml(rename = "rename")]
     struct TestTransformRename {
         #[xml(rename = "transform-matrix")]
@@ -174,6 +169,105 @@ pub mod tests {
         let transform_string = to_string(&test_transform).unwrap();
 
         assert_eq!(transform_string, xml_string);
+    }
+}
+
+#[cfg(feature = "memory-optimized-read")]
+#[cfg(test)]
+pub mod memory_read_tests {
+    use instant_xml::{FromXml, from_str};
+    use pretty_assertions::assert_eq;
+
+    use super::Transform;
+
+    // Transform is a transparent tuple struct, it can only be properly write/read to/from XML when
+    //placed in a separate struct
+    #[derive(FromXml, PartialEq, Debug)]
+    struct TestTransform {
+        transform: Transform,
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn fromxml_test_transform() {
+        let xml_string = "<TestTransform><transform>3.665893 -2718.281828 1618.033988 707.106781 -1414.213562 2236.067977 1442.249570 -866.025403 0.693556 1732.050807 -523.598775 577.215664</transform></TestTransform>";
+        let test_transform = from_str::<TestTransform>(xml_string).unwrap();
+
+        assert_eq!(
+            test_transform.transform,
+            Transform([
+            3.665893, -2718.281828, 1618.033988,
+            707.106781, -1414.213562, 2236.067977,
+            1442.249570, -866.025403, 0.693556,
+            1732.050807, -523.598775, 577.215664,
+        ]));
+    }
+
+    // Transform rename
+    #[derive(FromXml, PartialEq, Debug)]
+    #[xml(rename = "rename")]
+    struct TestTransformRename {
+        #[xml(rename = "transform-matrix")]
+        transform: Transform,
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn fromxml_test_transform_rename() {
+        let xml_string =
+            "<rename><transform-matrix>4.141592 -2718.281828 1618.033988 707.106781 -1414.213562 2236.067977 1442.249570 -866.025403 0.793147 1732.050807 -523.598775 577.215664</transform-matrix></rename>";
+        let test_transform = from_str::<TestTransformRename>(xml_string).unwrap();
+
+        assert_eq!(
+            test_transform.transform,
+           Transform([
+                4.141592, -2718.281828, 1618.033988,
+                707.106781, -1414.213562, 2236.067977,
+                1442.249570, -866.025403, 0.793147,
+                1732.050807, -523.598775, 577.215664,
+            ]) 
+        );
+    }
+}
+
+#[cfg(feature = "speed-optimized-read")]
+#[cfg(test)]
+pub mod speed_read_tests {
+    use pretty_assertions::assert_eq;
+    use serde::Deserialize;
+    use serde_roxmltree::from_str;
+
+    use super::Transform;
+
+    // Transform is a transparent tuple struct, it can only be properly write/read to/from XML when
+    // placed in a separate struct
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct TestTransform {
+        transform: Transform,
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn fromxml_test_transform() {
+        let xml_string = "<TestTransform><transform>3.665893 -2718.281828 1618.033988 707.106781 -1414.213562 2236.067977 1442.249570 -866.025403 0.693556 1732.050807 -523.598775 577.215664</transform></TestTransform>";
+        let test_transform = from_str::<TestTransform>(xml_string).unwrap();
+
+        assert_eq!(
+            test_transform.transform,
+            Transform([
+            3.665893, -2718.281828, 1618.033988,
+            707.106781, -1414.213562, 2236.067977,
+            1442.249570, -866.025403, 0.693556,
+            1732.050807, -523.598775, 577.215664,
+        ]));
+    }
+
+    // Transform rename
+    #[derive(Deserialize, PartialEq, Debug)]
+    #[serde(rename = "rename")]
+    struct TestTransformRename {
+        #[serde(rename = "transform-matrix")]
+        transform: Transform,
     }
 
     #[test]

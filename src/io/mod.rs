@@ -9,3 +9,13 @@ pub use threemf_unpacked::ThreemfUnpacked;
 
 #[cfg(feature = "thumbnail")]
 pub mod thumbnail;
+
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone)]
+pub enum ReadStrategy {
+    #[cfg(feature = "memory-optimized-read")]
+    MemoryOptimized,
+
+    #[cfg(feature = "speed-optimized-read")]
+    SpeedOptimized,
+}
