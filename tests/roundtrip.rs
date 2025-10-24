@@ -20,7 +20,7 @@ mod tests {
 
     use std::{collections::HashMap, io::Cursor};
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(all(feature = "memory-optimized-read", feature = "write"))]
     #[test]
     fn roundtrip_threemfpackage_test() {
         let vertices = Vertices {

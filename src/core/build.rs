@@ -1,3 +1,4 @@
+#[cfg(feature = "write")]
 use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
@@ -13,11 +14,15 @@ use crate::{
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(Default, ToXml, PartialEq, Debug)]
-#[xml(ns(CORE_NS, p=PROD_NS), rename = "build")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Default, PartialEq, Debug)]
+#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "build"))]
 pub struct Build {
-    #[xml(attribute, ns(PROD_NS), rename = "UUID")]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "UUID"))]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, ns(PROD_NS), rename = "UUID")
+    )]
     pub uuid: Option<String>,
 
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
@@ -26,26 +31,43 @@ pub struct Build {
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Debug)]
-#[xml(ns(CORE_NS, p=PROD_NS), rename = "item")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Debug)]
+#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "item"))]
 pub struct Item {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub objectid: usize,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub transform: Option<Transform>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub partnumber: Option<String>,
 
-    #[xml(attribute, ns(PROD_NS))]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, ns(PROD_NS))
+    )]
     pub path: Option<String>,
 
-    #[xml(attribute, ns(PROD_NS), rename = "UUID")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, ns(PROD_NS), rename = "UUID")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "UUID"))]
     pub uuid: Option<String>,
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;

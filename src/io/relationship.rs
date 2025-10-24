@@ -1,4 +1,8 @@
-use instant_xml::{Error, ToXml};
+#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+use instant_xml::Error;
+
+#[cfg(feature = "write")]
+use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{FromXml, Kind};
@@ -12,21 +16,34 @@ const RELATIONSHIP_NS: &str = "http://schemas.openxmlformats.org/package/2006/re
 /// and target path of the part in the archive.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(RELATIONSHIP_NS))]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(RELATIONSHIP_NS))
+)]
 pub struct Relationship {
     /// The unique identifier of the relationship.
-    #[xml(attribute, rename = "Id")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, rename = "Id")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Id"))]
     pub id: String,
 
     /// Target path of the part in the archive.
-    #[xml(attribute, rename = "Target")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, rename = "Target")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Target"))]
     pub target: String,
 
     /// The actual relationship of the target part
-    #[xml(attribute, rename = "Type")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, rename = "Type")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Type"))]
     pub relationship_type: RelationshipType,
 }
@@ -35,8 +52,12 @@ pub struct Relationship {
 /// relationship part in the 3mf package. A single 3mf package may contain multiple [Relationships].
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(RELATIONSHIP_NS))]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(RELATIONSHIP_NS))
+)]
 pub struct Relationships {
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Relationship"))]
     pub relationships: Vec<Relationship>,
@@ -62,6 +83,7 @@ const THUMBNAIL_TYPE_NS: &str =
     "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail";
 const MODEL_TYPE_NS: &str = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel";
 
+#[cfg(feature = "write")]
 impl ToXml for RelationshipType {
     fn serialize<W: std::fmt::Write + ?Sized>(
         &self,
@@ -126,6 +148,7 @@ impl From<String> for RelationshipType {
     }
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;

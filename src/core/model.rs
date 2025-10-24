@@ -1,3 +1,4 @@
+#[cfg(feature = "write")]
 use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
@@ -14,19 +15,27 @@ use crate::{
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "model"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, PartialEq)]
-#[xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS), rename = "model")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq)]
+#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS), rename = "model"))]
 pub struct Model {
-    // #[xml(attribute)]
-    // pub xmlns:Option<String>,
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub unit: Option<Unit>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub requiredextensions: Option<String>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub recommendedextensions: Option<String>,
 
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
@@ -41,8 +50,12 @@ pub struct Model {
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Default, Debug, PartialEq, Eq)]
-#[xml(scalar, rename_all = "lowercase")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(scalar, rename_all = "lowercase")
+)]
 pub enum Unit {
     Micron,
     #[default]
@@ -67,6 +80,7 @@ impl From<String> for Unit {
     }
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::{ToXml, to_string};

@@ -1,4 +1,6 @@
 use image::{DynamicImage, load_from_memory};
+
+#[cfg(feature = "write")]
 use instant_xml::{ToXml, to_string};
 
 use zip::write::SimpleFileOptions;
@@ -221,6 +223,7 @@ impl ThreemfPackage {
     /// Writes the 3mf package to a [writer].
     /// Expects a well formed [ThreemfPackage] object to write the package.
     /// A well formed packaged requires atleast 1 root model and 1 relationship file along with the content types.
+    #[cfg(feature = "write")]
     pub fn write<W: io::Write + io::Seek>(&self, threemf_archive: W) -> Result<(), Error> {
         let mut zip = ZipWriter::new(threemf_archive);
 
@@ -379,6 +382,7 @@ fn try_strip_leading_slash(target: &str) -> &str {
     }
 }
 
+#[cfg(feature = "write")]
 fn archive_write_xml_with_header<W: Write + Seek, T: ToXml + ?Sized>(
     archive: &mut ZipWriter<W>,
     filename: &str,
@@ -491,6 +495,7 @@ pub mod tests {
         }
     }
 
+    #[cfg(feature = "write")]
     #[test]
     pub fn write_root_model_test() {
         let bytes = {
@@ -556,7 +561,7 @@ pub mod tests {
         assert_eq!(bytes.into_inner().len(), 963);
     }
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(all(feature = "memory-optimized-read", feature = "write"))]
     #[test]
     pub fn io_unknown_content_test() {
         let test_file_bytes = include_bytes!("../../tests/data/test.txt");
@@ -635,7 +640,7 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(all(feature = "memory-optimized-read", feature = "write"))]
     #[test]
     pub fn io_thumbnail_content_test() {
         let test_file_bytes = include_bytes!("../../tests/data/test_thumbnail.png");

@@ -1,4 +1,3 @@
-use instant_xml::to_string;
 use zip::ZipArchive;
 
 use crate::io::{
@@ -61,16 +60,15 @@ impl ThreemfUnpacked {
         let mut zip = ZipArchive::new(reader)?;
 
         let content_types: ContentTypes;
+        let mut content_types_string: String = String::default();
         {
             let content_types_file = zip.by_name("[Content_Types].xml");
 
             content_types = match content_types_file {
                 Ok(mut file) => {
-                    let mut xml_string: String = Default::default();
-                    let _ = file.read_to_string(&mut xml_string)?;
-
-                    //from_str::<ContentTypes>(&xml_string)?
-                    serde_roxmltree::from_str::<ContentTypes>(&xml_string)?
+                    //let mut xml_string: String = Default::default();
+                    let _ = file.read_to_string(&mut content_types_string)?;
+                    serde_roxmltree::from_str::<ContentTypes>(&content_types_string)?
                 }
                 Err(err) => {
                     return Err(Error::Zip(err));
@@ -92,20 +90,20 @@ impl ThreemfUnpacked {
 
         let root_rels_filename: &str = &format!("_rels/.{rels_ext}");
 
-        let mut relationships = HashMap::<String, Relationships>::new();
+        let mut relationships = HashMap::<String, (Relationships, String)>::new();
 
         let mut models = HashMap::<String, String>::new();
         let mut thumbnails = HashMap::<String, Vec<u8>>::new();
         let mut unknown_parts = HashMap::<String, Vec<u8>>::new();
         let mut root_model_path: &str = "";
 
-        let root_rels: Relationships =
+        let root_rels: (Relationships, String) =
             relationships_from_zip_by_name(&mut zip, root_rels_filename)?;
         let mut rels_strings_map = HashMap::<String, String>::new();
 
         let root_model_processed = process_rels(
             &mut zip,
-            &root_rels,
+            &root_rels.0,
             &mut models,
             &mut thumbnails,
             &mut unknown_parts,
@@ -113,6 +111,7 @@ impl ThreemfUnpacked {
         match root_model_processed {
             Ok(_) => {
                 let model_rels = root_rels
+                    .0
                     .relationships
                     .iter()
                     .find(|rels| rels.relationship_type == RelationshipType::Model);
@@ -153,17 +152,17 @@ impl ThreemfUnpacked {
             for (dir_path, rels) in relationships.iter() {
                 process_rels(
                     &mut zip,
-                    rels,
+                    &rels.0,
                     &mut models,
                     &mut thumbnails,
                     &mut unknown_parts,
                 )?;
-                let rels_string = to_string(rels)?;
-                rels_strings_map.insert(dir_path.clone(), rels_string);
+                // let rels_string = to_string(rels)?;
+                rels_strings_map.insert(dir_path.clone(), rels.1.clone());
             }
         }
 
-        let content_types_string = to_string(&content_types)?;
+        // let content_types_string: String = to_string(&content_types)?;
         if let Some(root_model) = models.remove(root_model_path) {
             Ok(Self {
                 root: root_model,
@@ -182,7 +181,7 @@ impl ThreemfUnpacked {
 fn relationships_from_zip_by_name<R: Read + io::Seek>(
     zip: &mut ZipArchive<R>,
     zip_filename: &str,
-) -> Result<Relationships, Error> {
+) -> Result<(Relationships, String), Error> {
     let rels_file = zip.by_name(zip_filename);
     match rels_file {
         Ok(file) => relationships_from_zipfile(file),
@@ -192,13 +191,12 @@ fn relationships_from_zip_by_name<R: Read + io::Seek>(
 
 fn relationships_from_zipfile<R: Read>(
     mut file: zip::read::ZipFile<'_, R>,
-) -> Result<Relationships, Error> {
+) -> Result<(Relationships, String), Error> {
     let mut xml_string: String = Default::default();
     let _ = file.read_to_string(&mut xml_string)?;
-    // let rels = from_str::<Relationships>(&xml_string)?;
     let rels = serde_roxmltree::from_str::<Relationships>(&xml_string)?;
 
-    Ok(rels)
+    Ok((rels, xml_string))
 }
 
 fn process_rels<R: Read + io::Seek>(
@@ -276,7 +274,7 @@ pub mod tests {
 
         match result {
             Ok(threemf) => {
-                assert_eq!(threemf.content_types.len(), 332);
+                assert_eq!(threemf.content_types.len(), 407);
                 assert_eq!(threemf.root.len(), 988);
                 assert_eq!(threemf.sub_models.len(), 1);
                 assert_eq!(threemf.thumbnails.len(), 1);

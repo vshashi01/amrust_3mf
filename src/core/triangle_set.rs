@@ -1,3 +1,4 @@
+#[cfg(feature = "write")]
 use instant_xml::{Error, Id, Serializer, ToXml};
 
 #[cfg(feature = "memory-optimized-read")]
@@ -22,6 +23,7 @@ pub struct TriangleSets {
     pub trianglesets: Vec<TriangleSet>,
 }
 
+#[cfg(feature = "write")]
 impl ToXml for TriangleSets {
     fn serialize<W: std::fmt::Write + ?Sized>(
         &self,
@@ -72,7 +74,6 @@ impl ToXml for TriangleSets {
     xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset")
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
-// #[xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset")]
 pub struct TriangleSet {
     #[cfg_attr(feature = "memory-optimized-read", xml(attribute))]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "name"))]
@@ -90,6 +91,7 @@ pub struct TriangleSet {
     pub triangle_refrange: Vec<TriangleRefRange>,
 }
 
+#[cfg(feature = "write")]
 impl ToXml for TriangleSet {
     fn serialize<W: std::fmt::Write + ?Sized>(
         &self,
@@ -134,25 +136,43 @@ impl ToXml for TriangleSet {
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(CORE_TRIANGLESET_NS), rename = "ref")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_TRIANGLESET_NS), rename = "ref")
+)]
 pub struct TriangleRef {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub index: usize,
 }
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, Clone, PartialEq, Eq)]
-#[xml(ns(CORE_TRIANGLESET_NS), rename = "refrange")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_TRIANGLESET_NS), rename = "refrange")
+)]
 pub struct TriangleRefRange {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub startindex: usize,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub endindex: usize,
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;
