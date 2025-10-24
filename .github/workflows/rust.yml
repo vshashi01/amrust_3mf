@@ -20,12 +20,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-          lfs: true
       - run: cargo check --all-features --all-targets
-      - run: cargo test --features io
+      - run: cargo test --all-features
 
   msrv:
     runs-on: ubuntu-latest
