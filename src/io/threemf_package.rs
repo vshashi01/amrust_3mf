@@ -1,5 +1,6 @@
 use image::{DynamicImage, load_from_memory};
-use instant_xml::{ToXml, from_str, to_string};
+use instant_xml::{ToXml, to_string};
+
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
 
@@ -54,14 +55,41 @@ pub struct ThreemfPackage {
     pub content_types: ContentTypes,
 }
 
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone)]
+enum ReadStrategy {
+    #[cfg(feature = "memory-optimized-read")]
+    MemoryOptimized,
+
+    #[cfg(feature = "speed-optimized-read")]
+    SpeedOptimized,
+}
+
 impl ThreemfPackage {
+    #[cfg(feature = "memory-optimized-read")]
+    pub fn from_reader_with_memory_optimized_deserializer<R: Read + io::Seek>(
+        reader: R,
+        process_sub_models: bool,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, process_sub_models, ReadStrategy::MemoryOptimized)
+    }
+
+    #[cfg(feature = "speed-optimized-read")]
+    pub fn from_reader_with_speed_optimized_deserializer<R: Read + io::Seek>(
+        reader: R,
+        process_sub_models: bool,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, process_sub_models, ReadStrategy::SpeedOptimized)
+    }
+
     /// Reads a 3mf package from a type [Read] + [io::Seek].
     /// Expected to deal with nested parts of the 3mf package and flatten them into the respective dictionaries.
     /// Only If [process_sub_models] is set to true, it will process the sub models and thumbnails associated with the sub models in the package.
     /// Will return an error if the package is not a valid 3mf package or if the package contains unsupported content types.
-    pub fn from_reader<R: Read + io::Seek>(
+    fn from_reader<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
+        read_strategy: ReadStrategy,
     ) -> Result<Self, Error> {
         let mut zip = ZipArchive::new(reader)?;
 
@@ -74,7 +102,17 @@ impl ThreemfPackage {
                     let mut xml_string: String = Default::default();
                     let _ = file.read_to_string(&mut xml_string)?;
 
-                    from_str::<ContentTypes>(&xml_string)?
+                    //from_str::<ContentTypes>(&xml_string)?
+                    match read_strategy {
+                        #[cfg(feature = "memory-optimized-read")]
+                        ReadStrategy::MemoryOptimized => {
+                            instant_xml::from_str::<ContentTypes>(&xml_string)?
+                        }
+                        #[cfg(feature = "speed-optimized-read")]
+                        ReadStrategy::SpeedOptimized => {
+                            serde_roxmltree::from_str::<ContentTypes>(&xml_string)?
+                        }
+                    }
                 }
                 Err(err) => {
                     return Err(Error::Zip(err));
@@ -104,7 +142,7 @@ impl ThreemfPackage {
         let mut root_model_path: &str = "";
 
         let root_rels: Relationships =
-            relationships_from_zip_by_name(&mut zip, root_rels_filename)?;
+            relationships_from_zip_by_name(&mut zip, root_rels_filename, read_strategy)?;
 
         let root_model_processed = process_rels(
             &mut zip,
@@ -112,6 +150,7 @@ impl ThreemfPackage {
             &mut models,
             &mut thumbnails,
             &mut unknown_parts,
+            read_strategy,
         );
         match root_model_processed {
             Ok(_) => {
@@ -140,7 +179,7 @@ impl ThreemfPackage {
                     {
                         match path.to_str() {
                             Some(path_str) => {
-                                let rels = relationships_from_zipfile(file)?;
+                                let rels = relationships_from_zipfile(file, read_strategy)?;
                                 relationships.insert(format!("/{path_str}"), rels);
                             }
                             None => {
@@ -160,6 +199,7 @@ impl ThreemfPackage {
                     &mut models,
                     &mut thumbnails,
                     &mut unknown_parts,
+                    read_strategy,
                 )?;
             }
         }
@@ -241,20 +281,28 @@ impl ThreemfPackage {
 fn relationships_from_zip_by_name<R: Read + io::Seek>(
     zip: &mut ZipArchive<R>,
     zip_filename: &str,
+    read_strategy: ReadStrategy,
 ) -> Result<Relationships, Error> {
     let rels_file = zip.by_name(zip_filename);
     match rels_file {
-        Ok(file) => relationships_from_zipfile(file),
+        Ok(file) => relationships_from_zipfile(file, read_strategy),
         Err(err) => Err(Error::Zip(err)),
     }
 }
 
 fn relationships_from_zipfile<R: Read>(
     mut file: zip::read::ZipFile<'_, R>,
+    read_strategy: ReadStrategy,
 ) -> Result<Relationships, Error> {
     let mut xml_string: String = Default::default();
     let _ = file.read_to_string(&mut xml_string)?;
-    let rels = from_str::<Relationships>(&xml_string)?;
+    //let rels = from_str::<Relationships>(&xml_string)?;
+    let rels = match read_strategy {
+        #[cfg(feature = "memory-optimized-read")]
+        ReadStrategy::MemoryOptimized => instant_xml::from_str::<Relationships>(&xml_string)?,
+        #[cfg(feature = "speed-optimized-read")]
+        ReadStrategy::SpeedOptimized => serde_roxmltree::from_str::<Relationships>(&xml_string)?,
+    };
 
     Ok(rels)
 }
@@ -265,6 +313,7 @@ fn process_rels<R: Read + io::Seek>(
     models: &mut HashMap<String, Model>,
     thumbnails: &mut HashMap<String, DynamicImage>,
     unknown_parts: &mut HashMap<String, Vec<u8>>,
+    read_strategy: ReadStrategy,
 ) -> Result<(), Error> {
     for rel in &rels.relationships {
         let name = try_strip_leading_slash(&rel.target);
@@ -293,7 +342,18 @@ fn process_rels<R: Read + io::Seek>(
                         let _ = file.read_to_string(&mut xml_string)?;
                         // println!("Model bytes: {:?}", xml_string.len());
 
-                        let model = from_str::<Model>(&xml_string)?;
+                        //let model = from_str::<Model>(&xml_string)?;
+                        let model = match read_strategy {
+                            #[cfg(feature = "memory-optimized-read")]
+                            ReadStrategy::MemoryOptimized => {
+                                instant_xml::from_str::<Model>(&xml_string)?
+                            }
+                            #[cfg(feature = "speed-optimized-read")]
+                            ReadStrategy::SpeedOptimized => {
+                                serde_roxmltree::from_str::<Model>(&xml_string)?
+                            }
+                        };
+
                         models.insert(rel.target.clone(), model);
                     }
                     RelationshipType::Unknown(_) => {
@@ -351,14 +411,59 @@ pub mod tests {
 
     use super::ThreemfPackage;
 
+    use std::fs::File;
+    use std::path::PathBuf;
     use std::{collections::HashMap, io::Cursor};
 
+    #[cfg(feature = "memory-optimized-read")]
     #[test]
-    pub fn from_reader_root_model_test() {
-        let bytes = include_bytes!("../../tests/data/third-party/P_XPX_0702_02.3mf");
-        let reader = Cursor::new(bytes);
+    pub fn from_reader_root_model_with_memory_optimized_read_test() {
+        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader(reader, true);
+        let result = ThreemfPackage::from_reader(
+            reader,
+            true,
+            crate::io::threemf_package::ReadStrategy::MemoryOptimized,
+        );
+        // println!("{:?}", result);
+
+        match result {
+            Ok(threemf) => {
+                assert_eq!(threemf.content_types.defaults.len(), 3);
+                assert_eq!(threemf.sub_models.len(), 1);
+                assert_eq!(threemf.thumbnails.len(), 1);
+                assert_eq!(threemf.relationships.len(), 2);
+
+                assert!(threemf.sub_models.contains_key("/3D/midway.model"));
+
+                assert!(threemf.relationships.contains_key("_rels/.rels"));
+                assert!(
+                    threemf
+                        .relationships
+                        .contains_key("/3D/_rels/3dmodel.model.rels")
+                );
+                assert!(
+                    threemf
+                        .thumbnails
+                        .contains_key("/Thumbnails/P_XPX_0702_02.png")
+                )
+            }
+            Err(err) => panic!("{:?}", err),
+        }
+    }
+
+    #[cfg(feature = "speed-optimized-read")]
+    #[test]
+    pub fn from_reader_root_model_with_speed_optimized_read_test() {
+        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let reader = File::open(path).unwrap();
+
+        let result = ThreemfPackage::from_reader(
+            reader,
+            true,
+            crate::io::threemf_package::ReadStrategy::SpeedOptimized,
+        );
         // println!("{:?}", result);
 
         match result {
@@ -393,7 +498,7 @@ pub mod tests {
             let mut writer = Cursor::new(bytes);
             let threemf = ThreemfPackage {
                 root: Model {
-                    xmlns: None,
+                    // xmlns: None,
                     unit: Some(model::Unit::Centimeter),
                     requiredextensions: None,
                     recommendedextensions: None,
@@ -451,6 +556,7 @@ pub mod tests {
         assert_eq!(bytes.into_inner().len(), 963);
     }
 
+    #[cfg(feature = "memory-optimized-read")]
     #[test]
     pub fn io_unknown_content_test() {
         let test_file_bytes = include_bytes!("../../tests/data/test.txt");
@@ -459,7 +565,7 @@ pub mod tests {
 
         let package = ThreemfPackage {
             root: Model {
-                xmlns: None,
+                // xmlns: None,
                 unit: Some(model::Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -516,7 +622,8 @@ pub mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result = ThreemfPackage::from_reader(writer, false);
+        let read_result =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
 
         match read_result {
             Ok(package) => {
@@ -528,6 +635,7 @@ pub mod tests {
         }
     }
 
+    #[cfg(feature = "memory-optimized-read")]
     #[test]
     pub fn io_thumbnail_content_test() {
         let test_file_bytes = include_bytes!("../../tests/data/test_thumbnail.png");
@@ -538,7 +646,7 @@ pub mod tests {
 
         let package = ThreemfPackage {
             root: Model {
-                xmlns: None,
+                // xmlns: None,
                 unit: Some(model::Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -593,7 +701,8 @@ pub mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result = ThreemfPackage::from_reader(writer, false);
+        let read_result =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
 
         match read_result {
             Ok(package) => {
