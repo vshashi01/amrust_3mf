@@ -1,3 +1,4 @@
+#[cfg(feature = "write")]
 use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
@@ -20,8 +21,9 @@ use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 /// `TriangleMesh` provides an easy target for conversion from such a type.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS), rename = "mesh")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS), rename = "mesh"))]
 pub struct Mesh {
     /// The vertices of the mesh
     ///
@@ -35,15 +37,21 @@ pub struct Mesh {
     /// field.
     pub triangles: Triangles,
 
-    #[xml(ns(CORE_TRIANGLESET_NS))]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(ns(CORE_TRIANGLESET_NS))
+    )]
     pub trianglesets: Option<TriangleSets>,
 }
 
-/// A list of vertices, as a struct mainly to comply with easier serde xml
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "vertices")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "vertices")
+)]
 pub struct Vertices {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub vertex: Vec<Vertex>,
@@ -52,24 +60,41 @@ pub struct Vertices {
 /// A vertex in a triangle mesh
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "vertex")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "vertex")
+)]
 pub struct Vertex {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub x: f64,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub y: f64,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub z: f64,
 }
 
 /// A list of triangles, as a struct mainly to comply with easier serde xml
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "triangles")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "triangles")
+)]
 pub struct Triangles {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub triangle: Vec<Triangle>,
@@ -81,31 +106,57 @@ pub struct Triangles {
 /// [`TriangleMesh`].
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, PartialEq, Clone, Debug)]
-#[xml(ns(CORE_NS), rename = "triangle")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(PartialEq, Clone, Debug)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "triangle")
+)]
 pub struct Triangle {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub v1: usize,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub v2: usize,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub v3: usize,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub p1: Option<usize>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub p2: Option<usize>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub p3: Option<usize>,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub pid: Option<usize>,
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;

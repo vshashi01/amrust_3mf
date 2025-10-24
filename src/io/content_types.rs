@@ -1,4 +1,8 @@
-use instant_xml::{Error, ToXml};
+#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+use instant_xml::Error;
+
+#[cfg(feature = "write")]
+use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{FromXml, Kind};
@@ -13,12 +17,12 @@ use serde::Deserialize;
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Types"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-// #[cfg_attr(
-//     feature = "memory-optimized-read",
-//     xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets")
-// )]
-#[derive(ToXml, Debug, PartialEq, Eq)]
-#[xml(ns(CONTENT_TYPES_NS), rename = "Types")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CONTENT_TYPES_NS), rename = "Types")
+)]
 pub struct ContentTypes {
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Default"))]
     pub defaults: Vec<DefaultContentTypes>,
@@ -52,6 +56,7 @@ const MODEL_NS: &str = "application/vnd.ms-package.3dmanufacturing-3dmodel+xml";
 const PNG_NS: &str = "image/png";
 const JPEG_NS: &str = "image/jpeg";
 
+#[cfg(feature = "write")]
 impl ToXml for DefaultContentTypeEnum {
     fn serialize<W: std::fmt::Write + ?Sized>(
         &self,
@@ -120,20 +125,31 @@ impl From<String> for DefaultContentTypeEnum {
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Default"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, PartialEq, Eq)]
-#[xml(ns(CONTENT_TYPES_NS), rename = "Default")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CONTENT_TYPES_NS), rename = "Default")
+)]
 pub struct DefaultContentTypes {
-    #[xml(attribute, rename = "Extension")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, rename = "Extension")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Extension"))]
     pub extension: String,
 
-    #[xml(attribute, rename = "ContentType")]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute, rename = "ContentType")
+    )]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "ContentType"))]
     pub content_type: DefaultContentTypeEnum,
 }
 
 const CONTENT_TYPES_NS: &str = "http://schemas.openxmlformats.org/package/2006/content-types";
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;

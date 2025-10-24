@@ -22,6 +22,7 @@ pub enum Error {
     #[error("Error writing 3mf file: {0}")]
     WriteError(String),
 
+    #[cfg(any(feature = "write", feature = "memory-optimized-read"))]
     #[error("(De)Serialization error from Instant-Xml")]
     InstantXmlError(#[from] instant_xml::Error),
 
