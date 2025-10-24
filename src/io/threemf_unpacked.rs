@@ -66,7 +66,6 @@ impl ThreemfUnpacked {
 
             content_types = match content_types_file {
                 Ok(mut file) => {
-                    //let mut xml_string: String = Default::default();
                     let _ = file.read_to_string(&mut content_types_string)?;
                     serde_roxmltree::from_str::<ContentTypes>(&content_types_string)?
                 }
@@ -157,12 +156,10 @@ impl ThreemfUnpacked {
                     &mut thumbnails,
                     &mut unknown_parts,
                 )?;
-                // let rels_string = to_string(rels)?;
                 rels_strings_map.insert(dir_path.clone(), rels.1.clone());
             }
         }
 
-        // let content_types_string: String = to_string(&content_types)?;
         if let Some(root_model) = models.remove(root_model_path) {
             Ok(Self {
                 root: root_model,
