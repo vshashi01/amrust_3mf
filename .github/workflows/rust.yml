@@ -23,6 +23,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
+          lfs: true
       - run: cargo check --all-features --all-targets
       - run: cargo test --features io
 
