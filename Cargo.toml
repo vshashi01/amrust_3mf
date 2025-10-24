@@ -5,7 +5,6 @@ rust-version = "1.89"
 edition = "2024"
 license = "MIT or Apache-2.0"
 
-
 description = "3MF (3D Manufacturing Format) file format support"
 keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
