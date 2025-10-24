@@ -2,7 +2,6 @@ use instant_xml::to_string;
 use zip::ZipArchive;
 
 use crate::io::{
-    ReadStrategy,
     content_types::{ContentTypes, DefaultContentTypeEnum},
     error::Error,
     relationship::{RelationshipType, Relationships},
@@ -58,7 +57,6 @@ impl ThreemfUnpacked {
     pub fn from_reader<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
-        read_strategy: ReadStrategy,
     ) -> Result<Self, Error> {
         let mut zip = ZipArchive::new(reader)?;
 
@@ -72,16 +70,7 @@ impl ThreemfUnpacked {
                     let _ = file.read_to_string(&mut xml_string)?;
 
                     //from_str::<ContentTypes>(&xml_string)?
-                    match read_strategy {
-                        #[cfg(feature = "memory-optimized-read")]
-                        ReadStrategy::MemoryOptimized => {
-                            instant_xml::from_str::<ContentTypes>(&xml_string)?
-                        }
-                        #[cfg(feature = "speed-optimized-read")]
-                        ReadStrategy::SpeedOptimized => {
-                            serde_roxmltree::from_str::<ContentTypes>(&xml_string)?
-                        }
-                    }
+                    serde_roxmltree::from_str::<ContentTypes>(&xml_string)?
                 }
                 Err(err) => {
                     return Err(Error::Zip(err));
@@ -111,7 +100,7 @@ impl ThreemfUnpacked {
         let mut root_model_path: &str = "";
 
         let root_rels: Relationships =
-            relationships_from_zip_by_name(&mut zip, root_rels_filename, read_strategy)?;
+            relationships_from_zip_by_name(&mut zip, root_rels_filename)?;
         let mut rels_strings_map = HashMap::<String, String>::new();
 
         let root_model_processed = process_rels(
@@ -148,7 +137,7 @@ impl ThreemfUnpacked {
                     {
                         match path.to_str() {
                             Some(path_str) => {
-                                let rels = relationships_from_zipfile(file, read_strategy)?;
+                                let rels = relationships_from_zipfile(file)?;
                                 relationships.insert(format!("/{path_str}"), rels);
                             }
                             None => {
@@ -193,28 +182,21 @@ impl ThreemfUnpacked {
 fn relationships_from_zip_by_name<R: Read + io::Seek>(
     zip: &mut ZipArchive<R>,
     zip_filename: &str,
-    read_strategy: ReadStrategy,
 ) -> Result<Relationships, Error> {
     let rels_file = zip.by_name(zip_filename);
     match rels_file {
-        Ok(file) => relationships_from_zipfile(file, read_strategy),
+        Ok(file) => relationships_from_zipfile(file),
         Err(err) => Err(Error::Zip(err)),
     }
 }
 
 fn relationships_from_zipfile<R: Read>(
     mut file: zip::read::ZipFile<'_, R>,
-    read_strategy: ReadStrategy,
 ) -> Result<Relationships, Error> {
     let mut xml_string: String = Default::default();
     let _ = file.read_to_string(&mut xml_string)?;
     // let rels = from_str::<Relationships>(&xml_string)?;
-    let rels = match read_strategy {
-        #[cfg(feature = "memory-optimized-read")]
-        ReadStrategy::MemoryOptimized => instant_xml::from_str::<Relationships>(&xml_string)?,
-        #[cfg(feature = "speed-optimized-read")]
-        ReadStrategy::SpeedOptimized => serde_roxmltree::from_str::<Relationships>(&xml_string)?,
-    };
+    let rels = serde_roxmltree::from_str::<Relationships>(&xml_string)?;
 
     Ok(rels)
 }
@@ -281,19 +263,16 @@ fn try_strip_leading_slash(target: &str) -> &str {
 pub mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::io::ReadStrategy;
-
     use super::ThreemfUnpacked;
 
     use std::io::Cursor;
 
-    #[cfg(feature = "memory-optimized-read")]
     #[test]
     pub fn from_reader_root_model_test() {
         let bytes = include_bytes!("../../tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = Cursor::new(bytes);
 
-        let result = ThreemfUnpacked::from_reader(reader, true, ReadStrategy::MemoryOptimized);
+        let result = ThreemfUnpacked::from_reader(reader, true);
 
         match result {
             Ok(threemf) => {

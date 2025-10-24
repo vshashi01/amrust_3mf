@@ -12,7 +12,7 @@ mod tests {
             resources::Resources,
         },
         io::{
-            ReadStrategy, ThreemfPackage,
+            ThreemfPackage,
             content_types::{ContentTypes, DefaultContentTypeEnum, DefaultContentTypes},
             relationship::{Relationship, RelationshipType, Relationships},
         },
@@ -126,8 +126,9 @@ mod tests {
         write_package
             .write(&mut buf)
             .expect("Error writing package");
-        let models = ThreemfPackage::from_reader(&mut buf, false, ReadStrategy::MemoryOptimized)
-            .expect("Error reading package");
+        let models =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
+                .expect("Error reading package");
         assert_eq!(models, write_package);
     }
 }

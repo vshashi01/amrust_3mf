@@ -15,6 +15,7 @@ default = ["io", "memory-optimized-read"]
 io = ["dep:image", "dep:zip", "dep:thiserror"]
 memory-optimized-read = []
 speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
+unpack-only = ["speed-optimized-read", "dep:zip", "dep:thiserror"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main" }
@@ -22,6 +23,7 @@ image = { version = "0.25.5", default-features = false, features = [
     "png",
 ], optional = true }
 thiserror = { version = "2.0.3", optional = true }
+# glam = { version = "0.30.3", optional = true }
 zip = { version = "4.4.0", default-features = false, features = [
     "deflate",
 ], optional = true }

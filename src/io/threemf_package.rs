@@ -4,7 +4,6 @@ use instant_xml::{ToXml, to_string};
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
 
-use crate::io::ReadStrategy;
 use crate::{
     core::model::Model,
     io::{
@@ -56,12 +55,38 @@ pub struct ThreemfPackage {
     pub content_types: ContentTypes,
 }
 
+#[non_exhaustive]
+#[derive(Debug, Copy, Clone)]
+enum ReadStrategy {
+    #[cfg(feature = "memory-optimized-read")]
+    MemoryOptimized,
+
+    #[cfg(feature = "speed-optimized-read")]
+    SpeedOptimized,
+}
+
 impl ThreemfPackage {
+    #[cfg(feature = "memory-optimized-read")]
+    pub fn from_reader_with_memory_optimized_deserializer<R: Read + io::Seek>(
+        reader: R,
+        process_sub_models: bool,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, process_sub_models, ReadStrategy::MemoryOptimized)
+    }
+
+    #[cfg(feature = "speed-optimized-read")]
+    pub fn from_reader_with_speed_optimized_deserializer<R: Read + io::Seek>(
+        reader: R,
+        process_sub_models: bool,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, process_sub_models, ReadStrategy::SpeedOptimized)
+    }
+
     /// Reads a 3mf package from a type [Read] + [io::Seek].
     /// Expected to deal with nested parts of the 3mf package and flatten them into the respective dictionaries.
     /// Only If [process_sub_models] is set to true, it will process the sub models and thumbnails associated with the sub models in the package.
     /// Will return an error if the package is not a valid 3mf package or if the package contains unsupported content types.
-    pub fn from_reader<R: Read + io::Seek>(
+    fn from_reader<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
         read_strategy: ReadStrategy,
@@ -381,7 +406,7 @@ pub mod tests {
             object::{Object, ObjectType},
             resources::Resources,
         },
-        io::{ReadStrategy, content_types::*, relationship::*},
+        io::{content_types::*, relationship::*},
     };
 
     use super::ThreemfPackage;
@@ -597,7 +622,8 @@ pub mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result = ThreemfPackage::from_reader(writer, false, ReadStrategy::MemoryOptimized);
+        let read_result =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
 
         match read_result {
             Ok(package) => {
@@ -675,7 +701,8 @@ pub mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result = ThreemfPackage::from_reader(writer, false, ReadStrategy::MemoryOptimized);
+        let read_result =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
 
         match read_result {
             Ok(package) => {

@@ -4,9 +4,9 @@ pub mod tests {
 
     pub mod test_utilities;
 
-    use amrust_3mf::io::ReadStrategy;
-
     use amrust_3mf::io::ThreemfPackage;
+
+    #[cfg(feature = "unpack-only")]
     use amrust_3mf::io::ThreemfUnpacked;
 
     use std::fs::File;
@@ -27,7 +27,8 @@ pub mod tests {
             println!("{:?}", filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfPackage::from_reader(file, true, ReadStrategy::MemoryOptimized);
+            let package =
+                ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true);
 
             match package {
                 Ok(threemf) => {
@@ -45,7 +46,7 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(feature = "unpack-only")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
         let folder_path = PathBuf::from("./tests/data/third-party/");
@@ -59,7 +60,7 @@ pub mod tests {
             let filepath = folder_path.join(fixture.filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfUnpacked::from_reader(file, true, ReadStrategy::MemoryOptimized);
+            let package = ThreemfUnpacked::from_reader(file, true);
 
             match package {
                 Ok(threemf) => {
