@@ -7,7 +7,6 @@ pub(crate) struct TestFixture {
     pub filepath: String,
     pub skip_test: bool,
     pub large_test: bool,
-    pub golden_thumbnail_path: String,
 }
 
 #[derive(Deserialize, Debug)]

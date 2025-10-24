@@ -22,9 +22,13 @@ pub enum Error {
     #[error("Error writing 3mf file: {0}")]
     WriteError(String),
 
-    #[error("Derialization error from Instant-Xml")]
+    #[error("(De)Serialization error from Instant-Xml")]
     InstantXmlError(#[from] instant_xml::Error),
 
     #[error("Thumbnail error: {0}")]
     ThumbnailError(String),
+
+    #[cfg(feature = "speed-optimized-read")]
+    #[error("Deserialization error from serde-roxmltree")]
+    SerdeRoxmltreeError(#[from] serde_roxmltree::Error),
 }

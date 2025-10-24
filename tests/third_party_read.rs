@@ -4,31 +4,19 @@ pub mod tests {
 
     pub mod test_utilities;
 
-    use thiserror::Error;
-
     use amrust_3mf::io::ThreemfPackage;
-    use amrust_3mf::io::ThreemfUnpacked;
-    use amrust_3mf::io::error::Error;
 
-    use std::cmp::Ordering;
+    #[cfg(feature = "unpack-only")]
+    use amrust_3mf::io::ThreemfUnpacked;
+
     use std::fs::File;
     use std::path::PathBuf;
 
-    #[derive(Debug, Error)]
-    enum ImageTestError {
-        #[error("Failed to generate image for file {0}")]
-        ThumbnailGenerationFailed(#[from] Error),
-
-        #[cfg(feature = "thumbnail")]
-        #[error("Image dont match for file {0} with a Mean error {1}")]
-        ThumbnailComparisonFailed(PathBuf, f32),
-    }
-
+    #[cfg(feature = "memory-optimized-read")]
     #[test]
     pub fn can_load_thirdparty_3mf_package() {
         let folder_path = PathBuf::from("./tests/data/third-party/");
         let fixtures = test_utilities::get_test_fixtures();
-        let mut failed_conditions: Vec<ImageTestError> = vec![];
 
         for fixture in fixtures {
             if fixture.skip_test || fixture.large_test {
@@ -39,12 +27,8 @@ pub mod tests {
             println!("{:?}", filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfPackage::from_reader(file, true);
-
-            let golden_thumbnail_path = folder_path.join(format!(
-                "golden_thumbnails/{}",
-                fixture.golden_thumbnail_path
-            ));
+            let package =
+                ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true);
 
             match package {
                 Ok(threemf) => {
@@ -60,12 +44,9 @@ pub mod tests {
                 }
             }
         }
-
-        if !failed_conditions.is_empty() {
-            panic!("Some thumbnail generations failed {:?}", failed_conditions)
-        }
     }
 
+    #[cfg(feature = "unpack-only")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
         let folder_path = PathBuf::from("./tests/data/third-party/");

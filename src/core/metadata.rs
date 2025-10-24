@@ -1,9 +1,17 @@
-use instant_xml::{Error, FromXml, Kind, ToXml};
+use instant_xml::{Error, Kind, ToXml};
+
+#[cfg(feature = "memory-optimized-read")]
+use instant_xml::FromXml;
+
+#[cfg(feature = "speed-optimized-read")]
+use serde::Deserialize;
 
 use crate::threemf_namespaces::CORE_NS;
 
 //ToDo: Add additional optional fields on Metadata
-#[derive(FromXml, ToXml, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[derive(ToXml, Debug, PartialEq, Eq)]
 #[xml(ns(CORE_NS), rename = "metadata")]
 pub struct Metadata {
     #[xml(attribute)]
@@ -13,19 +21,25 @@ pub struct Metadata {
     pub preserve: Option<Preserve>,
 
     #[xml(direct)]
+    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "#content"))]
     pub value: Option<String>,
 }
 
-#[derive(Debug, ToXml, FromXml, PartialEq, Eq)]
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[derive(Debug, ToXml, PartialEq, Eq)]
 #[xml(ns(CORE_NS), rename = "metadatagroup")]
 pub struct MetadataGroup {
+    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub metadata: Vec<Metadata>,
 }
 
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[derive(ToXml, Debug, PartialEq, Eq)]
 #[xml(ns(CORE_NS), rename = "preserve")]
 pub struct Preserve(bool);
 
+#[cfg(feature = "memory-optimized-read")]
 impl<'xml> FromXml<'xml> for Preserve {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         match field {
@@ -62,11 +76,76 @@ impl<'xml> FromXml<'xml> for Preserve {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use instant_xml::{from_str, to_string};
+pub mod write_tests {
+    use instant_xml::to_string;
     use pretty_assertions::assert_eq;
 
-    use crate::{core::metadata::Preserve, threemf_namespaces::CORE_NS};
+    use crate::threemf_namespaces::CORE_NS;
+
+    use super::{Metadata, MetadataGroup};
+
+    #[test]
+    pub fn toxml_metadata_test() {
+        let xml_string = format!(
+            r#"<metadata xmlns="{}" name="Copyright">Copyright (c) 2018 3MF Consortium. All rights reserved.</metadata>"#,
+            CORE_NS
+        );
+        let metadata = Metadata {
+            name: "Copyright".to_string(),
+            preserve: None,
+            value: Some("Copyright (c) 2018 3MF Consortium. All rights reserved.".to_string()),
+        };
+        let metadata_string = to_string(&metadata).unwrap();
+
+        assert_eq!(metadata_string, xml_string);
+    }
+
+    #[test]
+    pub fn toxml_simple_metadata_test() {
+        let xml_string = format!(r#"<metadata xmlns="{}" name="From Test" />"#, CORE_NS);
+        let metadata = Metadata {
+            name: "From Test".to_string(),
+            preserve: None,
+            value: None,
+        };
+        let metadata_string = to_string(&metadata).unwrap();
+
+        assert_eq!(metadata_string, xml_string);
+    }
+
+    #[test]
+    pub fn toxml_metadatagroup_test() {
+        let xml_string = format!(
+            r#"<metadatagroup xmlns="{}"><metadata name="From Test"></metadata><metadata name="From Test 2"></metadata></metadatagroup>"#,
+            CORE_NS
+        );
+        let metadatagroup = MetadataGroup {
+            metadata: vec![
+                Metadata {
+                    name: "From Test".to_string(),
+                    preserve: None,
+                    value: Some("".to_string()),
+                },
+                Metadata {
+                    name: "From Test 2".to_string(),
+                    preserve: None,
+                    value: Some("".to_string()),
+                },
+            ],
+        };
+        let metadatagroup_string = to_string(&metadatagroup).unwrap();
+
+        assert_eq!(metadatagroup_string, xml_string);
+    }
+}
+
+#[cfg(feature = "memory-optimized-read")]
+#[cfg(test)]
+pub mod memory_optimized_read_tests {
+    use instant_xml::from_str;
+    use pretty_assertions::assert_eq;
+
+    use crate::threemf_namespaces::CORE_NS;
 
     use super::{Metadata, MetadataGroup};
 
@@ -89,22 +168,6 @@ pub mod tests {
     }
 
     #[test]
-    pub fn toxml_metadata_test() {
-        let xml_string = format!(
-            r#"<metadata xmlns="{}" name="Copyright">Copyright (c) 2018 3MF Consortium. All rights reserved.</metadata>"#,
-            CORE_NS
-        );
-        let metadata = Metadata {
-            name: "Copyright".to_string(),
-            preserve: None,
-            value: Some("Copyright (c) 2018 3MF Consortium. All rights reserved.".to_string()),
-        };
-        let metadata_string = to_string(&metadata).unwrap();
-
-        assert_eq!(metadata_string, xml_string);
-    }
-
-    #[test]
     pub fn fromxml_simple_metadata_test() {
         let xml_string = format!(r#"<metadata xmlns="{}" name="From Test"/>"#, CORE_NS);
         let metadata = from_str::<Metadata>(&xml_string).unwrap();
@@ -117,19 +180,6 @@ pub mod tests {
                 value: None,
             }
         )
-    }
-
-    #[test]
-    pub fn toxml_simple_metadata_test() {
-        let xml_string = format!(r#"<metadata xmlns="{}" name="From Test" />"#, CORE_NS);
-        let metadata = Metadata {
-            name: "From Test".to_string(),
-            preserve: None,
-            value: None,
-        };
-        let metadata_string = to_string(&metadata).unwrap();
-
-        assert_eq!(metadata_string, xml_string);
     }
 
     #[test]
@@ -158,29 +208,75 @@ pub mod tests {
             }
         )
     }
+}
+
+#[cfg(feature = "speed-optimized-read")]
+#[cfg(test)]
+pub mod speed_optimized_read_tests {
+    use pretty_assertions::assert_eq;
+    use serde_roxmltree::from_str;
+
+    use crate::threemf_namespaces::CORE_NS;
+
+    use super::{Metadata, MetadataGroup};
 
     #[test]
-    pub fn toxml_metadatagroup_test() {
+    pub fn fromxml_metadata_test() {
+        let xml_string = format!(
+            r#"<metadata xmlns="{}" name="Copyright">Copyright (c) 2018 3MF Consortium. All rights reserved.</metadata>"#,
+            CORE_NS
+        );
+        let metadata = from_str::<Metadata>(&xml_string).unwrap();
+
+        assert_eq!(
+            metadata,
+            Metadata {
+                name: "Copyright".to_string(),
+                preserve: None,
+                value: Some("Copyright (c) 2018 3MF Consortium. All rights reserved.".to_string())
+            }
+        )
+    }
+
+    #[test]
+    pub fn fromxml_simple_metadata_test() {
+        let xml_string = format!(r#"<metadata xmlns="{}" name="From Test"/>"#, CORE_NS);
+        let metadata = from_str::<Metadata>(&xml_string).unwrap();
+
+        assert_eq!(
+            metadata,
+            Metadata {
+                name: "From Test".to_string(),
+                preserve: None,
+                value: Some("".to_owned()),
+            }
+        )
+    }
+
+    #[test]
+    pub fn fromxml_metadatagroup_test() {
         let xml_string = format!(
             r#"<metadatagroup xmlns="{}"><metadata name="From Test"></metadata><metadata name="From Test 2"></metadata></metadatagroup>"#,
             CORE_NS
         );
-        let metadatagroup = MetadataGroup {
-            metadata: vec![
-                Metadata {
-                    name: "From Test".to_string(),
-                    preserve: None,
-                    value: Some("".to_string()),
-                },
-                Metadata {
-                    name: "From Test 2".to_string(),
-                    preserve: None,
-                    value: Some("".to_string()),
-                },
-            ],
-        };
-        let metadatagroup_string = to_string(&metadatagroup).unwrap();
+        let metadatagroup = from_str::<MetadataGroup>(&xml_string).unwrap();
 
-        assert_eq!(metadatagroup_string, xml_string);
+        assert_eq!(
+            metadatagroup,
+            MetadataGroup {
+                metadata: vec![
+                    Metadata {
+                        name: "From Test".to_string(),
+                        preserve: None,
+                        value: Some("".to_owned()),
+                    },
+                    Metadata {
+                        name: "From Test 2".to_string(),
+                        preserve: None,
+                        value: Some("".to_owned()),
+                    }
+                ]
+            }
+        )
     }
 }

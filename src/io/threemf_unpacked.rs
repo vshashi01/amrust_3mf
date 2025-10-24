@@ -1,4 +1,4 @@
-use instant_xml::{from_str, to_string};
+use instant_xml::to_string;
 use zip::ZipArchive;
 
 use crate::io::{
@@ -69,7 +69,8 @@ impl ThreemfUnpacked {
                     let mut xml_string: String = Default::default();
                     let _ = file.read_to_string(&mut xml_string)?;
 
-                    from_str::<ContentTypes>(&xml_string)?
+                    //from_str::<ContentTypes>(&xml_string)?
+                    serde_roxmltree::from_str::<ContentTypes>(&xml_string)?
                 }
                 Err(err) => {
                     return Err(Error::Zip(err));
@@ -194,7 +195,8 @@ fn relationships_from_zipfile<R: Read>(
 ) -> Result<Relationships, Error> {
     let mut xml_string: String = Default::default();
     let _ = file.read_to_string(&mut xml_string)?;
-    let rels = from_str::<Relationships>(&xml_string)?;
+    // let rels = from_str::<Relationships>(&xml_string)?;
+    let rels = serde_roxmltree::from_str::<Relationships>(&xml_string)?;
 
     Ok(rels)
 }
