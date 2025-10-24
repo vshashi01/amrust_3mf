@@ -1,7 +1,11 @@
-use instant_xml::{Error, Kind, ToXml};
+#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+use instant_xml::Error;
+
+#[cfg(feature = "write")]
+use instant_xml::ToXml;
 
 #[cfg(feature = "memory-optimized-read")]
-use instant_xml::FromXml;
+use instant_xml::{FromXml, Kind};
 
 #[cfg(feature = "speed-optimized-read")]
 use serde::Deserialize;
@@ -11,32 +15,47 @@ use crate::threemf_namespaces::CORE_NS;
 //ToDo: Add additional optional fields on Metadata
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(ToXml, Debug, PartialEq, Eq)]
-#[xml(ns(CORE_NS), rename = "metadata")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "metadata")
+)]
 pub struct Metadata {
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub name: String,
 
-    #[xml(attribute)]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(attribute)
+    )]
     pub preserve: Option<Preserve>,
 
-    #[xml(direct)]
+    #[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(direct))]
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "#content"))]
     pub value: Option<String>,
 }
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[derive(Debug, ToXml, PartialEq, Eq)]
-#[xml(ns(CORE_NS), rename = "metadatagroup")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(ns(CORE_NS), rename = "metadatagroup")
+)]
 pub struct MetadataGroup {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub metadata: Vec<Metadata>,
 }
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[derive(ToXml, Debug, PartialEq, Eq)]
-#[xml(ns(CORE_NS), rename = "preserve")]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "preserve"))]
 pub struct Preserve(bool);
 
 #[cfg(feature = "memory-optimized-read")]
@@ -75,6 +94,7 @@ impl<'xml> FromXml<'xml> for Preserve {
     const KIND: Kind = Kind::Scalar;
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::to_string;

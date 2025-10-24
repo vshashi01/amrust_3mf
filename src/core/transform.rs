@@ -1,4 +1,8 @@
-use instant_xml::{Error, Id, Serializer, ToXml};
+#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+use instant_xml::{Error, Id};
+
+#[cfg(feature = "write")]
+use instant_xml::{Serializer, ToXml};
 
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{Deserializer, FromXml, Kind};
@@ -23,6 +27,7 @@ const MATRIX_SIZE: usize = 12;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transform(pub [f64; MATRIX_SIZE]);
 
+#[cfg(feature = "write")]
 impl ToXml for Transform {
     fn serialize<W: std::fmt::Write + ?Sized>(
         &self,
@@ -117,6 +122,7 @@ impl Index<usize> for Transform {
     }
 }
 
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::{ToXml, to_string};
