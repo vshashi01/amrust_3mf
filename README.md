@@ -8,7 +8,7 @@ This crate exposes a compact core model representation and IO helpers for readin
 | 3MF Specifications | Type      | Optional | Current supported version |
 | ------------------ | --------- | :------: | ------------------------: |
 | 3MF Core Spec      | Core      |    No    |                     1.3.0 |
-| Production         | Extension |    No    |                     1.2.0 |
+| Production         | Extension |    No    |                     1.1.2 |
 
 ## Overview
 
@@ -40,81 +40,11 @@ This crate uses optional Cargo features to include different (de)serialization b
   - If `io` is enabled then[`ThreemfPackage::from_reader_with_speed_optimized_deserializer`](src/io/threemf_package.rs) is enabled to create an in memory 3MF Package from a reader
 - `unpack-only` — Builds struct [`io::ThreemfUnpacked`](src/io/threemf_unpacked.rs) that only creates the package structure without deserializing the actual 3MF Models (useful if you only need to extract files/metadata from 3MF).
 
-## Quick example
+## Examples
 
-A minimal example that constructs a simple package in-memory, writes it, and reads it back using the memory-optimized reader.
+A set of minimal examples for various combinations of features can be found in the [examples](examples/) folder.
 
-Note: The example below can be compiled just with the default features of the library
-
-```rust
-use std::io::Cursor;
-
-use amrust_3mf::io::ThreemfPackage;
-use amrust_3mf::core::{
-    model::Model,
-    resources::Resources,
-    object::{Object, ObjectType},
-    build::Build,
-};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Build a tiny model
-    let model = Model {
-        unit: Some(model::Unit::Millimeter),
-        metadata: vec![],
-        resources: Resources {
-            object: vec![Object {
-                id: 1,
-                objecttype: Some(ObjectType::Model),
-                name: Some("Some object".to_owned()),
-                mesh: None,
-                components: None,
-                thumbnail: None,
-                partnumber: None,
-                pid: None,
-                pindex: None,
-                uuid: Some("uuid".to_owned()),
-            }],
-            basematerials: vec![],
-        },
-        build: Build { uuid: None, item: vec![] },
-        ..Default::default()
-    };
-
-    let package = ThreemfPackage {
-        root: model,
-        sub_models: std::collections::HashMap::new(),
-        thumbnails: std::collections::HashMap::new(),
-        unknown_parts: std::collections::HashMap::new(),
-        relationships: std::collections::HashMap::new(),
-        content_types: amrust_3mf::io::content_types::ContentTypes {
-            defaults: vec![
-                amrust_3mf::io::content_types::DefaultContentTypes {
-                    extension: "rels".into(),
-                    content_type: amrust_3mf::io::content_types::DefaultContentTypeEnum::Relationship,
-                },
-                amrust_3mf::io::content_types::DefaultContentTypes {
-                    extension: "model".into(),
-                    content_type: amrust_3mf::io::content_types::DefaultContentTypeEnum::Model,
-                },
-            ],
-        },
-    };
-
-    // Write package to memory
-    let mut buf = Cursor::new(Vec::<u8>::new());
-    // requires the "write" feature
-    package.write(&mut buf)?;
-
-    // Read it back (choose "memory-optimized-read or "speed-optimized-read" backend; this example uses "memory-optimized-read")
-    let mut read_buf = Cursor::new(buf.into_inner());
-    let read_pkg = ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut read_buf, false)?;
-    println!("Read package root model objects: {}", read_pkg.root.resources.object.len());
-    Ok(())
-}
-```
-
-## Licensese
+## License
 
 This project and its source code are released under [MIT](/LICENSE-MIT) or [Apache 2.0](/LICENSE-APACHE) licenses.
 
@@ -126,6 +56,8 @@ Contributions are welcome.
 - Fork the repo and create a feature branch.
 - Add tests that exercise new behavior (tests may be feature-gated).
 - Run tests locally with all possible features, preferably use `cargo all-features test`:
+- Add or update an example
+- Add or update the documentation.
 - Submit a pull request with a clear description and link to any related issue.
 
 By contributing you agree to license your contributions under MIT or Apache 2.0 licenses.
