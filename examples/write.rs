@@ -1,0 +1,100 @@
+use amrust_3mf::{
+    core::{
+        Mesh, Triangle, Triangles, Vertex, Vertices,
+        build::{Build, Item},
+        metadata::Metadata,
+        model::{Model, Unit},
+        object::{Object, ObjectType},
+        resources::Resources,
+    },
+    io::ThreemfPackage,
+};
+
+use std::{io::Cursor, vec};
+
+/// This is an example showing the core 3MF Types available without any default features.
+/// With no default features only the core structs are available from this library.
+/// run with
+/// `cargo run --example write`
+///
+fn main() {
+    let model = Model {
+        unit: Some(Unit::Inch),
+        requiredextensions: None,
+        recommendedextensions: None,
+        metadata: vec![Metadata {
+            name: "Test metadata".to_string(),
+            preserve: None,
+            value: None,
+        }],
+        resources: Resources {
+            object: vec![Object {
+                id: 1,
+                objecttype: Some(ObjectType::Model),
+                thumbnail: None,
+                partnumber: None,
+                name: None,
+                pid: None,
+                pindex: None,
+                uuid: None,
+                mesh: Some(Mesh {
+                    vertices: Vertices {
+                        vertex: vec![
+                            Vertex {
+                                x: 0.0,
+                                y: 0.0,
+                                z: 0.0,
+                            },
+                            Vertex {
+                                x: -1.0,
+                                y: 0.0,
+                                z: 0.0,
+                            },
+                            Vertex {
+                                x: -1.0,
+                                y: 1.0,
+                                z: 0.0,
+                            },
+                        ],
+                    },
+                    triangles: Triangles {
+                        triangle: vec![Triangle {
+                            v1: 0,
+                            v2: 1,
+                            v3: 2,
+                            p1: None,
+                            p2: None,
+                            p3: None,
+                            pid: None,
+                        }],
+                    },
+                    trianglesets: None,
+                }),
+                components: None,
+            }],
+            basematerials: vec![],
+        },
+        build: Build {
+            uuid: None,
+            item: vec![Item {
+                objectid: 1,
+                transform: None,
+                partnumber: None,
+                path: None,
+                uuid: None,
+            }],
+        },
+    };
+
+    let package: ThreemfPackage = model.into();
+
+    let mut bytes: Vec<u8> = vec![];
+    let writer = Cursor::new(&mut bytes);
+
+    let result = package.write(writer);
+
+    match result {
+        Ok(_) => println!("The length of the ThreemfPackage in bytes: {}", bytes.len()),
+        Err(err) => println!("Error writing the model into a ThreemfPackage: {:?}", err),
+    }
+}

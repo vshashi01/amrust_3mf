@@ -5,10 +5,6 @@
 //! printing. It is typically exported from a CAD program, and imported to a
 //! slicer.
 //!
-//! So far, functionality is limited to writing 3MF files, and only the most
-//! basic features of 3MF are supported. Adding support for reading 3MF files,
-//! and for more features of the 3MF format is very desirable, and any
-//! contributions toward that are very welcome.
 //!
 //! [3MF]: https://en.wikipedia.org/wiki/3D_Manufacturing_Format
 //! This library was originally taken from the Threemf crate, however my goals deviated from the goals
@@ -25,7 +21,7 @@
 pub mod core;
 pub mod threemf_namespaces;
 
-#[cfg(feature = "io")]
+#[cfg(any(feature = "io", feature = "unpack-only"))]
 pub mod io;
 
 #[cfg(feature = "io")]

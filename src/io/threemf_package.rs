@@ -6,6 +6,8 @@ use instant_xml::{ToXml, to_string};
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
 
+use crate::io::content_types::DefaultContentTypes;
+use crate::io::relationship::Relationship;
 use crate::{
     core::model::Model,
     io::{
@@ -67,6 +69,84 @@ enum ReadStrategy {
     SpeedOptimized,
 }
 
+#[cfg(feature = "write")]
+impl ThreemfPackage {
+    /// Writes the 3mf package to a [writer].
+    /// Expects a well formed [ThreemfPackage] object to write the package.
+    /// A well formed packaged requires atleast 1 root model and 1 relationship file along with the content types.
+    pub fn write<W: io::Write + io::Seek>(&self, threemf_archive: W) -> Result<(), Error> {
+        let mut zip = ZipWriter::new(threemf_archive);
+
+        Self::archive_write_xml_with_header(&mut zip, "[Content_Types].xml", &self.content_types)?;
+
+        for (path, relationships) in &self.relationships {
+            Self::archive_write_xml_with_header(&mut zip, path, &relationships)?;
+
+            for relationship in &relationships.relationships {
+                let filename = try_strip_leading_slash(&relationship.target);
+                match relationship.relationship_type {
+                    RelationshipType::Model => {
+                        let model = if *path == *"_rels/.rels" {
+                            &self.root
+                        } else if let Some(model) = self.sub_models.get(&relationship.target) {
+                            model
+                        } else {
+                            return Err(Error::WriteError(format!(
+                                "No model found for relationship target {}",
+                                relationship.target
+                            )));
+                        };
+                        Self::archive_write_xml_with_header(&mut zip, filename, model)?;
+                    }
+                    RelationshipType::Thumbnail => {
+                        if let Some(image) = self.thumbnails.get(&relationship.target) {
+                            let mut buf = Cursor::new(Vec::<u8>::new());
+                            image.write_to(&mut buf, image::ImageFormat::Png)?;
+
+                            zip.start_file(filename, SimpleFileOptions::default())?;
+                            zip.write_all(&buf.into_inner())?;
+                        } else {
+                            return Err(Error::WriteError(format!(
+                                "No thumbnail image found for relationship target {}",
+                                &relationship.target
+                            )));
+                        }
+                    }
+                    RelationshipType::Unknown(_) => {
+                        if let Some(bytes) = self.unknown_parts.get(&relationship.target) {
+                            zip.start_file(filename, SimpleFileOptions::default())?;
+                            zip.write_all(bytes)?;
+                        } else {
+                            return Err(Error::WriteError(format!(
+                                "No data found for relationship target {}",
+                                &relationship.target
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+        zip.finish()?;
+        Ok(())
+    }
+
+    fn archive_write_xml_with_header<W: Write + Seek, T: ToXml + ?Sized>(
+        archive: &mut ZipWriter<W>,
+        filename: &str,
+        content: &T,
+    ) -> Result<(), Error> {
+        const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?>"#;
+
+        let mut content_string = to_string(&content)?;
+        content_string.insert_str(0, XML_HEADER);
+
+        archive.start_file(filename, SimpleFileOptions::default())?;
+        archive.write_all(content_string.as_bytes())?;
+        Ok(())
+    }
+}
+
+#[cfg(any(feature = "memory-optimized-read", feature = "speed-optimized-read"))]
 impl ThreemfPackage {
     #[cfg(feature = "memory-optimized-read")]
     pub fn from_reader_with_memory_optimized_deserializer<R: Read + io::Seek>(
@@ -144,9 +224,9 @@ impl ThreemfPackage {
         let mut root_model_path: &str = "";
 
         let root_rels: Relationships =
-            relationships_from_zip_by_name(&mut zip, root_rels_filename, read_strategy)?;
+            Self::relationships_from_zip_by_name(&mut zip, root_rels_filename, read_strategy)?;
 
-        let root_model_processed = process_rels(
+        let root_model_processed = Self::process_rels(
             &mut zip,
             &root_rels,
             &mut models,
@@ -181,7 +261,7 @@ impl ThreemfPackage {
                     {
                         match path.to_str() {
                             Some(path_str) => {
-                                let rels = relationships_from_zipfile(file, read_strategy)?;
+                                let rels = Self::relationships_from_zipfile(file, read_strategy)?;
                                 relationships.insert(format!("/{path_str}"), rels);
                             }
                             None => {
@@ -195,7 +275,7 @@ impl ThreemfPackage {
             }
 
             for rels in &relationships {
-                process_rels(
+                Self::process_rels(
                     &mut zip,
                     rels.1,
                     &mut models,
@@ -220,159 +300,134 @@ impl ThreemfPackage {
         }
     }
 
-    /// Writes the 3mf package to a [writer].
-    /// Expects a well formed [ThreemfPackage] object to write the package.
-    /// A well formed packaged requires atleast 1 root model and 1 relationship file along with the content types.
-    #[cfg(feature = "write")]
-    pub fn write<W: io::Write + io::Seek>(&self, threemf_archive: W) -> Result<(), Error> {
-        let mut zip = ZipWriter::new(threemf_archive);
+    fn relationships_from_zip_by_name<R: Read + io::Seek>(
+        zip: &mut ZipArchive<R>,
+        zip_filename: &str,
+        read_strategy: ReadStrategy,
+    ) -> Result<Relationships, Error> {
+        let rels_file = zip.by_name(zip_filename);
+        match rels_file {
+            Ok(file) => Self::relationships_from_zipfile(file, read_strategy),
+            Err(err) => Err(Error::Zip(err)),
+        }
+    }
 
-        archive_write_xml_with_header(&mut zip, "[Content_Types].xml", &self.content_types)?;
+    fn relationships_from_zipfile<R: Read>(
+        mut file: zip::read::ZipFile<'_, R>,
+        read_strategy: ReadStrategy,
+    ) -> Result<Relationships, Error> {
+        let mut xml_string: String = Default::default();
+        let _ = file.read_to_string(&mut xml_string)?;
+        let rels = match read_strategy {
+            #[cfg(feature = "memory-optimized-read")]
+            ReadStrategy::MemoryOptimized => instant_xml::from_str::<Relationships>(&xml_string)?,
+            #[cfg(feature = "speed-optimized-read")]
+            ReadStrategy::SpeedOptimized => {
+                serde_roxmltree::from_str::<Relationships>(&xml_string)?
+            }
+        };
 
-        for (path, relationships) in &self.relationships {
-            archive_write_xml_with_header(&mut zip, path, &relationships)?;
+        Ok(rels)
+    }
 
-            for relationship in &relationships.relationships {
-                let filename = try_strip_leading_slash(&relationship.target);
-                match relationship.relationship_type {
-                    RelationshipType::Model => {
-                        let model = if *path == *"_rels/.rels" {
-                            &self.root
-                        } else if let Some(model) = self.sub_models.get(&relationship.target) {
-                            model
-                        } else {
-                            return Err(Error::WriteError(format!(
-                                "No model found for relationship target {}",
-                                relationship.target
-                            )));
-                        };
-                        archive_write_xml_with_header(&mut zip, filename, model)?;
+    fn process_rels<R: Read + io::Seek>(
+        zip: &mut ZipArchive<R>,
+        rels: &Relationships,
+        models: &mut HashMap<String, Model>,
+        thumbnails: &mut HashMap<String, DynamicImage>,
+        unknown_parts: &mut HashMap<String, Vec<u8>>,
+        read_strategy: ReadStrategy,
+    ) -> Result<(), Error> {
+        for rel in &rels.relationships {
+            let name = try_strip_leading_slash(&rel.target);
+            let zip_file = zip.by_name(name);
+
+            match zip_file {
+                Ok(mut file) => {
+                    if file.is_dir() {
+                        return Err(Error::ReadError(format!(
+                            r#"Found a folder "{:?}" instead of a file"#,
+                            file.enclosed_name()
+                        )));
                     }
-                    RelationshipType::Thumbnail => {
-                        if let Some(image) = self.thumbnails.get(&relationship.target) {
-                            let mut buf = Cursor::new(Vec::<u8>::new());
-                            image.write_to(&mut buf, image::ImageFormat::Png)?;
 
-                            zip.start_file(filename, SimpleFileOptions::default())?;
-                            zip.write_all(&buf.into_inner())?;
-                        } else {
-                            return Err(Error::WriteError(format!(
-                                "No thumbnail image found for relationship target {}",
-                                &relationship.target
-                            )));
+                    match rel.relationship_type {
+                        RelationshipType::Thumbnail => {
+                            let mut bytes: Vec<u8> = vec![];
+                            let _ = file.read_to_end(&mut bytes)?;
+                            // println!("Thumbnail read bytes: {:?}", bytes.len());
+
+                            let image = load_from_memory(&bytes)?;
+                            thumbnails.insert(rel.target.clone(), image);
                         }
-                    }
-                    RelationshipType::Unknown(_) => {
-                        if let Some(bytes) = self.unknown_parts.get(&relationship.target) {
-                            zip.start_file(filename, SimpleFileOptions::default())?;
-                            zip.write_all(bytes)?;
-                        } else {
-                            return Err(Error::WriteError(format!(
-                                "No data found for relationship target {}",
-                                &relationship.target
-                            )));
+                        RelationshipType::Model => {
+                            let mut xml_string: String = Default::default();
+                            let _ = file.read_to_string(&mut xml_string)?;
+                            // println!("Model bytes: {:?}", xml_string.len());
+
+                            let model = match read_strategy {
+                                #[cfg(feature = "memory-optimized-read")]
+                                ReadStrategy::MemoryOptimized => {
+                                    instant_xml::from_str::<Model>(&xml_string)?
+                                }
+                                #[cfg(feature = "speed-optimized-read")]
+                                ReadStrategy::SpeedOptimized => {
+                                    serde_roxmltree::from_str::<Model>(&xml_string)?
+                                }
+                            };
+
+                            models.insert(rel.target.clone(), model);
+                        }
+                        RelationshipType::Unknown(_) => {
+                            let mut bytes: Vec<u8> = vec![];
+                            let _ = file.read_to_end(&mut bytes)?;
+                            // println!("Unknown bytes: {:?}", bytes.len());
+
+                            unknown_parts.insert(rel.target.clone(), bytes);
                         }
                     }
                 }
+                Err(err) => return Err(Error::Zip(err)),
             }
         }
-        zip.finish()?;
+
         Ok(())
     }
 }
 
-fn relationships_from_zip_by_name<R: Read + io::Seek>(
-    zip: &mut ZipArchive<R>,
-    zip_filename: &str,
-    read_strategy: ReadStrategy,
-) -> Result<Relationships, Error> {
-    let rels_file = zip.by_name(zip_filename);
-    match rels_file {
-        Ok(file) => relationships_from_zipfile(file, read_strategy),
-        Err(err) => Err(Error::Zip(err)),
-    }
-}
-
-fn relationships_from_zipfile<R: Read>(
-    mut file: zip::read::ZipFile<'_, R>,
-    read_strategy: ReadStrategy,
-) -> Result<Relationships, Error> {
-    let mut xml_string: String = Default::default();
-    let _ = file.read_to_string(&mut xml_string)?;
-    //let rels = from_str::<Relationships>(&xml_string)?;
-    let rels = match read_strategy {
-        #[cfg(feature = "memory-optimized-read")]
-        ReadStrategy::MemoryOptimized => instant_xml::from_str::<Relationships>(&xml_string)?,
-        #[cfg(feature = "speed-optimized-read")]
-        ReadStrategy::SpeedOptimized => serde_roxmltree::from_str::<Relationships>(&xml_string)?,
-    };
-
-    Ok(rels)
-}
-
-fn process_rels<R: Read + io::Seek>(
-    zip: &mut ZipArchive<R>,
-    rels: &Relationships,
-    models: &mut HashMap<String, Model>,
-    thumbnails: &mut HashMap<String, DynamicImage>,
-    unknown_parts: &mut HashMap<String, Vec<u8>>,
-    read_strategy: ReadStrategy,
-) -> Result<(), Error> {
-    for rel in &rels.relationships {
-        let name = try_strip_leading_slash(&rel.target);
-        let zip_file = zip.by_name(name);
-
-        match zip_file {
-            Ok(mut file) => {
-                if file.is_dir() {
-                    return Err(Error::ReadError(format!(
-                        r#"Found a folder "{:?}" instead of a file"#,
-                        file.enclosed_name()
-                    )));
-                }
-
-                match rel.relationship_type {
-                    RelationshipType::Thumbnail => {
-                        let mut bytes: Vec<u8> = vec![];
-                        let _ = file.read_to_end(&mut bytes)?;
-                        // println!("Thumbnail read bytes: {:?}", bytes.len());
-
-                        let image = load_from_memory(&bytes)?;
-                        thumbnails.insert(rel.target.clone(), image);
-                    }
-                    RelationshipType::Model => {
-                        let mut xml_string: String = Default::default();
-                        let _ = file.read_to_string(&mut xml_string)?;
-                        // println!("Model bytes: {:?}", xml_string.len());
-
-                        //let model = from_str::<Model>(&xml_string)?;
-                        let model = match read_strategy {
-                            #[cfg(feature = "memory-optimized-read")]
-                            ReadStrategy::MemoryOptimized => {
-                                instant_xml::from_str::<Model>(&xml_string)?
-                            }
-                            #[cfg(feature = "speed-optimized-read")]
-                            ReadStrategy::SpeedOptimized => {
-                                serde_roxmltree::from_str::<Model>(&xml_string)?
-                            }
-                        };
-
-                        models.insert(rel.target.clone(), model);
-                    }
-                    RelationshipType::Unknown(_) => {
-                        let mut bytes: Vec<u8> = vec![];
-                        let _ = file.read_to_end(&mut bytes)?;
-                        // println!("Unknown bytes: {:?}", bytes.len());
-
-                        unknown_parts.insert(rel.target.clone(), bytes);
-                    }
-                }
-            }
-            Err(err) => return Err(Error::Zip(err)),
+impl From<Model> for ThreemfPackage {
+    fn from(value: Model) -> Self {
+        let mut rels = HashMap::new();
+        rels.insert(
+            "_rels/.rels".to_owned(),
+            Relationships {
+                relationships: vec![Relationship {
+                    id: "rel0".to_owned(),
+                    target: "3D/3dmodel.model".to_owned(),
+                    relationship_type: RelationshipType::Model,
+                }],
+            },
+        );
+        Self {
+            root: value,
+            sub_models: HashMap::new(),
+            thumbnails: HashMap::new(),
+            unknown_parts: HashMap::new(),
+            relationships: rels,
+            content_types: ContentTypes {
+                defaults: vec![
+                    DefaultContentTypes {
+                        extension: "model".to_owned(),
+                        content_type: DefaultContentTypeEnum::Model,
+                    },
+                    DefaultContentTypes {
+                        extension: "rels".to_owned(),
+                        content_type: DefaultContentTypeEnum::Relationship,
+                    },
+                ],
+            },
         }
     }
-
-    Ok(())
 }
 
 fn try_strip_leading_slash(target: &str) -> &str {
@@ -380,22 +435,6 @@ fn try_strip_leading_slash(target: &str) -> &str {
         Some(stripped) => stripped,
         None => target,
     }
-}
-
-#[cfg(feature = "write")]
-fn archive_write_xml_with_header<W: Write + Seek, T: ToXml + ?Sized>(
-    archive: &mut ZipWriter<W>,
-    filename: &str,
-    content: &T,
-) -> Result<(), Error> {
-    const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?>"#;
-
-    let mut content_string = to_string(&content)?;
-    content_string.insert_str(0, XML_HEADER);
-
-    archive.start_file(filename, SimpleFileOptions::default())?;
-    archive.write_all(content_string.as_bytes())?;
-    Ok(())
 }
 
 #[cfg(test)]
