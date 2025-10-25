@@ -1,4 +1,6 @@
+#[cfg(feature = "io")]
 use image::ImageError;
+
 use thiserror::Error;
 use zip::result::ZipError;
 
@@ -16,6 +18,7 @@ pub enum Error {
     #[error("Error reading 3mf file: {0}")]
     ReadError(String),
 
+    #[cfg(feature = "io")]
     #[error("Error reading thumbnail image: {0}")]
     ImageReadError(#[from] ImageError),
 
