@@ -40,6 +40,26 @@ serde_json = { version = "1.0.140" }
 name = "reader"
 harness = false
 
+[[example]]
+name = "write"
+path = "examples/write.rs"
+required-features = ["write", "io"]
+
+[[example]]
+name = "unpack"
+path = "examples/unpack.rs"
+required-features = ["unpack-only", "io"]
+
+[[example]]
+name = "memory-optimized-read"
+path = "examples/memory-optimized-read.rs"
+required-features = ["memory-optimized-read", "io"]
+
+[[example]]
+name = "speed-optimized-read"
+path = "examples/speed-optimized-read.rs"
+required-features = ["speed-optimized-read", "io"]
+
 
 # [patch.crates-io]
 # instant-xml = { git = "https://github.com/djc/instant-xml.git" }

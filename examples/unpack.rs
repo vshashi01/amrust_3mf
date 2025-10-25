@@ -4,7 +4,7 @@ use std::{fs::File, path::PathBuf};
 
 /// This is an example showing unpacking the package and manually deserializing the root model
 /// run with
-/// `cargo run --example unpack --no-default-features --features unpack-only`
+/// `cargo run --example unpack --no-default-features --features unpack-only io`
 ///
 fn main() {
     let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
