@@ -8,7 +8,7 @@ use instant_xml::FromXml;
 use serde::Deserialize;
 
 use crate::{
-    core::{Mesh, component::Components},
+    core::{component::Components, mesh::Mesh},
     threemf_namespaces::{CORE_NS, PROD_NS},
 };
 
@@ -112,11 +112,14 @@ pub mod write_tests {
 
     use crate::{
         core::{
-            Mesh, Triangles, Vertices,
             component::{Component, Components},
+            mesh::Mesh,
+            mesh::Triangles,
+            mesh::Vertices,
         },
         threemf_namespaces::{
-            CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX,
+            BEAM_LATTICE_NS, BEAM_LATTICE_PREFIX, CORE_NS, CORE_TRIANGLESET_NS,
+            CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX,
         },
     };
 
@@ -197,8 +200,7 @@ pub mod write_tests {
     #[test]
     pub fn toxml_advanced_mesh_object_test() {
         let xml_string = format!(
-            r##"<object xmlns="{}" xmlns:{}="{}" id="4" type="model" thumbnail="\thumbnail\part_thumbnail.png" partnumber="part_1" name="Object Part"><mesh xmlns:{}="{}"><vertices></vertices><triangles></triangles></mesh></object>"##,
-            CORE_NS, PROD_PREFIX, PROD_NS, CORE_TRIANGLESET_PREFIX, CORE_TRIANGLESET_NS
+            r##"<object xmlns="{CORE_NS}" xmlns:{PROD_PREFIX}="{PROD_NS}" id="4" type="model" thumbnail="\thumbnail\part_thumbnail.png" partnumber="part_1" name="Object Part"><mesh xmlns:{BEAM_LATTICE_PREFIX}="{BEAM_LATTICE_NS}" xmlns:{CORE_TRIANGLESET_PREFIX}="{CORE_TRIANGLESET_NS}"><vertices></vertices><triangles></triangles></mesh></object>"##,
         );
         let object = Object {
             id: 4,
@@ -213,6 +215,7 @@ pub mod write_tests {
                 vertices: Vertices { vertex: vec![] },
                 triangles: Triangles { triangle: vec![] },
                 trianglesets: None,
+                beamlattice: None,
             }),
             components: None,
         };
@@ -290,8 +293,10 @@ pub mod memory_optimized_read_tests {
 
     use crate::{
         core::{
-            Mesh, Triangles, Vertices,
             component::{Component, Components},
+            mesh::Mesh,
+            mesh::Triangles,
+            mesh::Vertices,
         },
         threemf_namespaces::{
             CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX,
@@ -423,6 +428,7 @@ pub mod memory_optimized_read_tests {
                     vertices: Vertices { vertex: vec![] },
                     triangles: Triangles { triangle: vec![] },
                     trianglesets: None,
+                    beamlattice: None,
                 }),
                 components: None,
             }
@@ -503,8 +509,10 @@ pub mod speed_optimized_read_tests {
 
     use crate::{
         core::{
-            Mesh, Triangles, Vertices,
             component::{Component, Components},
+            mesh::Mesh,
+            mesh::Triangles,
+            mesh::Vertices,
         },
         threemf_namespaces::{
             CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX,
@@ -636,6 +644,7 @@ pub mod speed_optimized_read_tests {
                     vertices: Vertices { vertex: vec![] },
                     triangles: Triangles { triangle: vec![] },
                     trianglesets: None,
+                    beamlattice: None,
                 }),
                 components: None,
             }
