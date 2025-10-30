@@ -8,4 +8,4 @@ pub mod resources;
 pub mod transform;
 pub mod triangle_set;
 
-pub mod beam_lattice;
+pub mod beamlattice;

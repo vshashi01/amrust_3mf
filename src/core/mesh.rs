@@ -10,7 +10,7 @@ use serde::Deserialize;
 use crate::core::triangle_set::TriangleSets;
 use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 
-use crate::core::beam_lattice::BeamLattice;
+use crate::core::beamlattice::BeamLattice;
 
 use crate::threemf_namespaces::BEAM_LATTICE_NS;
 

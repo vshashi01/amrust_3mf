@@ -64,7 +64,7 @@ required-features = ["speed-optimized-read", "io"]
 [[example]]
 name = "beam-lattice"
 path = "examples/beam-lattice.rs"
-required-features = ["write", "io", "beam-lattice"]
+required-features = ["write", "io"]
 
 
 # [patch.crates-io]

@@ -9,101 +9,6 @@ use instant_xml::FromXml;
 #[cfg(feature = "speed-optimized-read")]
 use serde::Deserialize;
 
-/// Ball mode for beam lattices - specifies whether balls are created at beam vertices
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(scalar, ns(BEAM_LATTICE_BALLS_NS), rename_all = "lowercase")
-)]
-pub enum BallMode {
-    /// No balls are created at beam vertices
-    #[default]
-    None,
-    /// Balls are created at vertices with a corresponding <ball> element. Other vertices do not get a ball.
-    Mixed,
-    /// Balls are created at every vertex that maps to the end of a beam
-    All,
-}
-
-impl From<String> for BallMode {
-    fn from(value: String) -> Self {
-        match value.to_ascii_lowercase().as_str() {
-            "none" => BallMode::None,
-            "mixed" => BallMode::Mixed,
-            "all" => BallMode::All,
-            _ => BallMode::None,
-        }
-    }
-}
-
-/// Clipping mode for beam lattices
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(scalar, ns(BEAM_LATTICE_NS), rename_all = "lowercase")
-)]
-pub enum ClippingMode {
-    /// The lattice is not clipped at any mesh boundary
-    #[default]
-    None,
-    /// The lattice is clipped by the volume described by the referenced clippingmesh.
-    /// All geometry inside the volume (according to the positive fill rule) is retained.
-    Inside,
-    /// The lattice is clipped by the volume described by the referenced clippingmesh.
-    /// All geometry outside the volume (according to the positive fill rule) is retained.
-    Outside,
-}
-
-impl From<String> for ClippingMode {
-    fn from(value: String) -> Self {
-        match value.to_ascii_lowercase().as_str() {
-            "none" => ClippingMode::None,
-            "inside" => ClippingMode::Inside,
-            "outside" => ClippingMode::Outside,
-            _ => ClippingMode::None,
-        }
-    }
-}
-
-/// Capping mode for beam ends
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(scalar, ns(BEAM_LATTICE_NS), rename_all = "lowercase")
-)]
-pub enum CapMode {
-    /// The beam end will be closed at its end nodes by a half sphere
-    Hemisphere,
-    /// The beam end will be closed at its end nodes by a sphere
-    #[default]
-    Sphere,
-    /// The beam end will be closed with a flat end and therefore have a cylindrical or conical shape
-    Butt,
-}
-
-impl From<String> for CapMode {
-    fn from(value: String) -> Self {
-        match value.to_ascii_lowercase().as_str() {
-            "hemisphere" => CapMode::Hemisphere,
-            "sphere" => CapMode::Sphere,
-            "butt" => CapMode::Butt,
-            _ => CapMode::Sphere,
-        }
-    }
-}
-
 /// A beam lattice provides information about lattice data, in the form of a simplistic node-beam model
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "beamlattice"))]
@@ -150,7 +55,7 @@ pub struct BeamLattice {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
+        xml(ns(BEAM_LATTICE_NS), attribute)
     )]
     pub clippingmode: Option<ClippingMode>,
 
@@ -186,7 +91,7 @@ pub struct BeamLattice {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
+        xml(ns(BEAM_LATTICE_NS), attribute)
     )]
     pub cap: Option<CapMode>,
 
@@ -202,6 +107,101 @@ pub struct BeamLattice {
 
     /// Optional container for beam sets
     pub beamsets: Option<BeamSets>,
+}
+
+/// Ball mode for beam lattices - specifies whether balls are created at beam vertices
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(scalar, ns(BEAM_LATTICE_BALLS_NS), rename_all = "lowercase")
+)]
+pub enum BallMode {
+    /// No balls are created at beam vertices
+    #[default]
+    None,
+    /// Balls are created at vertices with a corresponding <ball> element. Other vertices do not get a ball.
+    Mixed,
+    /// Balls are created at every vertex that maps to the end of a beam
+    All,
+}
+
+impl From<String> for BallMode {
+    fn from(value: String) -> Self {
+        match value.to_ascii_lowercase().as_str() {
+            "none" => BallMode::None,
+            "mixed" => BallMode::Mixed,
+            "all" => BallMode::All,
+            _ => BallMode::None,
+        }
+    }
+}
+
+/// Clipping mode for beam lattices
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(scalar, rename_all = "lowercase")
+)]
+pub enum ClippingMode {
+    /// The lattice is not clipped at any mesh boundary
+    #[default]
+    None,
+    /// The lattice is clipped by the volume described by the referenced clippingmesh.
+    /// All geometry inside the volume (according to the positive fill rule) is retained.
+    Inside,
+    /// The lattice is clipped by the volume described by the referenced clippingmesh.
+    /// All geometry outside the volume (according to the positive fill rule) is retained.
+    Outside,
+}
+
+impl From<String> for ClippingMode {
+    fn from(value: String) -> Self {
+        match value.to_ascii_lowercase().as_str() {
+            "none" => ClippingMode::None,
+            "inside" => ClippingMode::Inside,
+            "outside" => ClippingMode::Outside,
+            _ => ClippingMode::None,
+        }
+    }
+}
+
+/// Capping mode for beam ends
+#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
+#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "write", derive(ToXml))]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(
+    any(feature = "write", feature = "memory-optimized-read"),
+    xml(scalar, rename_all = "lowercase")
+)]
+pub enum CapMode {
+    /// The beam end will be closed at its end nodes by a half sphere
+    Hemisphere,
+    /// The beam end will be closed at its end nodes by a sphere
+    #[default]
+    Sphere,
+    /// The beam end will be closed with a flat end and therefore have a cylindrical or conical shape
+    Butt,
+}
+
+impl From<String> for CapMode {
+    fn from(value: String) -> Self {
+        match value.to_ascii_lowercase().as_str() {
+            "hemisphere" => CapMode::Hemisphere,
+            "sphere" => CapMode::Sphere,
+            "butt" => CapMode::Butt,
+            _ => CapMode::Sphere,
+        }
+    }
 }
 
 /// A container for beams
@@ -579,15 +579,20 @@ pub mod write_tests {
     }
 
     #[derive(Debug, ToXml, PartialEq, Eq)]
+    #[xml(ns(b2 = BEAM_LATTICE_BALLS_NS))]
     struct EnumTestType {
         ballmode: Vec<BallMode>,
+
         clippingmode: Vec<ClippingMode>,
+
         capmode: Vec<CapMode>,
     }
 
     #[test]
     pub fn toxml_enums_test() {
-        let xml_string = "<EnumTestType><ballmode>none</ballmode><ballmode>mixed</ballmode><ballmode>all</ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>";
+        let xml_string = format!(
+            r#"<EnumTestType xmlns:b2="{BEAM_LATTICE_BALLS_NS}"><b2:ballmode>none</b2:ballmode><b2:ballmode>mixed</b2:ballmode><b2:ballmode>all</b2:ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>"#
+        );
         let enum_test = EnumTestType {
             ballmode: vec![BallMode::None, BallMode::Mixed, BallMode::All],
             clippingmode: vec![
@@ -606,7 +611,7 @@ pub mod write_tests {
 #[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
 pub mod memory_optimized_read_tests {
-    use instant_xml::{from_str, to_string};
+    use instant_xml::from_str;
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -757,46 +762,20 @@ pub mod memory_optimized_read_tests {
         );
     }
 
-    #[derive(FromXml, ToXml, Debug, PartialEq, Eq)]
-    #[xml(ns(BEAM_LATTICE_NS, b2 = BEAM_LATTICE_BALLS_NS))]
+    #[derive(FromXml, Debug, PartialEq, Eq)]
+    #[xml(ns(b2 = BEAM_LATTICE_BALLS_NS))]
     struct EnumTestType {
         ballmode: Vec<BallMode>,
         clippingmode: Vec<ClippingMode>,
         capmode: Vec<CapMode>,
-
-        #[xml(ns(BEAM_LATTICE_NS), attribute)]
-        attr_clippingmode: ClippingMode,
-
-        #[xml(attribute)]
-        attr_capmode: CapMode,
-
-        #[xml(ns(BEAM_LATTICE_BALLS_NS), attribute)]
-        attr_ballmode: BallMode,
     }
 
     #[test]
     pub fn fromxml_enums_test() {
-        // let xml_string = format!(
-        //     r#"<EnumTestType xmlns="{BEAM_LATTICE_NS}" xmlns:b2="{BEAM_LATTICE_BALLS_NS}" attr_clippingmode="none" attr_capmode="butt" b2:attr_ballmode="all" ><b2:ballmode>none</b2:ballmode><b2:ballmode>mixed</b2:ballmode><b2:ballmode>all</b2:ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>"#
-        // );
-        let lala = r#"<EnumTestType xmlns="http://schemas.microsoft.com/3dmanufacturing/beamlattice/2017/02" xmlns:b2="http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07" attr_clippingmode="none" attr_capmode="butt" b2:attr_ballmode="all"><b2:ballmode>none</b2:ballmode><b2:ballmode>mixed</b2:ballmode><b2:ballmode>all</b2:ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>"#;
-        let enum_test = from_str::<EnumTestType>(lala).unwrap();
-
-        let object = EnumTestType {
-            ballmode: vec![BallMode::None, BallMode::Mixed, BallMode::All],
-            clippingmode: vec![
-                ClippingMode::None,
-                ClippingMode::Inside,
-                ClippingMode::Outside,
-            ],
-            capmode: vec![CapMode::Hemisphere, CapMode::Sphere, CapMode::Butt],
-            attr_ballmode: BallMode::All,
-            attr_capmode: CapMode::Butt,
-            attr_clippingmode: ClippingMode::None,
-        };
-
-        let lala = to_string(&object).unwrap();
-        println!("{lala}");
+        let xml_string = format!(
+            r#"<EnumTestType xmlns:b2="{BEAM_LATTICE_BALLS_NS}"><b2:ballmode>none</b2:ballmode><b2:ballmode>mixed</b2:ballmode><b2:ballmode>all</b2:ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>"#
+        );
+        let enum_test = from_str::<EnumTestType>(&xml_string).unwrap();
 
         assert_eq!(
             enum_test,
@@ -808,9 +787,6 @@ pub mod memory_optimized_read_tests {
                     ClippingMode::Outside
                 ],
                 capmode: vec![CapMode::Hemisphere, CapMode::Sphere, CapMode::Butt],
-                attr_ballmode: BallMode::All,
-                attr_capmode: CapMode::Butt,
-                attr_clippingmode: ClippingMode::None,
             }
         );
     }

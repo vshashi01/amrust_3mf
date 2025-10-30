@@ -1,6 +1,6 @@
 use amrust_3mf::{
     core::{
-        beam_lattice::{Ball, BallMode, Balls, Beam, BeamLattice, Beams, CapMode},
+        beamlattice::{Ball, BallMode, Balls, Beam, BeamLattice, Beams, CapMode},
         build::{Build, Item},
         mesh::Mesh,
         mesh::Triangles,
@@ -20,7 +20,7 @@ use std::{io::Cursor, vec};
 /// This demonstrates the Beam Lattice Extension support in amrust_3mf.
 ///
 /// Run with:
-/// `cargo run --example beam-lattice --features write,io,beam-lattice`
+/// `cargo run --example beamlattice-write --features write,io,`
 ///
 fn main() {
     // Create vertices for a simple cube structure
