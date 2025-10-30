@@ -20,7 +20,7 @@ unpack-only = ["speed-optimized-read", "dep:zip", "dep:thiserror"]
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main", optional = true }
 image = { version = "0.25.5", default-features = false, features = [
-    "png",
+    "png", "jpeg"
 ], optional = true }
 thiserror = { version = "2.0.3", optional = true }
 zip = { version = "4.4.0", default-features = false, features = [
