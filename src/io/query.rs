@@ -96,11 +96,8 @@ pub fn get_beam_lattice_objects_from_model<'a>(
     })
 }
 
-pub fn iter_models<'a>(
-    package: &'a ThreemfPackage,
-) -> impl Iterator<Item = &'a Model> {
-    std::iter::once(&package.root)
-        .chain(package.sub_models.values().map(|m| m))
+pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = &'a Model> {
+    std::iter::once(&package.root).chain(package.sub_models.values().map(|m| m))
 }
 
 fn iter_objects_from<'a, I, F>(
@@ -114,31 +111,37 @@ where
     iter_models(package).flat_map(f)
 }
 
-
 #[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use instant_xml::from_str;
+    use std::path::PathBuf;
 
-    use crate::{core::model::Model};
     use super::*;
+    use crate::core::model::Model;
 
     #[test]
     fn test_get_object_ref_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let (object, _) = get_object_ref_from_id(1,&package, Some("/3D/Objects/Object.model".to_string()), None);
-        
+        let (object, _) = get_object_ref_from_id(
+            1,
+            &package,
+            Some("/3D/Objects/Object.model".to_string()),
+            None,
+        );
+
         match object {
             Some(obj) => {
                 assert!(obj.mesh.is_some());
                 assert_eq!(obj.id, 1);
-            },
+            }
             None => panic!("Object ref not found"),
         }
     }
@@ -151,25 +154,26 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let object = get_object_ref_from_model(1,&model);
-        
+        let object = get_object_ref_from_model(1, &model);
+
         match object {
             Some(obj) => {
                 assert!(obj.mesh.is_some());
                 assert_eq!(obj.id, 1);
-            },
+            }
             None => panic!("Object ref not found"),
         }
     }
 
-
     #[test]
     fn test_get_objects_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 6);
@@ -189,11 +193,13 @@ mod tests {
 
     #[test]
     fn test_get_mesh_objects_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_mesh_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 5);
@@ -213,11 +219,13 @@ mod tests {
 
     #[test]
     fn test_get_composedpart_objects_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_composedpart_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 1);
@@ -237,11 +245,13 @@ mod tests {
 
     #[test]
     fn test_get_beamlattice_objects_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_beam_lattice_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 2);
@@ -261,11 +271,13 @@ mod tests {
 
     #[test]
     fn test_iter_models_from_package() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-            .canonicalize()
-            .unwrap();
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let models = iter_models(&package).collect::<Vec<_>>();
         assert_eq!(models.len(), 5);

@@ -4,7 +4,9 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use amrust_3mf::io::ThreemfPackage;
-    use amrust_3mf::io::query::{get_composedpart_objects, get_mesh_objects, get_object_ref_from_id, get_objects};
+    use amrust_3mf::io::query::{
+        get_composedpart_objects, get_mesh_objects, get_object_ref_from_id, get_objects,
+    };
 
     use std::{fs::File, path::PathBuf};
 
@@ -20,10 +22,8 @@ mod tests {
 
         match result {
             Ok(package) => {
-                
-
                 assert_eq!(package.relationships.len(), 4);
-                
+
                 let objects = get_objects(&package).collect::<Vec<_>>();
                 assert_eq!(objects.len(), 4);
 
@@ -41,7 +41,12 @@ mod tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(1, &package, Some("/3D/Objects/Object.model".to_string()), None);
+                let object_by_id = get_object_ref_from_id(
+                    1,
+                    &package,
+                    Some("/3D/Objects/Object.model".to_string()),
+                    None,
+                );
                 assert!(object_by_id.0.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
@@ -72,7 +77,7 @@ mod tests {
         match result {
             Ok(package) => {
                 assert_eq!(package.relationships.len(), 4);
-                
+
                 let objects = get_objects(&package).collect::<Vec<_>>();
                 assert_eq!(objects.len(), 4);
 
@@ -90,7 +95,12 @@ mod tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(1, &package, Some("/3D/Objects/Object.model".to_string()), None);
+                let object_by_id = get_object_ref_from_id(
+                    1,
+                    &package,
+                    Some("/3D/Objects/Object.model".to_string()),
+                    None,
+                );
                 assert!(object_by_id.0.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
