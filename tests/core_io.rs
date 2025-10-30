@@ -37,20 +37,6 @@ mod tests {
                 assert!(object_by_id.0.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
-                // for rels in package.relationships.keys() {
-                //     println!("Relationship file at {}", rels);
-                // }
-                // assert!(package.relationships.contains_key("_rels/.rels"));
-                // assert!(
-                //     package
-                //         .relationships
-                //         .contains_key("/3D/_rels/3dmodel.model.rels")
-                // );
-
-                // let sub_rels = package.relationships.get("/3D/_rels/3dmodel.model.rels");
-
-                //assert!(package.unknown_parts.contains_key("/3D/Disp2D/lines.png"));
-                //assert!(sub_rels.is_some());
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -61,7 +47,7 @@ mod tests {
     #[cfg(feature = "speed-optimized-read")]
     #[test]
     fn read_threemf_package_speed_optimized() {
-        let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
+        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, false);
@@ -85,21 +71,6 @@ mod tests {
                 assert!(object_by_id.0.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
-
-                // for rels in package.relationships.keys() {
-                //     println!("Relationship file at {}", rels);
-                // }
-                // assert!(package.relationships.contains_key("_rels/.rels"));
-                // assert!(
-                //     package
-                //         .relationships
-                //         .contains_key("/3D/_rels/3dmodel.model.rels")
-                // );
-
-                // let sub_rels = package.relationships.get("/3D/_rels/3dmodel.model.rels");
-
-                // assert!(package.unknown_parts.contains_key("/3D/Disp2D/lines.png"));
-                // assert!(sub_rels.is_some());
             }
             Err(err) => {
                 panic!("read failed {:?}", err);

@@ -62,8 +62,8 @@ path = "examples/speed-optimized-read.rs"
 required-features = ["speed-optimized-read", "io"]
 
 [[example]]
-name = "beam-lattice"
-path = "examples/beam-lattice.rs"
+name = "beamlattice-write"
+path = "examples/beamlattice-write.rs"
 required-features = ["write", "io"]
 
 

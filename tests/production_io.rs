@@ -62,7 +62,7 @@ mod tests {
     #[cfg(feature = "speed-optimized-read")]
     #[test]
     fn read_threemf_package_speed_optimized() {
-        let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
+        let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, true);

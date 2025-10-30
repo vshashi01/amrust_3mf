@@ -115,10 +115,11 @@ where
 }
 
 
+#[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use serde_roxmltree::from_str;
+    use instant_xml::from_str;
 
     use crate::{core::model::Model};
     use super::*;
@@ -129,7 +130,7 @@ mod tests {
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let (object, _) = get_object_ref_from_id(1,&package, Some("/3D/Objects/Object.model".to_string()), None);
         
@@ -161,13 +162,14 @@ mod tests {
         }
     }
 
+
     #[test]
     fn test_get_objects_from_package() {
         let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 6);
@@ -191,7 +193,7 @@ mod tests {
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_mesh_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 5);
@@ -215,7 +217,7 @@ mod tests {
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_composedpart_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 1);
@@ -239,7 +241,7 @@ mod tests {
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_beam_lattice_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 2);
@@ -263,7 +265,7 @@ mod tests {
             .canonicalize()
             .unwrap();
         let file = std::fs::File::open(path).unwrap();
-        let package = ThreemfPackage::from_reader_with_speed_optimized_deserializer(file, true).unwrap();
+        let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let models = iter_models(&package).collect::<Vec<_>>();
         assert_eq!(models.len(), 5);
