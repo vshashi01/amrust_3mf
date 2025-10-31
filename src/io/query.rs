@@ -97,7 +97,7 @@ pub fn get_beam_lattice_objects_from_model<'a>(
 }
 
 pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = &'a Model> {
-    std::iter::once(&package.root).chain(package.sub_models.values().map(|m| m))
+    std::iter::once(&package.root).chain(package.sub_models.values())
 }
 
 fn iter_objects_from<'a, I, F>(
