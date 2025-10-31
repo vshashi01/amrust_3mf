@@ -20,7 +20,6 @@ use crate::{
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::io::{self, Cursor, Read, Seek, Write};
-use std::path::PathBuf;
 
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
@@ -252,12 +251,14 @@ impl ThreemfPackage {
         if process_sub_models {
             {
                 for value in 0..zip.len() {
+                    use std::path::Path;
+
                     let file = zip.by_index(value)?;
 
                     if file.is_file()
                         && let Some(path) = file.enclosed_name()
                         && Some(OsStr::new(rels_ext)) == path.extension()
-                        && path != PathBuf::from(root_rels_filename)
+                        && path != Path::new(root_rels_filename)
                     {
                         match path.to_str() {
                             Some(path_str) => {
