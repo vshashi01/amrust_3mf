@@ -9,6 +9,7 @@ This crate exposes a compact core model representation and IO helpers for readin
 | ------------------ | --------- | :------: | ------------------------: |
 | 3MF Core Spec      | Core      |    No    |                     1.3.0 |
 | Production         | Extension |    No    |                     1.1.2 |
+| Beam Lattice       | Extension |    No    |                     1.2.0 |
 
 ## Overview
 

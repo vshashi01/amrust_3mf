@@ -23,6 +23,3 @@ pub mod threemf_namespaces;
 
 #[cfg(any(feature = "io", feature = "unpack-only"))]
 pub mod io;
-
-#[cfg(feature = "io")]
-pub mod query;

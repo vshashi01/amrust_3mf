@@ -1,7 +1,7 @@
 use amrust_3mf::{
     core::{
-        Mesh, Triangle, Triangles, Vertex, Vertices,
         build::{Build, Item},
+        mesh::*,
         metadata::Metadata,
         model::{Model, Unit},
         object::{Object, ObjectType},
@@ -69,6 +69,8 @@ fn main() {
                         }],
                     },
                     trianglesets: None,
+                    // #[cfg(feature = "beam-lattice")]
+                    beamlattice: None,
                 }),
                 components: None,
             }],

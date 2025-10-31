@@ -597,7 +597,7 @@ pub mod tests {
             writer
         };
 
-        assert_eq!(bytes.into_inner().len(), 963);
+        assert_eq!(bytes.into_inner().len(), 976);
     }
 
     #[cfg(all(feature = "memory-optimized-read", feature = "write"))]

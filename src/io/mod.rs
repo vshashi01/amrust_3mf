@@ -7,6 +7,9 @@ mod threemf_package;
 #[cfg(feature = "io")]
 pub use threemf_package::ThreemfPackage;
 
+#[cfg(feature = "io")]
+pub mod query;
+
 #[cfg(feature = "unpack-only")]
 mod threemf_unpacked;
 #[cfg(feature = "unpack-only")]
