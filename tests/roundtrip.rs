@@ -59,6 +59,7 @@ mod tests {
             triangles,
             vertices,
             trianglesets: None,
+            beamlattice: None,
         };
 
         let write_package = ThreemfPackage {

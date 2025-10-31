@@ -10,6 +10,10 @@ use serde::Deserialize;
 use crate::core::triangle_set::TriangleSets;
 use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 
+use crate::core::beamlattice::BeamLattice;
+
+use crate::threemf_namespaces::BEAM_LATTICE_NS;
+
 /// A triangle mesh
 ///
 /// This is a very basic types that lacks any amenities for constructing it or
@@ -23,7 +27,9 @@ use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
-#[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS), rename = "mesh"))]
+// #[cfg_attr(all(feature = "beam-lattice", any(feature = "write", feature = "memory-optimized-read")), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
+#[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
+// #[cfg_attr(all(not(feature = "beam-lattice"), any(feature = "write", feature = "memory-optimized-read")), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS), rename = "mesh"))]
 pub struct Mesh {
     /// The vertices of the mesh
     ///
@@ -42,6 +48,15 @@ pub struct Mesh {
         xml(ns(CORE_TRIANGLESET_NS))
     )]
     pub trianglesets: Option<TriangleSets>,
+
+    /// The beam lattice that is part of this mesh
+    // #[cfg(feature = "beam-lattice")]
+    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
+    #[cfg_attr(
+        any(feature = "write", feature = "memory-optimized-read"),
+        xml(ns(BEAM_LATTICE_NS))
+    )]
+    pub beamlattice: Option<BeamLattice>,
 }
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
@@ -162,7 +177,9 @@ pub mod write_tests {
     use instant_xml::to_string;
     use pretty_assertions::assert_eq;
 
-    use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX};
+    use crate::threemf_namespaces::{
+        BEAM_LATTICE_NS, BEAM_LATTICE_PREFIX, CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX,
+    };
 
     use super::{Mesh, Triangle, Triangles, Vertex, Vertices};
 
@@ -257,8 +274,12 @@ pub mod write_tests {
     #[test]
     pub fn toxml_mesh_test() {
         let xml_string = format!(
-            r##"<mesh xmlns="{}" xmlns:{}="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles></mesh>"##,
-            CORE_NS, CORE_TRIANGLESET_PREFIX, CORE_TRIANGLESET_NS
+            r##"<mesh xmlns="{core_ns}" xmlns:{bl_prefix}="{bl_ns}" xmlns:{ts_prefix}="{ts_ns}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles></mesh>"##,
+            core_ns = CORE_NS,
+            ts_prefix = CORE_TRIANGLESET_PREFIX,
+            ts_ns = CORE_TRIANGLESET_NS,
+            bl_prefix = BEAM_LATTICE_PREFIX,
+            bl_ns = BEAM_LATTICE_NS,
         );
         let mesh = Mesh {
             vertices: Vertices {
@@ -308,6 +329,7 @@ pub mod write_tests {
                 ],
             },
             trianglesets: None,
+            beamlattice: None,
         };
         let mesh_string = to_string(&mesh).unwrap();
 
@@ -479,6 +501,7 @@ pub mod memory_optimized_read_tests {
                     ]
                 },
                 trianglesets: None,
+                beamlattice: None,
             }
         )
     }
@@ -648,6 +671,7 @@ pub mod speed_optimized_read_tests {
                     ]
                 },
                 trianglesets: None,
+                beamlattice: None,
             }
         )
     }

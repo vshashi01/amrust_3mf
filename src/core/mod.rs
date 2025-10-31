@@ -7,4 +7,5 @@ pub mod object;
 pub mod resources;
 pub mod transform;
 pub mod triangle_set;
-pub use mesh::*;
+
+pub mod beamlattice;

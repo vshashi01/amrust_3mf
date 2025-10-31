@@ -180,17 +180,23 @@ pub mod write_tests {
 
     use crate::{
         core::{
-            Mesh, Triangle, Triangles, Vertex, Vertices,
+            mesh::Mesh,
+            mesh::Triangle,
+            mesh::Triangles,
+            mesh::Vertex,
+            mesh::Vertices,
             triangle_set::{TriangleRef, TriangleRefRange, TriangleSet, TriangleSets},
         },
-        threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX},
+        threemf_namespaces::{
+            BEAM_LATTICE_NS, BEAM_LATTICE_PREFIX, CORE_NS, CORE_TRIANGLESET_NS,
+            CORE_TRIANGLESET_PREFIX,
+        },
     };
 
     #[test]
     pub fn toxml_mesh_with_triangletest_test() {
         let xml_string = format!(
-            r##"<mesh xmlns="{}" xmlns:{}="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles><t:trianglesets><t:triangleset name="Triangle Set 1" identifier="someUniqueID1"><t:ref index="2" /><t:refrange startindex="22" endindex="102" /></t:triangleset><t:triangleset name="Triangle Set 2" identifier="someUniqueID2"><t:refrange startindex="1" endindex="12" /><t:refrange startindex="100236" endindex="4566893" /></t:triangleset></t:trianglesets></mesh>"##,
-            CORE_NS, CORE_TRIANGLESET_PREFIX, CORE_TRIANGLESET_NS
+            r##"<mesh xmlns="{CORE_NS}" xmlns:{BEAM_LATTICE_PREFIX}="{BEAM_LATTICE_NS}" xmlns:{CORE_TRIANGLESET_PREFIX}="{CORE_TRIANGLESET_NS}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles><t:trianglesets><t:triangleset name="Triangle Set 1" identifier="someUniqueID1"><t:ref index="2" /><t:refrange startindex="22" endindex="102" /></t:triangleset><t:triangleset name="Triangle Set 2" identifier="someUniqueID2"><t:refrange startindex="1" endindex="12" /><t:refrange startindex="100236" endindex="4566893" /></t:triangleset></t:trianglesets></mesh>"##,
         );
         let mesh = Mesh {
             vertices: Vertices {
@@ -267,6 +273,7 @@ pub mod write_tests {
                     },
                 ],
             }),
+            beamlattice: None,
         };
         let mesh_string = to_string(&mesh).unwrap();
 
@@ -323,7 +330,11 @@ pub mod memory_optimized_read_tests {
 
     use crate::{
         core::{
-            Mesh, Triangle, Triangles, Vertex, Vertices,
+            mesh::Mesh,
+            mesh::Triangle,
+            mesh::Triangles,
+            mesh::Vertex,
+            mesh::Vertices,
             triangle_set::{TriangleRef, TriangleRefRange, TriangleSet, TriangleSets},
         },
         threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX},
@@ -414,7 +425,8 @@ pub mod memory_optimized_read_tests {
                             ],
                         },
                     ],
-                })
+                }),
+                beamlattice: None,
             }
         )
     }
@@ -470,7 +482,11 @@ pub mod speed_optimized_read_tests {
 
     use crate::{
         core::{
-            Mesh, Triangle, Triangles, Vertex, Vertices,
+            mesh::Mesh,
+            mesh::Triangle,
+            mesh::Triangles,
+            mesh::Vertex,
+            mesh::Vertices,
             triangle_set::{TriangleRef, TriangleRefRange, TriangleSet, TriangleSets},
         },
         threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX},
@@ -561,7 +577,8 @@ pub mod speed_optimized_read_tests {
                             ],
                         },
                     ],
-                })
+                }),
+                beamlattice: None,
             }
         )
     }
