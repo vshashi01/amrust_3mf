@@ -24,6 +24,7 @@ dependencies = [
  "criterion",
  "image",
  "instant-xml",
+ "once_cell",
  "pretty_assertions",
  "serde",
  "serde-roxmltree",

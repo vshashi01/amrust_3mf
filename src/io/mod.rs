@@ -14,3 +14,8 @@ pub mod query;
 mod threemf_unpacked;
 #[cfg(feature = "unpack-only")]
 pub use threemf_unpacked::ThreemfUnpacked;
+
+#[cfg(feature = "pull-based-read")]
+mod threemf_package_pull;
+#[cfg(feature = "pull-based-read")]
+pub use threemf_package_pull::{CachePolicy, ThreemfPackagePull};
