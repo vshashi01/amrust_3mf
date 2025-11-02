@@ -34,7 +34,7 @@
             "date": "05-04-2025",
             "golden_thumbnail_path": "ultimaker-spinal_implant.3mf_golden_thumbnail.png",
             "skip_test": false,
-            "large_test": false
+            "large_test": true
         },
         {
             "filepath": "mgx-core-prod-beamlattice-material.3mf",
@@ -52,7 +52,7 @@
             "date": "17-04-2025",
             "golden_thumbnail_path": "meshmixer-resized_box_mm.3mf_golden_thumbnail.png",
             "skip_test": true,
-            "large_test": false
+            "large_test": true
         },
         {
             "filepath": "meshmixer-resized_box_mm.3mf",

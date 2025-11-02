@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_get_object_ref_from_model() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice.model")
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
             .canonicalize()
             .unwrap();
         let text = std::fs::read_to_string(path).unwrap();
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn test_get_objects_from_model() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice.model")
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
             .canonicalize()
             .unwrap();
         let text = std::fs::read_to_string(path).unwrap();
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_get_mesh_objects_from_model() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice.model")
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
             .canonicalize()
             .unwrap();
         let text = std::fs::read_to_string(path).unwrap();
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_get_composedpart_objects_from_model() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice.model")
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
             .canonicalize()
             .unwrap();
         let text = std::fs::read_to_string(path).unwrap();
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn test_get_beamlattice_objects_from_model() {
-        let path = PathBuf::from("tests/data/mesh-composedpart-beamlattice.model")
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
             .canonicalize()
             .unwrap();
         let text = std::fs::read_to_string(path).unwrap();
