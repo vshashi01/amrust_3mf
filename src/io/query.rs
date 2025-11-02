@@ -114,11 +114,9 @@ where
 #[cfg(feature = "memory-optimized-read")]
 #[cfg(test)]
 mod smoke_tests {
-    use instant_xml::from_str;
-    use std::path::PathBuf;
-
     use super::*;
-    use crate::core::model::Model;
+
+    use std::path::PathBuf;
 
     #[test]
     fn test_get_object_ref_from_package() {
