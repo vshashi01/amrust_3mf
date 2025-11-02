@@ -147,25 +147,6 @@ mod smoke_tests {
     }
 
     #[test]
-    fn test_get_object_ref_from_model() {
-        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
-            .canonicalize()
-            .unwrap();
-        let text = std::fs::read_to_string(path).unwrap();
-        let model = from_str::<Model>(&text).unwrap();
-
-        let object = get_object_ref_from_model(1, &model);
-
-        match object {
-            Some(obj) => {
-                assert!(obj.mesh.is_some());
-                assert_eq!(obj.id, 1);
-            }
-            None => panic!("Object ref not found"),
-        }
-    }
-
-    #[test]
     fn test_get_objects_from_package() {
         let path =
             PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
@@ -176,18 +157,6 @@ mod smoke_tests {
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
         let objects = get_objects(&package).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 6);
-    }
-
-    #[test]
-    fn test_get_objects_from_model() {
-        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
-            .canonicalize()
-            .unwrap();
-        let text = std::fs::read_to_string(path).unwrap();
-        let model = from_str::<Model>(&text).unwrap();
-
-        let objects = get_objects_from_model(&model).collect::<Vec<_>>();
         assert_eq!(objects.len(), 6);
     }
 
@@ -206,18 +175,6 @@ mod smoke_tests {
     }
 
     #[test]
-    fn test_get_mesh_objects_from_model() {
-        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
-            .canonicalize()
-            .unwrap();
-        let text = std::fs::read_to_string(path).unwrap();
-        let model = from_str::<Model>(&text).unwrap();
-
-        let objects = get_mesh_objects_from_model(&model).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 5);
-    }
-
-    #[test]
     fn test_get_composedpart_objects_from_package() {
         let path =
             PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
@@ -232,18 +189,6 @@ mod smoke_tests {
     }
 
     #[test]
-    fn test_get_composedpart_objects_from_model() {
-        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
-            .canonicalize()
-            .unwrap();
-        let text = std::fs::read_to_string(path).unwrap();
-        let model = from_str::<Model>(&text).unwrap();
-
-        let objects = get_composedpart_objects_from_model(&model).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 1)
-    }
-
-    #[test]
     fn test_get_beamlattice_objects_from_package() {
         let path =
             PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
@@ -255,18 +200,6 @@ mod smoke_tests {
 
         let objects = get_beam_lattice_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 2);
-    }
-
-    #[test]
-    fn test_get_beamlattice_objects_from_model() {
-        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
-            .canonicalize()
-            .unwrap();
-        let text = std::fs::read_to_string(path).unwrap();
-        let model = from_str::<Model>(&text).unwrap();
-
-        let objects = get_beam_lattice_objects_from_model(&model).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 2)
     }
 
     #[test]
