@@ -254,7 +254,7 @@ fn try_strip_leading_slash(target: &str) -> &str {
 }
 
 #[cfg(test)]
-pub mod tests {
+pub mod smoke_tests {
     use pretty_assertions::assert_eq;
 
     use super::ThreemfUnpacked;
