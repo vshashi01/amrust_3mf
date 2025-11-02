@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    if: ${{ github.event_name == 'push' || (github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main') }}
+    if: ${{ github.event_name == 'push' || github.event.pull_request.base.ref == 'main' }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
