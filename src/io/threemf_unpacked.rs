@@ -6,10 +6,9 @@ use crate::io::{
     relationship::{RelationshipType, Relationships},
 };
 
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::io::{self, Read};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::Path};
 
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
@@ -131,7 +130,7 @@ impl ThreemfUnpacked {
                     if file.is_file()
                         && let Some(path) = file.enclosed_name()
                         && Some(OsStr::new(rels_ext)) == path.extension()
-                        && path != PathBuf::from(root_rels_filename)
+                        && path != Path::new(root_rels_filename)
                     {
                         match path.to_str() {
                             Some(path_str) => {
@@ -255,7 +254,7 @@ fn try_strip_leading_slash(target: &str) -> &str {
 }
 
 #[cfg(test)]
-pub mod tests {
+pub mod smoke_tests {
     use pretty_assertions::assert_eq;
 
     use super::ThreemfUnpacked;

@@ -1,6 +1,6 @@
 #[cfg(feature = "io")]
 #[cfg(test)]
-mod tests {
+mod smoke_tests {
     use pretty_assertions::assert_eq;
 
     use amrust_3mf::{

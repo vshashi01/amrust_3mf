@@ -1,4 +1,2 @@
 *.model filter=lfs diff=lfs merge=lfs -text
-*.3mf filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
 **/lfs/**/*.3mf filter=lfs diff=lfs merge=lfs -text

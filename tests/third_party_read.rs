@@ -15,7 +15,6 @@ pub mod tests {
     #[cfg(feature = "memory-optimized-read")]
     #[test]
     pub fn can_load_thirdparty_3mf_package() {
-        let folder_path = PathBuf::from("./tests/data/third-party/");
         let fixtures = test_utilities::get_test_fixtures();
 
         for fixture in fixtures {
@@ -23,8 +22,12 @@ pub mod tests {
                 continue;
             }
 
+            let mut folder_path = PathBuf::from("./tests/data/third-party/");
+            if fixture.large_test {
+                folder_path = folder_path.join("lfs");
+            }
             let filepath = folder_path.join(fixture.filepath.clone());
-            println!("{:?}", filepath);
+            // println!("{:?}", filepath);
             let file = File::open(&filepath).unwrap();
 
             let package =
@@ -49,12 +52,16 @@ pub mod tests {
     #[cfg(feature = "unpack-only")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
-        let folder_path = PathBuf::from("./tests/data/third-party/");
         let fixtures = test_utilities::get_test_fixtures();
 
         for fixture in fixtures {
             if fixture.skip_test {
                 continue;
+            }
+
+            let mut folder_path = PathBuf::from("./tests/data/third-party/");
+            if fixture.large_test {
+                folder_path = folder_path.join("lfs");
             }
 
             let filepath = folder_path.join(fixture.filepath);
