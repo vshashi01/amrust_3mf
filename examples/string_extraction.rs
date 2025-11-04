@@ -1,16 +1,16 @@
-use amrust_3mf::io::{ThreemfPackagePull, CachePolicy, error::Error};
+use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader, error::Error};
 use std::{fs::File, path::PathBuf};
 
 /// This example demonstrates extracting raw XML strings from a 3MF package
 /// using the pull-based reader with string extraction methods.
 ///
 /// Run with:
-/// `cargo run --example string_extraction --features io-memory-optimized-read`
+/// `cargo run --example string_extraction --features io-lazy-read`
 fn main() {
     let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
     let reader = File::open(path).unwrap();
 
-    let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+    let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
         reader,
         CachePolicy::NoCache,
     )

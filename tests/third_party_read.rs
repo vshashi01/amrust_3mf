@@ -1,4 +1,4 @@
-#[cfg(any(feature = "io-memory-optimized-read", feature = "io-unpack"))]
+#[cfg(any(feature = "io-memory-optimized-read", feature = "io-lazy-read"))]
 #[cfg(test)]
 pub mod tests {
     pub mod test_utilities;
@@ -45,11 +45,11 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "io-pull-based-read")]
+    #[cfg(feature = "io-lazy-read")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
         use amrust_3mf::io::CachePolicy;
-        use amrust_3mf::io::ThreemfPackagePull;
+        use amrust_3mf::io::ThreemfPackageLazyReader;
 
         let fixtures = test_utilities::get_test_fixtures();
 
@@ -66,7 +66,7 @@ pub mod tests {
             let filepath = folder_path.join(fixture.filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+            let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
                 file,
                 CachePolicy::NoCache,
             );

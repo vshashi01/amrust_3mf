@@ -8,11 +8,12 @@ use zip::ZipArchive;
 use image::{DynamicImage, load_from_memory};
 
 use crate::core::model::Model;
+use crate::io::utils;
 use crate::io::{
     content_types::{ContentTypes, DefaultContentTypeEnum},
     error::Error,
     relationship::{RelationshipType, Relationships},
-    zip_utils::{self, XmlDeserializer, try_strip_leading_slash},
+    zip_utils::{self, XmlDeserializer},
 };
 
 /// Cache policy for lazy-loaded data
@@ -25,14 +26,14 @@ pub enum CachePolicy {
     NoCache,
 }
 
-/// Represents a 3mf package with lazy/pull-based loading.
+/// Represents a 3mf package with lazy loading.
 /// Unlike [`ThreemfPackage`](crate::io::ThreemfPackage), this struct only parses metadata upfront
 /// (content types and relationships), and loads models, thumbnails, and other data on-demand.
 ///
 /// This is ideal for memory-constrained environments or when you need to inspect package contents
 /// without loading all data.
 ///
-pub struct ThreemfPackagePull<R: Read + Seek> {
+pub struct ThreemfPackageLazyReader<R: Read + Seek> {
     archive: RefCell<ZipArchive<R>>,
     deserializer: XmlDeserializer,
     cache_policy: CachePolicy,
@@ -51,7 +52,7 @@ pub struct ThreemfPackagePull<R: Read + Seek> {
     unknown_parts: RefCell<HashMap<String, Vec<u8>>>,
 }
 
-impl<R: Read + Seek> ThreemfPackagePull<R> {
+impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     fn from_reader(
         reader: R,
         deserializer: XmlDeserializer,
@@ -169,12 +170,14 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
             .get_or_try_init(|| self.load_model_from_archive(&self.root_model_path))
     }
 
-    pub fn with_sub_model<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    pub fn with_model<F, T>(&self, path: &str, f: F) -> Result<T, Error>
     where
         F: FnOnce(&Model) -> T,
     {
         if path == self.root_model_path {
-            return Ok(None);
+            let model = self.root_model()?;
+            return Ok(f(model));
+            //return Ok(None);
         }
 
         let is_model = self
@@ -186,7 +189,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
             });
 
         if !is_model {
-            return Ok(None);
+            return Err(Error::ResourceNotFound(path.to_owned()));
         }
 
         match self.cache_policy {
@@ -197,13 +200,13 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
                 if self.sub_models.borrow().contains_key(path) {
                     let cache = self.sub_models.borrow();
                     let model = cache.get(path).unwrap();
-                    Ok(Some(f(model)))
+                    Ok(f(model))
                 } else {
                     let model = self.load_model_from_archive(path)?;
                     self.sub_models.borrow_mut().insert(path.to_string(), model);
                     let cache = self.sub_models.borrow();
                     let model = cache.get(path).unwrap();
-                    Ok(Some(f(model)))
+                    Ok(f(model))
                 }
             }
             CachePolicy::CacheAll => {
@@ -211,20 +214,20 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
                 if self.sub_models.borrow().contains_key(path) {
                     let cache = self.sub_models.borrow();
                     let model = cache.get(path).unwrap();
-                    Ok(Some(f(model)))
+                    Ok(f(model))
                 } else {
                     // Load and cache
                     let model = self.load_model_from_archive(path)?;
                     self.sub_models.borrow_mut().insert(path.to_string(), model);
                     let cache = self.sub_models.borrow();
                     let model = cache.get(path).unwrap();
-                    Ok(Some(f(model)))
+                    Ok(f(model))
                 }
             }
         }
     }
 
-    pub fn with_thumbnail<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    pub fn with_thumbnail<F, T>(&self, path: &str, f: F) -> Result<T, Error>
     where
         F: FnOnce(&DynamicImage) -> T,
     {
@@ -238,26 +241,26 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
             });
 
         if !is_thumbnail {
-            return Ok(None);
+            return Err(Error::ResourceNotFound(path.to_owned()));
         }
 
         if self.thumbnails.borrow().contains_key(path) {
             let cache = self.thumbnails.borrow();
             let image = cache.get(path).unwrap();
-            Ok(Some(f(image)))
+            Ok(f(image))
         } else {
             let image = self.load_thumbnail_from_archive(path)?;
             self.thumbnails.borrow_mut().insert(path.to_string(), image);
             let cache = self.thumbnails.borrow();
             let image = cache.get(path).unwrap();
-            Ok(Some(f(image)))
+            Ok(f(image))
         }
     }
 
     /// Get an unknown part by path (lazy loaded, cached based on policy)
     ///
     /// Returns `None` if no unknown part exists at the given path.
-    pub fn with_unknown_part<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    pub fn with_unknown_part<F, T>(&self, path: &str, f: F) -> Result<T, Error>
     where
         F: FnOnce(&[u8]) -> T,
     {
@@ -271,14 +274,14 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
             });
 
         if !is_unknown {
-            return Ok(None);
+            return Err(Error::ResourceNotFound(path.to_owned()));
         }
 
         // Check cache (works for both policies since we need to return a reference)
         if self.unknown_parts.borrow().contains_key(path) {
             let cache = self.unknown_parts.borrow();
             let bytes = cache.get(path).unwrap();
-            Ok(Some(f(bytes)))
+            Ok(f(bytes))
         } else {
             // Load and cache
             let bytes = self.load_unknown_part_from_archive(path)?;
@@ -287,7 +290,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
                 .insert(path.to_string(), bytes);
             let cache = self.unknown_parts.borrow();
             let bytes = cache.get(path).unwrap();
-            Ok(Some(f(bytes)))
+            Ok(f(bytes))
         }
     }
 
@@ -313,7 +316,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
 
         // Read XML directly from ZIP archive
         let mut archive = self.archive.borrow_mut();
-        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         let mut xml_string = String::new();
         file.read_to_string(&mut xml_string)?;
 
@@ -329,12 +332,15 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
     {
         // Check if relationships file exists
         if !self.relationships.contains_key(path) {
-            return Err(Error::ResourceNotFound(format!("Relationships file at path: {}", path)));
+            return Err(Error::ResourceNotFound(format!(
+                "Relationships file at path: {}",
+                path
+            )));
         }
 
         // Read relationships XML directly from ZIP
         let mut archive = self.archive.borrow_mut();
-        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         let mut xml_string = String::new();
         file.read_to_string(&mut xml_string)?;
 
@@ -357,13 +363,13 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
 
     fn load_model_from_archive(&self, path: &str) -> Result<Model, Error> {
         let mut archive = self.archive.borrow_mut();
-        let file = archive.by_name(try_strip_leading_slash(path))?;
+        let file = archive.by_name(utils::try_strip_leading_slash(path))?;
         self.deserializer.deserialize_model(file)
     }
 
     fn load_thumbnail_from_archive(&self, path: &str) -> Result<DynamicImage, Error> {
         let mut archive = self.archive.borrow_mut();
-        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         let mut bytes: Vec<u8> = vec![];
         file.read_to_end(&mut bytes)?;
 
@@ -373,7 +379,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
 
     fn load_unknown_part_from_archive(&self, path: &str) -> Result<Vec<u8>, Error> {
         let mut archive = self.archive.borrow_mut();
-        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         let mut bytes: Vec<u8> = vec![];
         file.read_to_end(&mut bytes)?;
         Ok(bytes)
@@ -381,7 +387,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
 }
 
 #[cfg(feature = "io-memory-optimized-read")]
-impl<R: Read + Seek> ThreemfPackagePull<R> {
+impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     /// Create a pull-based package with memory-optimized deserialization
     ///
     /// * `reader` - A readable and seekable source (e.g., `File`)
@@ -395,7 +401,7 @@ impl<R: Read + Seek> ThreemfPackagePull<R> {
 }
 
 #[cfg(feature = "io-speed-optimized-read")]
-impl<R: Read + Seek> ThreemfPackagePull<R> {
+impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     /// Create a pull-based package with speed-optimized deserialization
     ///
     /// * `reader` - A readable and seekable source (e.g., `File`)
@@ -423,7 +429,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
             reader,
             CachePolicy::NoCache,
         )
@@ -445,7 +451,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
             reader,
             CachePolicy::CacheAll,
         )
@@ -461,8 +467,12 @@ mod smoke_tests {
         assert!(!root.resources.object.is_empty());
 
         let sub_model_path = "/3D/midway.model";
-        let exists = package.with_sub_model(sub_model_path, |_| true).unwrap();
-        assert!(exists.is_some());
+        let exists = package.with_model(sub_model_path, |_| true);
+        assert!(exists.is_ok());
+
+        let sub_model_path = "/SomeThing/ThatDoesNotExist.model";
+        let exists = package.with_model(sub_model_path, |_| true);
+        assert!(exists.is_err());
     }
 
     #[cfg(feature = "io-memory-optimized-read")]
@@ -471,7 +481,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
             reader,
             CachePolicy::NoCache,
         )
@@ -495,7 +505,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackagePull::from_reader_with_speed_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
             reader,
             CachePolicy::CacheAll,
         )
@@ -513,7 +523,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
             reader,
             CachePolicy::NoCache,
         )

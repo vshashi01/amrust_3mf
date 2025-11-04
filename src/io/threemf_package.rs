@@ -1,9 +1,9 @@
 use image::DynamicImage;
+use zip::ZipWriter;
+use zip::write::SimpleFileOptions;
 
 #[cfg(feature = "io-write")]
 use instant_xml::ToXml;
-use zip::ZipWriter;
-use zip::write::SimpleFileOptions;
 
 use crate::io::content_types::DefaultContentTypes;
 use crate::io::relationship::Relationship;
@@ -13,10 +13,14 @@ use crate::{
         content_types::{ContentTypes, DefaultContentTypeEnum},
         error::Error,
         relationship::{RelationshipType, Relationships},
-        zip_utils::{self, try_strip_leading_slash},
+        utils,
     },
 };
 
+#[cfg(any(
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 use crate::io::zip_utils::XmlDeserializer;
 
 use std::collections::HashMap;
@@ -64,7 +68,7 @@ impl ThreemfPackage {
     /// Writes the 3mf package to a [writer].
     /// Expects a well formed [ThreemfPackage] object to write the package.
     /// A well formed packaged requires atleast 1 root model and 1 relationship file along with the content types.
-    pub fn write<W: io::Write + io::Seek>(&self, threemf_archive: W) -> Result<(), Error> {
+    pub fn write<W: Write + Seek>(&self, threemf_archive: W) -> Result<(), Error> {
         let mut zip = ZipWriter::new(threemf_archive);
 
         Self::archive_write_xml_with_header(&mut zip, "[Content_Types].xml", &self.content_types)?;
@@ -73,7 +77,7 @@ impl ThreemfPackage {
             Self::archive_write_xml_with_header(&mut zip, path, &relationships)?;
 
             for relationship in &relationships.relationships {
-                let filename = try_strip_leading_slash(&relationship.target);
+                let filename = utils::try_strip_leading_slash(&relationship.target);
                 match relationship.relationship_type {
                     RelationshipType::Model => {
                         let model = if *path == *"_rels/.rels" {
@@ -168,7 +172,7 @@ impl ThreemfPackage {
         process_sub_models: bool,
         deserializer: XmlDeserializer,
     ) -> Result<Self, Error> {
-        use crate::io::threemf_package::processor::ThreemfPackageProcessor;
+        use crate::io::zip_utils;
 
         let (mut zip, content_types, _, root_rels_filename) =
             zip_utils::setup_archive_and_content_types(reader, deserializer)?;
@@ -222,7 +226,7 @@ impl ThreemfPackage {
             }
         }
 
-        let mut processor = ThreemfPackageProcessor::new(content_types);
+        let mut processor = processor::ThreemfPackageProcessor::new(content_types);
 
         // Process all relationships
         zip_utils::process_relationships(

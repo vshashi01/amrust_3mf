@@ -10,7 +10,7 @@ keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
 [features]
-default = ["io-pull-based-read", "io-write", "write", "memory-optimized-read"]
+default = ["io-write", "io-memory-optimized-read", "io-lazy-read", "write", "memory-optimized-read"]
 write = ["dep:instant-xml"]
 memory-optimized-read = ["dep:instant-xml"]
 speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
@@ -29,7 +29,7 @@ io-speed-optimized-read = [
 ]
 
 io-unpack = ["speed-optimized-read", "dep:zip", "dep:thiserror"]
-io-pull-based-read = ["dep:once_cell", "io-memory-optimized-read"]
+io-lazy-read = ["dep:once_cell", "io-memory-optimized-read"]
 
 [dependencies]
 instant-xml = { git = "https://github.com/vshashi01/instant-xml", branch = "main", optional = true }
@@ -65,7 +65,7 @@ required-features = ["io-write"]
 [[example]]
 name = "unpack"
 path = "examples/unpack.rs"
-required-features = ["io-pull-based-read"]
+required-features = ["io-lazy-read"]
 
 [[example]]
 name = "memory-optimized-read"
@@ -85,8 +85,10 @@ required-features = ["io-write"]
 [[example]]
 name = "string-extraction"
 path = "examples/string_extraction.rs"
-required-features = ["io-pull-based-read", "io-memory-optimized-read"]
+required-features = ["io-lazy-read"]
 
+[package.metadata.cargo-all-features]
+max_combination_size = 3
 
 # [patch.crates-io]
 # instant-xml = { git = "https://github.com/djc/instant-xml.git" }
