@@ -1,0 +1,569 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::io::{Read, Seek};
+
+use once_cell::unsync::OnceCell;
+use zip::ZipArchive;
+
+use image::{DynamicImage, load_from_memory};
+
+use crate::core::model::Model;
+use crate::io::{
+    content_types::{ContentTypes, DefaultContentTypeEnum},
+    error::Error,
+    relationship::{RelationshipType, Relationships},
+    zip_utils::{self, XmlDeserializer, try_strip_leading_slash},
+};
+
+/// Cache policy for lazy-loaded data
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CachePolicy {
+    /// Cache everything after first access (best for typical usage where data is accessed multiple times)
+    CacheAll,
+    /// Never cache, always re-read from zip (best for memory-constrained environments, read-once patterns)
+    #[default]
+    NoCache,
+}
+
+/// Represents a 3mf package with lazy/pull-based loading.
+/// Unlike [`ThreemfPackage`](crate::io::ThreemfPackage), this struct only parses metadata upfront
+/// (content types and relationships), and loads models, thumbnails, and other data on-demand.
+///
+/// This is ideal for memory-constrained environments or when you need to inspect package contents
+/// without loading all data.
+///
+pub struct ThreemfPackagePull<R: Read + Seek> {
+    archive: RefCell<ZipArchive<R>>,
+    deserializer: XmlDeserializer,
+    cache_policy: CachePolicy,
+
+    // always eagerly loaded
+    content_types: ContentTypes,
+    relationships: HashMap<String, Relationships>,
+    root_model_path: String,
+
+    // always cached on first access
+    root_model: OnceCell<Model>,
+
+    // cached based on cachepolicy
+    sub_models: RefCell<HashMap<String, Model>>,
+    thumbnails: RefCell<HashMap<String, DynamicImage>>,
+    unknown_parts: RefCell<HashMap<String, Vec<u8>>>,
+}
+
+impl<R: Read + Seek> ThreemfPackagePull<R> {
+    fn from_reader(
+        reader: R,
+        deserializer: XmlDeserializer,
+        cache_policy: CachePolicy,
+    ) -> Result<Self, Error> {
+        let (mut zip, content_types, _, root_rels_filename) =
+            zip_utils::setup_archive_and_content_types(reader, deserializer)?;
+
+        let rels_ext = {
+            let rels_content = content_types
+                .defaults
+                .iter()
+                .find(|t| t.content_type == DefaultContentTypeEnum::Relationship);
+
+            match rels_content {
+                Some(rels) => &rels.extension,
+                None => "rels",
+            }
+        };
+
+        let mut relationships = HashMap::<String, Relationships>::new();
+        let root_rels: Relationships = zip_utils::relationships_from_zip_by_name(
+            &mut zip,
+            &root_rels_filename,
+            &deserializer,
+        )?;
+
+        let root_model_path = root_rels
+            .relationships
+            .iter()
+            .find(|rels| rels.relationship_type == RelationshipType::Model)
+            .map(|rel| rel.target.clone())
+            .ok_or_else(|| Error::ReadError("Root model relationship not found".to_owned()))?;
+
+        relationships.insert(root_rels_filename.to_owned(), root_rels);
+
+        let rel_files =
+            zip_utils::discover_relationship_files(&mut zip, rels_ext, &root_rels_filename)?;
+        for rel_file_path in rel_files {
+            let rels = zip_utils::relationships_from_zip_by_name(
+                &mut zip,
+                &rel_file_path[1..],
+                &deserializer,
+            )?;
+            relationships.insert(rel_file_path, rels);
+        }
+
+        Ok(Self {
+            archive: RefCell::new(zip),
+            deserializer,
+            cache_policy,
+            content_types,
+            relationships,
+            root_model_path,
+            root_model: OnceCell::new(),
+            sub_models: RefCell::new(HashMap::new()),
+            thumbnails: RefCell::new(HashMap::new()),
+            unknown_parts: RefCell::new(HashMap::new()),
+        })
+    }
+
+    pub fn content_types(&self) -> &ContentTypes {
+        &self.content_types
+    }
+
+    pub fn relationships(&self) -> &HashMap<String, Relationships> {
+        &self.relationships
+    }
+
+    pub fn root_model_path(&self) -> &str {
+        &self.root_model_path
+    }
+
+    pub fn model_paths(&self) -> impl Iterator<Item = &str> {
+        self.relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .filter_map(|rel| {
+                if matches!(rel.relationship_type, RelationshipType::Model) {
+                    Some(rel.target.as_str())
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn thumbnail_paths(&self) -> impl Iterator<Item = &str> {
+        self.relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .filter_map(|rel| {
+                if matches!(rel.relationship_type, RelationshipType::Thumbnail) {
+                    Some(rel.target.as_str())
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn unknown_part_paths(&self) -> impl Iterator<Item = &str> {
+        self.relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .filter_map(|rel| {
+                if matches!(rel.relationship_type, RelationshipType::Unknown(_)) {
+                    Some(rel.target.as_str())
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn root_model(&self) -> Result<&Model, Error> {
+        self.root_model
+            .get_or_try_init(|| self.load_model_from_archive(&self.root_model_path))
+    }
+
+    pub fn with_sub_model<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    where
+        F: FnOnce(&Model) -> T,
+    {
+        if path == self.root_model_path {
+            return Ok(None);
+        }
+
+        let is_model = self
+            .relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .any(|rel| {
+                rel.target == path && matches!(rel.relationship_type, RelationshipType::Model)
+            });
+
+        if !is_model {
+            return Ok(None);
+        }
+
+        match self.cache_policy {
+            CachePolicy::NoCache => {
+                // Always load fresh, don't cache
+                // We can't return a reference to temporary data, so we must cache at least temporarily
+                // Check if already in cache from a previous call
+                if self.sub_models.borrow().contains_key(path) {
+                    let cache = self.sub_models.borrow();
+                    let model = cache.get(path).unwrap();
+                    Ok(Some(f(model)))
+                } else {
+                    let model = self.load_model_from_archive(path)?;
+                    self.sub_models.borrow_mut().insert(path.to_string(), model);
+                    let cache = self.sub_models.borrow();
+                    let model = cache.get(path).unwrap();
+                    Ok(Some(f(model)))
+                }
+            }
+            CachePolicy::CacheAll => {
+                // Check cache first
+                if self.sub_models.borrow().contains_key(path) {
+                    let cache = self.sub_models.borrow();
+                    let model = cache.get(path).unwrap();
+                    Ok(Some(f(model)))
+                } else {
+                    // Load and cache
+                    let model = self.load_model_from_archive(path)?;
+                    self.sub_models.borrow_mut().insert(path.to_string(), model);
+                    let cache = self.sub_models.borrow();
+                    let model = cache.get(path).unwrap();
+                    Ok(Some(f(model)))
+                }
+            }
+        }
+    }
+
+    pub fn with_thumbnail<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    where
+        F: FnOnce(&DynamicImage) -> T,
+    {
+        // Check if it's a valid thumbnail path
+        let is_thumbnail = self
+            .relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .any(|rel| {
+                rel.target == path && matches!(rel.relationship_type, RelationshipType::Thumbnail)
+            });
+
+        if !is_thumbnail {
+            return Ok(None);
+        }
+
+        if self.thumbnails.borrow().contains_key(path) {
+            let cache = self.thumbnails.borrow();
+            let image = cache.get(path).unwrap();
+            Ok(Some(f(image)))
+        } else {
+            let image = self.load_thumbnail_from_archive(path)?;
+            self.thumbnails.borrow_mut().insert(path.to_string(), image);
+            let cache = self.thumbnails.borrow();
+            let image = cache.get(path).unwrap();
+            Ok(Some(f(image)))
+        }
+    }
+
+    /// Get an unknown part by path (lazy loaded, cached based on policy)
+    ///
+    /// Returns `None` if no unknown part exists at the given path.
+    pub fn with_unknown_part<F, T>(&self, path: &str, f: F) -> Result<Option<T>, Error>
+    where
+        F: FnOnce(&[u8]) -> T,
+    {
+        // Check if it's a valid unknown part path
+        let is_unknown = self
+            .relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .any(|rel| {
+                rel.target == path && matches!(rel.relationship_type, RelationshipType::Unknown(_))
+            });
+
+        if !is_unknown {
+            return Ok(None);
+        }
+
+        // Check cache (works for both policies since we need to return a reference)
+        if self.unknown_parts.borrow().contains_key(path) {
+            let cache = self.unknown_parts.borrow();
+            let bytes = cache.get(path).unwrap();
+            Ok(Some(f(bytes)))
+        } else {
+            // Load and cache
+            let bytes = self.load_unknown_part_from_archive(path)?;
+            self.unknown_parts
+                .borrow_mut()
+                .insert(path.to_string(), bytes);
+            let cache = self.unknown_parts.borrow();
+            let bytes = cache.get(path).unwrap();
+            Ok(Some(f(bytes)))
+        }
+    }
+
+    /// Access raw XML content of a model by path (pull-based, reads from ZIP each time)
+    ///
+    /// Returns an error if no model exists at the given path.
+    pub fn with_model_xml<F, T>(&self, path: &str, f: F) -> Result<T, Error>
+    where
+        F: FnOnce(&str) -> T,
+    {
+        // Validate path exists and is a model relationship
+        let is_model = self
+            .relationships
+            .values()
+            .flat_map(|r| &r.relationships)
+            .any(|rel| {
+                rel.target == path && matches!(rel.relationship_type, RelationshipType::Model)
+            });
+
+        if !is_model {
+            return Err(Error::ResourceNotFound(format!("Model at path: {}", path)));
+        }
+
+        // Read XML directly from ZIP archive
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut xml_string = String::new();
+        file.read_to_string(&mut xml_string)?;
+
+        Ok(f(&xml_string))
+    }
+
+    /// Access raw XML content of relationships by path (pull-based, reads from ZIP each time)
+    ///
+    /// Returns an error if no relationships file exists at the given path.
+    pub fn with_relationships_xml<F, T>(&self, path: &str, f: F) -> Result<T, Error>
+    where
+        F: FnOnce(&str) -> T,
+    {
+        // Check if relationships file exists
+        if !self.relationships.contains_key(path) {
+            return Err(Error::ResourceNotFound(format!("Relationships file at path: {}", path)));
+        }
+
+        // Read relationships XML directly from ZIP
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut xml_string = String::new();
+        file.read_to_string(&mut xml_string)?;
+
+        Ok(f(&xml_string))
+    }
+
+    /// Access raw XML content of content types (pull-based, reads from ZIP each time)
+    pub fn with_content_types_xml<F, T>(&self, f: F) -> Result<T, Error>
+    where
+        F: FnOnce(&str) -> T,
+    {
+        // Read content types XML directly from ZIP
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name("[Content_Types].xml")?;
+        let mut xml_string = String::new();
+        file.read_to_string(&mut xml_string)?;
+
+        Ok(f(&xml_string))
+    }
+
+    fn load_model_from_archive(&self, path: &str) -> Result<Model, Error> {
+        let mut archive = self.archive.borrow_mut();
+        let file = archive.by_name(try_strip_leading_slash(path))?;
+        self.deserializer.deserialize_model(file)
+    }
+
+    fn load_thumbnail_from_archive(&self, path: &str) -> Result<DynamicImage, Error> {
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut bytes: Vec<u8> = vec![];
+        file.read_to_end(&mut bytes)?;
+
+        let image = load_from_memory(&bytes)?;
+        Ok(image)
+    }
+
+    fn load_unknown_part_from_archive(&self, path: &str) -> Result<Vec<u8>, Error> {
+        let mut archive = self.archive.borrow_mut();
+        let mut file = archive.by_name(try_strip_leading_slash(path))?;
+        let mut bytes: Vec<u8> = vec![];
+        file.read_to_end(&mut bytes)?;
+        Ok(bytes)
+    }
+}
+
+#[cfg(feature = "io-memory-optimized-read")]
+impl<R: Read + Seek> ThreemfPackagePull<R> {
+    /// Create a pull-based package with memory-optimized deserialization
+    ///
+    /// * `reader` - A readable and seekable source (e.g., `File`)
+    /// * `cache_policy` - Whether to cache loaded data (`CachePolicy::NoCache` is default)
+    pub fn from_reader_with_memory_optimized_deserializer(
+        reader: R,
+        cache_policy: CachePolicy,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, XmlDeserializer::MemoryOptimized, cache_policy)
+    }
+}
+
+#[cfg(feature = "io-speed-optimized-read")]
+impl<R: Read + Seek> ThreemfPackagePull<R> {
+    /// Create a pull-based package with speed-optimized deserialization
+    ///
+    /// * `reader` - A readable and seekable source (e.g., `File`)
+    /// * `cache_policy` - Whether to cache loaded data (`CachePolicy::NoCache` is default)
+    pub fn from_reader_with_speed_optimized_deserializer(
+        reader: R,
+        cache_policy: CachePolicy,
+    ) -> Result<Self, Error> {
+        Self::from_reader(reader, XmlDeserializer::SpeedOptimized, cache_policy)
+    }
+}
+
+#[cfg(test)]
+mod smoke_tests {
+    use pretty_assertions::assert_eq;
+
+    use std::fs::File;
+    use std::path::PathBuf;
+
+    use super::*;
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn test_pull_based_root_model_lazy_load() {
+        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
+        let reader = File::open(path).unwrap();
+
+        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+            reader,
+            CachePolicy::NoCache,
+        )
+        .unwrap();
+
+        assert_eq!(package.relationships().len(), 1);
+        assert!(package.root_model_path().contains("3dmodel.model"));
+
+        let paths: Vec<_> = package.model_paths().collect();
+        assert!(!paths.is_empty());
+
+        let root = package.root_model().unwrap();
+        assert_eq!(root.build.item.len(), 2);
+    }
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn test_pull_based_with_sub_models() {
+        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let reader = File::open(path).unwrap();
+
+        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+            reader,
+            CachePolicy::CacheAll,
+        )
+        .unwrap();
+
+        assert_eq!(package.content_types().defaults.len(), 3);
+        assert_eq!(package.relationships().len(), 2);
+
+        let model_paths: Vec<_> = package.model_paths().collect();
+        assert!(model_paths.len() >= 2); // root + at least one sub-model
+
+        let root = package.root_model().unwrap();
+        assert!(!root.resources.object.is_empty());
+
+        let sub_model_path = "/3D/midway.model";
+        let exists = package.with_sub_model(sub_model_path, |_| true).unwrap();
+        assert!(exists.is_some());
+    }
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn test_pull_based_thumbnails() {
+        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let reader = File::open(path).unwrap();
+
+        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+            reader,
+            CachePolicy::NoCache,
+        )
+        .unwrap();
+
+        let thumbnail_paths: Vec<_> = package.thumbnail_paths().collect();
+        assert!(!thumbnail_paths.is_empty());
+
+        let thumbnail_path = thumbnail_paths[0];
+        package
+            .with_thumbnail(thumbnail_path, |img| {
+                assert!(img.width() > 0);
+                assert!(img.height() > 0);
+            })
+            .unwrap();
+    }
+
+    #[cfg(feature = "io-speed-optimized-read")]
+    #[test]
+    fn test_pull_based_speed_optimized() {
+        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
+        let reader = File::open(path).unwrap();
+
+        let package = ThreemfPackagePull::from_reader_with_speed_optimized_deserializer(
+            reader,
+            CachePolicy::CacheAll,
+        )
+        .unwrap();
+
+        assert!(!package.relationships().is_empty());
+
+        let root = package.root_model().unwrap();
+        assert_eq!(root.build.item.len(), 2);
+    }
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn test_string_extraction() {
+        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let reader = File::open(path).unwrap();
+
+        let package = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+            reader,
+            CachePolicy::NoCache,
+        )
+        .unwrap();
+
+        // Test model XML extraction
+        package
+            .with_model_xml("/3D/3dmodel.model", |xml| {
+                assert!(xml.contains("<model"));
+                assert!(xml.contains("</model>"));
+                assert!(xml.contains("xmlns"));
+            })
+            .unwrap();
+
+        // Test sub-model XML extraction
+        package
+            .with_model_xml("/3D/midway.model", |xml| {
+                assert!(xml.contains("<model"));
+                assert!(xml.contains("</model>"));
+            })
+            .unwrap();
+
+        // Test relationships XML extraction
+        package
+            .with_relationships_xml("_rels/.rels", |xml| {
+                assert!(xml.contains("<Relationships"));
+                assert!(xml.contains("<Relationship"));
+            })
+            .unwrap();
+
+        // Test sub-model relationships XML extraction
+        package
+            .with_relationships_xml("/3D/_rels/3dmodel.model.rels", |xml| {
+                assert!(xml.contains("<Relationships"));
+            })
+            .unwrap();
+
+        // Test content types XML extraction
+        package
+            .with_content_types_xml(|xml| {
+                assert!(xml.contains("<Types"));
+                assert!(xml.contains("<Default"));
+            })
+            .unwrap();
+
+        // Test invalid paths return errors
+        let invalid_result = package.with_model_xml("/invalid/path.model", |_| ());
+        assert!(matches!(invalid_result, Err(Error::ResourceNotFound(_))));
+
+        let invalid_rels = package.with_relationships_xml("/invalid/rels.xml", |_| ());
+        assert!(matches!(invalid_rels, Err(Error::ResourceNotFound(_))));
+    }
+}

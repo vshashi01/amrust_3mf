@@ -1,4 +1,7 @@
-#[cfg(feature = "io")]
+#[cfg(any(
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 #[cfg(test)]
 mod smoke_tests {
     use pretty_assertions::assert_eq;
@@ -10,7 +13,7 @@ mod smoke_tests {
 
     use std::{fs::File, path::PathBuf};
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn read_threemf_package_memory_optimized() {
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
@@ -44,7 +47,7 @@ mod smoke_tests {
         }
     }
 
-    #[cfg(feature = "speed-optimized-read")]
+    #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     fn read_threemf_package_speed_optimized() {
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");

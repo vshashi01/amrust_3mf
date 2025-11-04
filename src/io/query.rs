@@ -111,7 +111,7 @@ where
     iter_models(package).flat_map(f)
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "io-memory-optimized-read")]
 #[cfg(test)]
 mod smoke_tests {
     use super::*;

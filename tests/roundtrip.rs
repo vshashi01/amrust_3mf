@@ -1,4 +1,4 @@
-#[cfg(feature = "io")]
+#[cfg(all(feature = "io-memory-optimized-read", feature = "io-write"))]
 #[cfg(test)]
 mod smoke_tests {
     use pretty_assertions::assert_eq;
@@ -20,7 +20,6 @@ mod smoke_tests {
 
     use std::{collections::HashMap, io::Cursor};
 
-    #[cfg(all(feature = "memory-optimized-read", feature = "write"))]
     #[test]
     fn roundtrip_threemfpackage_test() {
         let vertices = Vertices {

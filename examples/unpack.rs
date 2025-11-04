@@ -1,23 +1,32 @@
-use amrust_3mf::{core::model::Model, io::ThreemfUnpacked};
+use amrust_3mf::{core::model::Model, io::CachePolicy, io::ThreemfPackagePull};
 
 use std::{fs::File, path::PathBuf};
 
 /// This is an example showing unpacking the package and manually deserializing the root model
 /// run with
-/// `cargo run --example unpack --no-default-features --features unpack-only io`
+/// `cargo run --example unpack --no-default-features --features io-pull-based-read`
 ///
 fn main() {
-    let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
+    let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
     let reader = File::open(path).unwrap();
 
-    let result = ThreemfUnpacked::from_reader(reader, true);
+    let result = ThreemfPackagePull::from_reader_with_memory_optimized_deserializer(
+        reader,
+        CachePolicy::NoCache,
+    );
 
     match result {
         Ok(unpacked) => {
-            let model = serde_roxmltree::from_str::<Model>(&unpacked.root);
+            let mut model: Option<Model> = None;
+            //let model = serde_roxmltree::from_str::<Model>(&unpacked.root);
+            let result_from_model = unpacked.with_model_xml(unpacked.root_model_path(), |xml| {
+                let deserialized = instant_xml::from_str::<Model>(xml).unwrap();
+                model = Some(deserialized);
+            });
+            assert!(result_from_model.is_ok());
             match model {
-                Ok(model) => println!("Number of build items: {}", model.build.item.len()),
-                Err(err) => println!("Error deserializing the model: {:?}", err),
+                Some(model) => println!("Number of build items: {}", model.build.item.len()),
+                None => println!("Error deserializing the model"),
             }
         }
         Err(err) => println!("Error reading the file: {:?}", err),

@@ -1,14 +1,80 @@
-use zip::ZipArchive;
-
 use crate::io::{
-    content_types::{ContentTypes, DefaultContentTypeEnum},
+    content_types::DefaultContentTypeEnum,
     error::Error,
     relationship::{RelationshipType, Relationships},
+    zip_utils::{self, RelationshipProcessor, XmlDeserializer},
 };
 
-use std::ffi::OsStr;
-use std::io::{self, Read};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
+use std::io::{Read, Seek};
+
+struct ThreemfUnpackedProcessor {
+    root: String,
+    sub_models: HashMap<String, String>,
+    thumbnails: HashMap<String, Vec<u8>>,
+    unknown_parts: HashMap<String, Vec<u8>>,
+    relationships: HashMap<String, String>,
+    content_types: String,
+}
+
+impl ThreemfUnpackedProcessor {
+    fn new(content_types: String, relationships: HashMap<String, String>) -> Self {
+        Self {
+            root: String::new(),
+            sub_models: HashMap::new(),
+            thumbnails: HashMap::new(),
+            unknown_parts: HashMap::new(),
+            relationships,
+            content_types,
+        }
+    }
+
+    fn into_threemf_unpacked(self) -> ThreemfUnpacked {
+        ThreemfUnpacked {
+            root: self.root,
+            sub_models: self.sub_models,
+            thumbnails: self.thumbnails,
+            unknown_parts: self.unknown_parts,
+            relationships: self.relationships,
+            content_types: self.content_types,
+        }
+    }
+}
+
+impl RelationshipProcessor for ThreemfUnpackedProcessor {
+    fn process_model(
+        &mut self,
+        target: &str,
+        xml_reader: &mut impl Read,
+        _deserializer: &zip_utils::XmlDeserializer,
+        is_root: bool,
+    ) -> Result<(), Error> {
+        let mut xml_content = String::new();
+        xml_reader.read_to_string(&mut xml_content)?;
+        if is_root {
+            self.root = xml_content;
+        } else {
+            self.sub_models.insert(target.to_string(), xml_content);
+        }
+        Ok(())
+    }
+
+    fn process_thumbnail(&mut self, target: &str, image_bytes: &[u8]) -> Result<(), Error> {
+        self.thumbnails
+            .insert(target.to_string(), image_bytes.to_vec());
+        Ok(())
+    }
+
+    fn process_unknown(
+        &mut self,
+        target: &str,
+        _content_type: &str,
+        data: &[u8],
+    ) -> Result<(), Error> {
+        self.unknown_parts.insert(target.to_string(), data.to_vec());
+        Ok(())
+    }
+}
 
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
@@ -52,30 +118,13 @@ impl ThreemfUnpacked {
     /// Expected to deal with nested parts of the 3mf package and flatten them into the respective dictionaries.
     /// Only If [process_sub_models] is set to true, it will process the sub models and thumbnails associated with the sub models in the package.
     /// Will return an error if the package is not a valid 3mf package or if the package contains unsupported content types.
-    pub fn from_reader<R: Read + io::Seek>(
-        reader: R,
-        process_sub_models: bool,
-    ) -> Result<Self, Error> {
-        let mut zip = ZipArchive::new(reader)?;
-
-        let content_types: ContentTypes;
-        let mut content_types_string: String = String::default();
-        {
-            let content_types_file = zip.by_name("[Content_Types].xml");
-
-            content_types = match content_types_file {
-                Ok(mut file) => {
-                    let _ = file.read_to_string(&mut content_types_string)?;
-                    serde_roxmltree::from_str::<ContentTypes>(&content_types_string)?
-                }
-                Err(err) => {
-                    return Err(Error::Zip(err));
-                }
-            }
-        }
+    pub fn from_reader<R: Read + Seek>(reader: R, process_sub_models: bool) -> Result<Self, Error> {
+        let deserializer = XmlDeserializer::Raw;
+        let (mut zip, _content_types, content_types_string, root_rels_filename) =
+            zip_utils::setup_archive_and_content_types(reader, deserializer)?;
 
         let rels_ext = {
-            let rels_content = content_types
+            let rels_content = _content_types
                 .defaults
                 .iter()
                 .find(|t| t.content_type == DefaultContentTypeEnum::Relationship);
@@ -86,170 +135,95 @@ impl ThreemfUnpacked {
             }
         };
 
-        let root_rels_filename: &str = &format!("_rels/.{rels_ext}");
-
-        let mut relationships = HashMap::<String, (Relationships, String)>::new();
-
-        let mut models = HashMap::<String, String>::new();
-        let mut thumbnails = HashMap::<String, Vec<u8>>::new();
-        let mut unknown_parts = HashMap::<String, Vec<u8>>::new();
-        let mut root_model_path: &str = "";
-
-        let root_rels: (Relationships, String) =
-            relationships_from_zip_by_name(&mut zip, root_rels_filename)?;
+        let mut relationships = HashMap::<String, Relationships>::new();
         let mut rels_strings_map = HashMap::<String, String>::new();
 
-        let root_model_processed = process_rels(
-            &mut zip,
-            &root_rels.0,
-            &mut models,
-            &mut thumbnails,
-            &mut unknown_parts,
-        );
-        match root_model_processed {
-            Ok(_) => {
-                let model_rels = root_rels
-                    .0
-                    .relationships
-                    .iter()
-                    .find(|rels| rels.relationship_type == RelationshipType::Model);
+        let root_rels: (Relationships, String) =
+            zip_utils::relationships_from_zip_by_name_with_raw(&mut zip, &root_rels_filename)?;
 
-                if let Some(root_model) = model_rels {
-                    root_model_path = &root_model.target;
-                    relationships.insert(root_rels_filename.to_owned(), root_rels.clone());
-                }
+        let root_model_rel = root_rels
+            .0
+            .relationships
+            .iter()
+            .find(|rels| rels.relationship_type == RelationshipType::Model);
+
+        let root_model_path = match root_model_rel {
+            Some(rel) => rel.target.clone(),
+            None => {
+                return Err(Error::ReadError(
+                    "Root model relationship not found".to_owned(),
+                ));
             }
-            Err(err) => return Err(err),
-        }
+        };
+
+        relationships.insert(root_rels_filename.clone(), root_rels.0.clone());
+        rels_strings_map.insert(root_rels_filename.clone(), root_rels.1);
 
         if process_sub_models {
-            {
-                for value in 0..zip.len() {
-                    let file = zip.by_index(value)?;
-
-                    if file.is_file()
-                        && let Some(path) = file.enclosed_name()
-                        && Some(OsStr::new(rels_ext)) == path.extension()
-                        && path != Path::new(root_rels_filename)
-                    {
-                        match path.to_str() {
-                            Some(path_str) => {
-                                let rels = relationships_from_zipfile(file)?;
-                                relationships.insert(format!("/{path_str}"), rels);
-                            }
-                            None => {
-                                return Err(Error::ReadError(
-                                    "Failed to read the relationship file path".to_owned(),
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (dir_path, rels) in relationships.iter() {
-                process_rels(
+            let rel_files =
+                zip_utils::discover_relationship_files(&mut zip, rels_ext, &root_rels_filename)?;
+            for rel_file_path in rel_files {
+                let rels = zip_utils::relationships_from_zip_by_name_with_raw(
                     &mut zip,
-                    &rels.0,
-                    &mut models,
-                    &mut thumbnails,
-                    &mut unknown_parts,
+                    &rel_file_path[1..],
                 )?;
-                rels_strings_map.insert(dir_path.clone(), rels.1.clone());
+                relationships.insert(rel_file_path.clone(), rels.0.clone());
+                rels_strings_map.insert(rel_file_path, rels.1);
             }
         }
 
-        if let Some(root_model) = models.remove(root_model_path) {
-            Ok(Self {
-                root: root_model,
-                sub_models: models,
-                thumbnails,
-                unknown_parts,
-                relationships: rels_strings_map,
-                content_types: content_types_string,
-            })
+        let mut processor = ThreemfUnpackedProcessor::new(content_types_string, rels_strings_map);
+
+        // Process all relationships
+        zip_utils::process_relationships(
+            &mut zip,
+            &relationships,
+            &mut processor,
+            &deserializer,
+            &root_model_path,
+        )?;
+
+        // Move root model from sub_models to root if it was processed as a sub-model
+        if let Some(root_content) = processor.sub_models.remove(&root_model_path) {
+            processor.root = root_content;
+        }
+
+        Ok(processor.into_threemf_unpacked())
+    }
+}
+
+impl RelationshipProcessor for ThreemfUnpacked {
+    fn process_model(
+        &mut self,
+        target: &str,
+        xml_reader: &mut impl Read,
+        _deserializer: &XmlDeserializer,
+        is_root: bool,
+    ) -> Result<(), Error> {
+        let mut xml_content = String::new();
+        xml_reader.read_to_string(&mut xml_content)?;
+        if is_root {
+            self.root = xml_content;
         } else {
-            Err(Error::ReadError("Root model not found".to_owned()))
+            self.sub_models.insert(target.to_string(), xml_content);
         }
-    }
-}
-
-fn relationships_from_zip_by_name<R: Read + io::Seek>(
-    zip: &mut ZipArchive<R>,
-    zip_filename: &str,
-) -> Result<(Relationships, String), Error> {
-    let rels_file = zip.by_name(zip_filename);
-    match rels_file {
-        Ok(file) => relationships_from_zipfile(file),
-        Err(err) => Err(Error::Zip(err)),
-    }
-}
-
-fn relationships_from_zipfile<R: Read>(
-    mut file: zip::read::ZipFile<'_, R>,
-) -> Result<(Relationships, String), Error> {
-    let mut xml_string: String = Default::default();
-    let _ = file.read_to_string(&mut xml_string)?;
-    let rels = serde_roxmltree::from_str::<Relationships>(&xml_string)?;
-
-    Ok((rels, xml_string))
-}
-
-fn process_rels<R: Read + io::Seek>(
-    zip: &mut ZipArchive<R>,
-    rels: &Relationships,
-    models: &mut HashMap<String, String>,
-    thumbnails: &mut HashMap<String, Vec<u8>>,
-    unknown_parts: &mut HashMap<String, Vec<u8>>,
-) -> Result<(), Error> {
-    for rel in &rels.relationships {
-        let name = try_strip_leading_slash(&rel.target);
-        let zip_file = zip.by_name(name);
-
-        match zip_file {
-            Ok(mut file) => {
-                if file.is_dir() {
-                    return Err(Error::ReadError(format!(
-                        r#"Found a folder "{:?}" instead of a file"#,
-                        file.enclosed_name()
-                    )));
-                }
-
-                match rel.relationship_type {
-                    RelationshipType::Thumbnail => {
-                        let mut bytes: Vec<u8> = vec![];
-                        let _ = file.read_to_end(&mut bytes)?;
-                        // println!("Thumbnail read bytes: {:?}", bytes.len());
-
-                        thumbnails.insert(rel.target.clone(), bytes);
-                    }
-                    RelationshipType::Model => {
-                        let mut xml_string: String = Default::default();
-                        let _ = file.read_to_string(&mut xml_string)?;
-                        // println!("Model bytes: {:?}", xml_string.len());
-
-                        models.insert(rel.target.clone(), xml_string);
-                    }
-                    RelationshipType::Unknown(_) => {
-                        let mut bytes: Vec<u8> = vec![];
-                        let _ = file.read_to_end(&mut bytes)?;
-                        // println!("Unknown bytes: {:?}", bytes.len());
-
-                        unknown_parts.insert(rel.target.clone(), bytes);
-                    }
-                }
-            }
-            Err(err) => return Err(Error::Zip(err)),
-        }
+        Ok(())
     }
 
-    Ok(())
-}
+    fn process_thumbnail(&mut self, target: &str, image_bytes: &[u8]) -> Result<(), Error> {
+        self.thumbnails
+            .insert(target.to_string(), image_bytes.to_vec());
+        Ok(())
+    }
 
-fn try_strip_leading_slash(target: &str) -> &str {
-    match target.strip_prefix("/") {
-        Some(stripped) => stripped,
-        None => target,
+    fn process_unknown(
+        &mut self,
+        target: &str,
+        _content_type: &str,
+        data: &[u8],
+    ) -> Result<(), Error> {
+        self.unknown_parts.insert(target.to_string(), data.to_vec());
+        Ok(())
     }
 }
 
