@@ -33,11 +33,6 @@ pub(crate) enum XmlDeserializer {
     // Raw,
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 impl XmlDeserializer {
     pub(crate) fn deserialize_content_types<R: Read>(
         &self,
@@ -89,10 +84,6 @@ impl XmlDeserializer {
         }
     }
 
-    // #[cfg(any(
-    //     feature = "io-memory-optimized-read",
-    //     feature = "io-speed-optimized-read",
-    // ))]
     pub(crate) fn deserialize_model<R: Read>(&self, mut reader: R) -> Result<Model, Error> {
         match self {
             #[cfg(feature = "io-memory-optimized-read")]
@@ -112,11 +103,6 @@ impl XmlDeserializer {
     }
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 pub(crate) trait RelationshipProcessor {
     fn process_model(
         &mut self,
@@ -136,11 +122,6 @@ pub(crate) trait RelationshipProcessor {
     ) -> Result<(), Error>;
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 pub(crate) fn setup_archive_and_content_types<R: Read + Seek>(
     reader: R,
     deserializer: XmlDeserializer,
@@ -155,11 +136,6 @@ pub(crate) fn setup_archive_and_content_types<R: Read + Seek>(
     Ok((zip, content_types, content_types_string, root_rels_filename))
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 fn parse_content_types<R: Read + Seek>(
     zip: &mut ZipArchive<R>,
     deserializer: XmlDeserializer,
@@ -176,11 +152,6 @@ fn parse_content_types<R: Read + Seek>(
     }
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 fn determine_relationships_extension(content_types: &ContentTypes) -> String {
     content_types
         .defaults
@@ -190,11 +161,6 @@ fn determine_relationships_extension(content_types: &ContentTypes) -> String {
         .unwrap_or_else(|| "rels".to_string())
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 /// Find all relationship files in the archive (excluding the root relationships file)
 pub(crate) fn discover_relationship_files<R: Read + Seek>(
     zip: &mut ZipArchive<R>,
@@ -224,11 +190,6 @@ pub(crate) fn discover_relationship_files<R: Read + Seek>(
     Ok(rel_files)
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 pub(crate) fn relationships_from_zipfile<R: Read>(
     file: zip::read::ZipFile<'_, R>,
     deserializer: &XmlDeserializer,
@@ -236,11 +197,6 @@ pub(crate) fn relationships_from_zipfile<R: Read>(
     deserializer.deserialize_relationships(file)
 }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 pub(crate) fn relationships_from_zip_by_name<R: Read + Seek>(
     zip: &mut ZipArchive<R>,
     zip_filename: &str,
@@ -275,11 +231,6 @@ pub(crate) fn relationships_from_zip_by_name<R: Read + Seek>(
 //     }
 // }
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read",
-//     feature = "io-unpack"
-// ))]
 pub(crate) fn process_relationships<R: Read + Seek, P: RelationshipProcessor>(
     zip: &mut ZipArchive<R>,
     relationships: &HashMap<String, Relationships>,
