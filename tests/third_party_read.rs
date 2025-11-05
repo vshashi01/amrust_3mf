@@ -1,23 +1,19 @@
-#[cfg(feature = "io")]
+#[cfg(any(feature = "io-memory-optimized-read", feature = "io-lazy-read"))]
 #[cfg(test)]
 pub mod tests {
-
     pub mod test_utilities;
-
-    use amrust_3mf::io::ThreemfPackage;
-
-    #[cfg(feature = "unpack-only")]
-    use amrust_3mf::io::ThreemfUnpacked;
 
     use std::fs::File;
     use std::path::PathBuf;
 
-    #[cfg(feature = "memory-optimized-read")]
+    #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     pub fn can_load_thirdparty_3mf_package() {
         let fixtures = test_utilities::get_test_fixtures();
 
         for fixture in fixtures {
+            use amrust_3mf::io::ThreemfPackage;
+
             if fixture.skip_test || fixture.large_test {
                 continue;
             }
@@ -49,9 +45,12 @@ pub mod tests {
         }
     }
 
-    #[cfg(feature = "unpack-only")]
+    #[cfg(feature = "io-lazy-read")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
+        use amrust_3mf::io::CachePolicy;
+        use amrust_3mf::io::ThreemfPackageLazyReader;
+
         let fixtures = test_utilities::get_test_fixtures();
 
         for fixture in fixtures {
@@ -67,13 +66,16 @@ pub mod tests {
             let filepath = folder_path.join(fixture.filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfUnpacked::from_reader(file, true);
+            let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+                file,
+                CachePolicy::NoCache,
+            );
 
             match package {
                 Ok(threemf) => {
-                    assert!(!threemf.content_types.is_empty());
-                    assert!(!threemf.relationships.is_empty());
-                    assert!(!threemf.root.is_empty());
+                    assert!(!threemf.content_types().defaults.is_empty());
+                    assert!(!threemf.relationships().is_empty());
+                    assert_eq!(threemf.root_model_path(), "/3D/3dmodel.model");
                 }
                 Err(err) => {
                     panic!(

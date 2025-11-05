@@ -20,7 +20,7 @@ use std::{io::Cursor, vec};
 /// This demonstrates the Beam Lattice Extension support in amrust_3mf.
 ///
 /// Run with:
-/// `cargo run --example beamlattice-write --features write,io,`
+/// `cargo run --example beamlattice_write --no-default-features --features io-write`
 ///
 fn main() {
     // Create vertices for a simple cube structure

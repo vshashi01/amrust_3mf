@@ -1,4 +1,8 @@
-#[cfg(feature = "io")]
+#[cfg(any(
+    feature = "io-write",
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 use image::ImageError;
 
 use thiserror::Error;
@@ -18,9 +22,13 @@ pub enum Error {
     #[error("Error reading 3mf file: {0}")]
     ReadError(String),
 
-    #[cfg(feature = "io")]
+    #[cfg(any(
+        feature = "io-write",
+        feature = "io-memory-optimized-read",
+        feature = "io-speed-optimized-read"
+    ))]
     #[error("Error reading thumbnail image: {0}")]
-    ImageReadError(#[from] ImageError),
+    ImageIOError(#[from] ImageError),
 
     #[error("Error writing 3mf file: {0}")]
     WriteError(String),
@@ -31,6 +39,9 @@ pub enum Error {
 
     #[error("Thumbnail error: {0}")]
     ThumbnailError(String),
+
+    #[error("Resource not found: {0}")]
+    ResourceNotFound(String),
 
     #[cfg(feature = "speed-optimized-read")]
     #[error("Deserialization error from serde-roxmltree")]

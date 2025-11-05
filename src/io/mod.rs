@@ -2,15 +2,46 @@ pub mod content_types;
 pub mod error;
 pub mod relationship;
 
-#[cfg(feature = "io")]
+mod utils;
+#[cfg(any(
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
+mod zip_utils;
+
+#[cfg(any(
+    feature = "io-write",
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 mod threemf_package;
-#[cfg(feature = "io")]
+#[cfg(any(
+    feature = "io-write",
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 pub use threemf_package::ThreemfPackage;
 
-#[cfg(feature = "io")]
+#[cfg(any(
+    feature = "io-write",
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
 pub mod query;
 
-#[cfg(feature = "unpack-only")]
-mod threemf_unpacked;
-#[cfg(feature = "unpack-only")]
-pub use threemf_unpacked::ThreemfUnpacked;
+#[cfg(all(
+    feature = "io-lazy-read",
+    any(
+        feature = "io-memory-optimized-read",
+        feature = "io-speed-optimized-read"
+    )
+))]
+mod threemf_package_lazy_reader;
+#[cfg(all(
+    feature = "io-lazy-read",
+    any(
+        feature = "io-memory-optimized-read",
+        feature = "io-speed-optimized-read"
+    )
+))]
+pub use threemf_package_lazy_reader::{CachePolicy, ThreemfPackageLazyReader};
