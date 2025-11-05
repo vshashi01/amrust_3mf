@@ -1,4 +1,10 @@
-#[cfg(all(feature = "io-memory-optimized-read", feature = "io-write"))]
+#[cfg(all(
+    any(
+        feature = "io-memory-optimized-read",
+        feature = "io-speed-optimized-read"
+    ),
+    feature = "io-write"
+))]
 #[cfg(test)]
 mod smoke_tests {
     use pretty_assertions::assert_eq;
@@ -126,9 +132,19 @@ mod smoke_tests {
         write_package
             .write(&mut buf)
             .expect("Error writing package");
-        let models =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
-                .expect("Error reading package");
-        assert_eq!(models, write_package);
+        #[cfg(feature = "io-memory-optimized-read")]
+        {
+            let models =
+                ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
+                    .expect("Error reading package");
+            assert_eq!(models, write_package);
+        }
+        #[cfg(feature = "io-speed-optimized-read")]
+        {
+            let models =
+                ThreemfPackage::from_reader_with_speed_optimized_deserializer(&mut buf, false)
+                    .expect("Error reading package");
+            assert_eq!(models, write_package);
+        }
     }
 }

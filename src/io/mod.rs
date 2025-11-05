@@ -14,20 +14,20 @@ mod zip_utils;
     feature = "io-memory-optimized-read",
     feature = "io-speed-optimized-read"
 ))]
-mod feature_gate {
-    #[path = "../threemf_package.rs"]
-    pub mod threemf_package;
-
-    #[path = "../query.rs"]
-    pub mod query;
-}
+mod threemf_package;
+#[cfg(any(
+    feature = "io-write",
+    feature = "io-memory-optimized-read",
+    feature = "io-speed-optimized-read"
+))]
+pub use threemf_package::ThreemfPackage;
 
 #[cfg(any(
     feature = "io-write",
     feature = "io-memory-optimized-read",
     feature = "io-speed-optimized-read"
 ))]
-pub use feature_gate::{query, threemf_package::ThreemfPackage};
+pub mod query;
 
 #[cfg(all(
     feature = "io-lazy-read",
