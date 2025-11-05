@@ -146,5 +146,33 @@ mod smoke_tests {
                     .expect("Error reading package");
             assert_eq!(models, write_package);
         }
+
+        // Test lazy reader roundtrip
+        #[cfg(feature = "io-lazy-read")]
+        {
+            use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+
+            buf.set_position(0); // Reset cursor position
+            let lazy_package =
+                ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+                    &mut buf,
+                    CachePolicy::NoCache,
+                )
+                .expect("Error reading package with lazy reader");
+
+            // Verify basic structure
+            assert_eq!(lazy_package.relationships().len(), 1);
+            assert!(lazy_package.root_model_path().contains("3Dmodel.model"));
+
+            // Verify root model content
+            let root_model = lazy_package.root_model().unwrap();
+            assert_eq!(root_model.resources.object.len(), 1);
+            assert_eq!(root_model.build.item.len(), 1);
+
+            let obj = &root_model.resources.object[0];
+            assert_eq!(obj.id, 1);
+            assert_eq!(obj.name, Some("Mesh".to_owned()));
+            assert!(obj.mesh.is_some());
+        }
     }
 }
