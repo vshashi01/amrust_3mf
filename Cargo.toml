@@ -10,7 +10,13 @@ keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
 [features]
-default = ["io-write", "io-memory-optimized-read", "io-lazy-read", "write", "memory-optimized-read"]
+default = [
+    "io-write",
+    "io-memory-optimized-read",
+    "io-lazy-read",
+    "write",
+    "memory-optimized-read",
+]
 write = ["dep:instant-xml"]
 memory-optimized-read = ["dep:instant-xml"]
 speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
@@ -28,7 +34,6 @@ io-speed-optimized-read = [
     "speed-optimized-read",
 ]
 
-io-unpack = ["speed-optimized-read", "dep:zip", "dep:thiserror"]
 io-lazy-read = ["dep:once_cell", "io-memory-optimized-read"]
 
 [dependencies]

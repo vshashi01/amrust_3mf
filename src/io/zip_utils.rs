@@ -7,10 +7,6 @@ use crate::io::{
     utils,
 };
 
-// #[cfg(any(
-//     feature = "io-memory-optimized-read",
-//     feature = "io-speed-optimized-read"
-// ))]
 use crate::core::model::Model;
 
 use std::collections::HashMap;
@@ -29,8 +25,6 @@ pub(crate) enum XmlDeserializer {
     MemoryOptimized,
     #[cfg(feature = "io-speed-optimized-read")]
     SpeedOptimized,
-    // #[cfg(feature = "io-unpack")]
-    // Raw,
 }
 
 impl XmlDeserializer {
@@ -50,12 +44,7 @@ impl XmlDeserializer {
                 let mut xml_string = String::new();
                 reader.read_to_string(&mut xml_string)?;
                 serde_roxmltree::from_str::<ContentTypes>(&xml_string).map_err(Error::from)
-            } // #[cfg(feature = "io-unpack")]
-              // XmlDeserializer::Raw => {
-              //     let mut xml_string = String::new();
-              //     reader.read_to_string(&mut xml_string)?;
-              //     serde_roxmltree::from_str::<ContentTypes>(&xml_string).map_err(Error::from)
-              // }
+            }
         }
     }
 
@@ -75,12 +64,7 @@ impl XmlDeserializer {
                 let mut xml_string = String::new();
                 reader.read_to_string(&mut xml_string)?;
                 serde_roxmltree::from_str::<Relationships>(&xml_string).map_err(Error::from)
-            } // #[cfg(feature = "io-unpack")]
-              // XmlDeserializer::Raw => {
-              //     let mut xml_string = String::new();
-              //     reader.read_to_string(&mut xml_string)?;
-              //     serde_roxmltree::from_str::<Relationships>(&xml_string).map_err(Error::from)
-              // }
+            }
         }
     }
 
@@ -97,8 +81,7 @@ impl XmlDeserializer {
                 let mut xml_string = String::new();
                 reader.read_to_string(&mut xml_string)?;
                 serde_roxmltree::from_str::<Model>(&xml_string).map_err(Error::from)
-            } // #[cfg(feature = "io-unpack")]
-              // XmlDeserializer::Raw => unreachable!("Raw deserializer should not deserialize models"),
+            }
         }
     }
 }
@@ -208,28 +191,6 @@ pub(crate) fn relationships_from_zip_by_name<R: Read + Seek>(
         Err(err) => Err(Error::Zip(err)),
     }
 }
-
-// #[cfg(feature = "io-unpack")]
-// pub(crate) fn relationships_from_zipfile_with_raw<R: Read>(
-//     mut file: zip::read::ZipFile<'_, R>,
-// ) -> Result<(Relationships, String), Error> {
-//     let mut xml_string = String::new();
-//     file.read_to_string(&mut xml_string)?;
-//     let rels = serde_roxmltree::from_str::<Relationships>(&xml_string)?;
-//     Ok((rels, xml_string))
-// }
-
-// #[cfg(feature = "io-unpack")]
-// pub(crate) fn relationships_from_zip_by_name_with_raw<R: Read + Seek>(
-//     zip: &mut ZipArchive<R>,
-//     zip_filename: &str,
-// ) -> Result<(Relationships, String), Error> {
-//     let rels_file = zip.by_name(zip_filename);
-//     match rels_file {
-//         Ok(file) => relationships_from_zipfile_with_raw(file),
-//         Err(err) => Err(Error::Zip(err)),
-//     }
-// }
 
 pub(crate) fn process_relationships<R: Read + Seek, P: RelationshipProcessor>(
     zip: &mut ZipArchive<R>,

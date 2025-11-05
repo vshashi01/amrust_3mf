@@ -25,8 +25,8 @@ pub mod threemf_namespaces;
 
 #[cfg(any(
     feature = "io-write",
-    feature = "io-unpack",
     feature = "io-memory-optimized-read",
-    feature = "io-speed-optimized-read"
+    feature = "io-speed-optimized-read",
+    feature = "io-lazy-read"
 ))]
 pub mod io;
