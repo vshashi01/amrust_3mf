@@ -66,31 +66,38 @@ harness = false
 name = "write"
 path = "examples/write.rs"
 required-features = ["io-write"]
+default-features = false
 
 [[example]]
 name = "unpack"
 path = "examples/unpack.rs"
 required-features = ["io-lazy-read"]
+default-features = false
 
 [[example]]
-name = "memory-optimized-read"
-path = "examples/memory-optimized-read.rs"
+name = "io_memory_optimized_read"
+path = "examples/io_memory_optimized_read.rs"
 required-features = ["io-memory-optimized-read"]
+default-features = false
+
 
 [[example]]
-name = "speed-optimized-read"
-path = "examples/speed-optimized-read.rs"
+name = "io_speed_optimized_read"
+path = "examples/io_speed_optimized_read.rs"
 required-features = ["io-speed-optimized-read"]
+default-features = false
 
 [[example]]
-name = "beamlattice-write"
-path = "examples/beamlattice-write.rs"
+name = "beamlattice_write"
+path = "examples/beamlattice_write.rs"
 required-features = ["io-write"]
+default-features = false
 
 [[example]]
-name = "string-extraction"
+name = "string_extraction"
 path = "examples/string_extraction.rs"
 required-features = ["io-lazy-read"]
+default-features = false
 
 [package.metadata.cargo-all-features]
 max_combination_size = 3

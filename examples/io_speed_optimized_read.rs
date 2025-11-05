@@ -3,8 +3,8 @@ use amrust_3mf::io::ThreemfPackage;
 use std::{fs::File, path::PathBuf};
 
 /// This is an example showing speed optimized reading
-/// run with
-/// `cargo run --example speed-optimized-read --features speed-optimized-read`
+/// Run with:
+/// `cargo run --example io_speed_optimized_read --features io-speed-optimized-read`
 ///
 fn main() {
     let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
