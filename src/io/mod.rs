@@ -3,6 +3,7 @@ pub mod error;
 pub mod relationship;
 
 mod utils;
+pub use utils::parse_xmlns_attributes;
 #[cfg(any(
     feature = "io-memory-optimized-read",
     feature = "io-speed-optimized-read"

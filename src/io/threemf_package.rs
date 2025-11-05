@@ -5,14 +5,16 @@ use zip::write::SimpleFileOptions;
 #[cfg(feature = "io-write")]
 use instant_xml::ToXml;
 
-use crate::io::content_types::DefaultContentTypes;
-use crate::io::relationship::Relationship;
+#[cfg(feature = "io-write")]
+use crate::threemf_namespaces::ThreemfNamespace;
+
 use crate::{
     core::model::Model,
     io::{
-        content_types::{ContentTypes, DefaultContentTypeEnum},
+        content_types::{ContentTypes, DefaultContentTypeEnum, DefaultContentTypes},
         error::Error,
-        relationship::{RelationshipType, Relationships},
+        parse_xmlns_attributes,
+        relationship::{Relationship, RelationshipType, Relationships},
         utils,
     },
 };
@@ -71,10 +73,15 @@ impl ThreemfPackage {
     pub fn write<W: Write + Seek>(&self, threemf_archive: W) -> Result<(), Error> {
         let mut zip = ZipWriter::new(threemf_archive);
 
-        Self::archive_write_xml_with_header(&mut zip, "[Content_Types].xml", &self.content_types)?;
+        Self::archive_write_xml_with_header(
+            &mut zip,
+            "[Content_Types].xml",
+            &self.content_types,
+            None,
+        )?;
 
         for (path, relationships) in &self.relationships {
-            Self::archive_write_xml_with_header(&mut zip, path, &relationships)?;
+            Self::archive_write_xml_with_header(&mut zip, path, &relationships, None)?;
 
             for relationship in &relationships.relationships {
                 let filename = utils::try_strip_leading_slash(&relationship.target);
@@ -90,7 +97,12 @@ impl ThreemfPackage {
                                 relationship.target
                             )));
                         };
-                        Self::archive_write_xml_with_header(&mut zip, filename, model)?;
+                        Self::archive_write_xml_with_header(
+                            &mut zip,
+                            filename,
+                            model,
+                            Some(model.used_namespaces()),
+                        )?;
                     }
                     RelationshipType::Thumbnail => {
                         if let Some(image) = self.thumbnails.get(&relationship.target) {
@@ -128,17 +140,89 @@ impl ThreemfPackage {
         archive: &mut ZipWriter<W>,
         filename: &str,
         content: &T,
+        optional_namespaces_to_keep: Option<Vec<ThreemfNamespace>>,
     ) -> Result<(), Error> {
         use instant_xml::to_string;
 
         const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?>"#;
 
         let mut content_string = to_string(&content)?;
+
+        if let Some(namespaces) = optional_namespaces_to_keep {
+            Self::filter_unused_namespaces(&mut content_string, &namespaces);
+        }
+
         content_string.insert_str(0, XML_HEADER);
 
         archive.start_file(filename, SimpleFileOptions::default())?;
         archive.write_all(content_string.as_bytes())?;
         Ok(())
+    }
+
+    fn filter_unused_namespaces(xml: &mut String, keep_namespaces: &[ThreemfNamespace]) {
+        let keep_uris: std::collections::HashSet<_> = keep_namespaces.iter().map(|ns| ns.uri()).collect();
+
+        // Find model tag
+        if let Some(model_pos) = xml.find("<model") {
+            if let Some(end_pos) = xml[model_pos..].find('>') {
+                let tag_end = model_pos + end_pos + 1;
+                let tag_content = &xml[model_pos..tag_end];
+
+                // Parse xmlns attributes
+                let xmlns_attrs = parse_xmlns_attributes(tag_content);
+
+                // Parse all attributes (simple approach: split by spaces)
+                let mut all_attrs = Vec::new();
+                let mut current_attr = String::new();
+                let mut in_quotes = false;
+
+                for ch in tag_content[6..].chars() { // Skip "<model"
+                    if ch == '"' {
+                        in_quotes = !in_quotes;
+                        current_attr.push(ch);
+                    } else if ch == ' ' && !in_quotes {
+                        if !current_attr.is_empty() {
+                            all_attrs.push(current_attr);
+                            current_attr = String::new();
+                        }
+                    } else if ch == '>' {
+                        if !current_attr.is_empty() {
+                            all_attrs.push(current_attr);
+                        }
+                        break;
+                    } else {
+                        current_attr.push(ch);
+                    }
+                }
+
+                // Build new tag
+                let mut new_tag = String::from("<model");
+
+                // Add kept xmlns attributes
+                for (attr_name, uri) in &xmlns_attrs {
+                    if keep_uris.contains(uri.as_str()) {
+                        new_tag.push(' ');
+                        new_tag.push_str(attr_name);
+                        new_tag.push_str("=\"");
+                        new_tag.push_str(uri);
+                        new_tag.push('"');
+                    }
+                }
+
+                // Add non-xmlns attributes
+                for attr in all_attrs {
+                    if !attr.starts_with("xmlns") {
+                        new_tag.push(' ');
+                        new_tag.push_str(&attr);
+                    }
+                }
+
+                new_tag.push('>');
+
+                // Replace in original XML
+                xml.replace_range(model_pos..tag_end, &new_tag);
+            }
+        }
     }
 }
 
@@ -526,7 +610,7 @@ pub mod smoke_tests {
             writer
         };
 
-        assert_eq!(bytes.into_inner().len(), 976);
+        assert_eq!(bytes.into_inner().len(), 944);
     }
 
     #[cfg(all(feature = "io-memory-optimized-read", feature = "io-write"))]
