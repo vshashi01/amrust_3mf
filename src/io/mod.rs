@@ -4,6 +4,24 @@ pub mod relationship;
 
 mod utils;
 pub use utils::parse_xmlns_attributes;
+
+/// Represents an XML namespace declaration with its prefix and URI
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct XmlNamespace {
+    /// The namespace prefix (None for default namespace)
+    pub prefix: Option<String>,
+    /// The namespace URI
+    pub uri: String,
+}
+
+/// Stores namespace information for a specific model file
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelNamespaces {
+    /// Path to the model file
+    pub path: String,
+    /// List of namespaces declared in that model
+    pub namespaces: Vec<XmlNamespace>,
+}
 #[cfg(any(
     feature = "io-memory-optimized-read",
     feature = "io-speed-optimized-read"

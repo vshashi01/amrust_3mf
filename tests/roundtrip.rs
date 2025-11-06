@@ -67,9 +67,8 @@ mod smoke_tests {
             beamlattice: None,
         };
 
-        let write_package = ThreemfPackage {
-            root: Model {
-                // xmlns: None,
+        let write_package = ThreemfPackage::new(
+            Model {
                 unit: Some(Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -100,10 +99,10 @@ mod smoke_tests {
                     }],
                 },
             },
-            sub_models: HashMap::new(),
-            thumbnails: HashMap::new(),
-            unknown_parts: HashMap::new(),
-            relationships: HashMap::from([(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::from([(
                 "_rels/.rels".to_owned(),
                 Relationships {
                     relationships: vec![Relationship {
@@ -113,7 +112,7 @@ mod smoke_tests {
                     }],
                 },
             )]),
-            content_types: ContentTypes {
+            ContentTypes {
                 defaults: vec![
                     DefaultContentTypes {
                         extension: "rels".to_owned(),
@@ -125,7 +124,7 @@ mod smoke_tests {
                     },
                 ],
             },
-        };
+        );
 
         let mut buf = Cursor::new(Vec::new());
 

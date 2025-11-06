@@ -363,8 +363,8 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
 
     fn load_model_from_archive(&self, path: &str) -> Result<Model, Error> {
         let mut archive = self.archive.borrow_mut();
-        let file = archive.by_name(utils::try_strip_leading_slash(path))?;
-        self.deserializer.deserialize_model(file)
+        let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
+        self.deserializer.deserialize_model(&mut file)
     }
 
     fn load_thumbnail_from_archive(&self, path: &str) -> Result<DynamicImage, Error> {

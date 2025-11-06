@@ -68,7 +68,7 @@ impl XmlDeserializer {
         }
     }
 
-    pub(crate) fn deserialize_model<R: Read>(&self, mut reader: R) -> Result<Model, Error> {
+    pub(crate) fn deserialize_model<R: Read>(&self, reader: &mut R) -> Result<Model, Error> {
         match self {
             #[cfg(feature = "io-memory-optimized-read")]
             XmlDeserializer::MemoryOptimized => {

@@ -1,3 +1,5 @@
+use crate::io::XmlNamespace;
+
 pub(crate) fn try_strip_leading_slash(target: &str) -> &str {
     match target.strip_prefix('/') {
         Some(stripped) => stripped,
@@ -6,9 +8,8 @@ pub(crate) fn try_strip_leading_slash(target: &str) -> &str {
 }
 
 /// Extracts xmlns attribute declarations from an XML tag
-/// Returns vec of (attribute_name, uri) pairs
-/// e.g., [("xmlns", "http://..."), ("xmlns:p", "http://...")]
-pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<(String, String)> {
+/// Returns vec of XmlNamespace structs containing prefix and URI
+pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<XmlNamespace> {
     let mut attributes = Vec::new();
     let mut chars = tag_content.chars().peekable();
 
@@ -29,18 +30,21 @@ pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<(String, String)> {
             }
 
             if is_xmlns {
-                // Check for colon (namespaced)
-                if chars.peek() == Some(&':') {
-                    attr_name.push(chars.next().unwrap());
+                let prefix = if chars.peek() == Some(&':') {
+                    chars.next(); // consume ':'
                     // Read namespace prefix
+                    let mut prefix_str = String::new();
                     while let Some(&ch) = chars.peek() {
                         if ch.is_alphabetic() || ch == '_' || ch == '-' {
-                            attr_name.push(chars.next().unwrap());
+                            prefix_str.push(chars.next().unwrap());
                         } else {
                             break;
                         }
                     }
-                }
+                    Some(prefix_str)
+                } else {
+                    None
+                };
 
                 // Expect equals sign
                 if chars.next() == Some('=') && chars.next() == Some('"') {
@@ -52,7 +56,7 @@ pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<(String, String)> {
                         }
                         uri.push(ch);
                     }
-                    attributes.push((attr_name, uri));
+                    attributes.push(XmlNamespace { prefix, uri });
                 }
             }
         }
@@ -69,7 +73,7 @@ mod tests {
     fn test_parse_xmlns_attributes_simple() {
         let xml = r#"<model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter">"#;
         let attrs = parse_xmlns_attributes(xml);
-        assert_eq!(attrs, vec![("xmlns".to_string(), "http://schemas.microsoft.com/3dmanufacturing/core/2015/02".to_string())]);
+        assert_eq!(attrs, vec![XmlNamespace { prefix: None, uri: "http://schemas.microsoft.com/3dmanufacturing/core/2015/02".to_string() }]);
     }
 
     #[test]
@@ -77,9 +81,9 @@ mod tests {
         let xml = r#"<model xmlns="http://core" xmlns:p="http://prod" xmlns:b="http://beam">"#;
         let attrs = parse_xmlns_attributes(xml);
         assert_eq!(attrs, vec![
-            ("xmlns".to_string(), "http://core".to_string()),
-            ("xmlns:p".to_string(), "http://prod".to_string()),
-            ("xmlns:b".to_string(), "http://beam".to_string()),
+            XmlNamespace { prefix: None, uri: "http://core".to_string() },
+            XmlNamespace { prefix: Some("p".to_string()), uri: "http://prod".to_string() },
+            XmlNamespace { prefix: Some("b".to_string()), uri: "http://beam".to_string() },
         ]);
     }
 
@@ -87,7 +91,7 @@ mod tests {
     fn test_parse_xmlns_attributes_empty() {
         let xml = r#"<model unit="millimeter">"#;
         let attrs = parse_xmlns_attributes(xml);
-        assert_eq!(attrs, Vec::<(String, String)>::new());
+        assert_eq!(attrs, Vec::<XmlNamespace>::new());
     }
 
     #[test]
@@ -95,8 +99,8 @@ mod tests {
         let xml = r#"<model xmlns="http://core" unit="millimeter" xmlns:p="http://prod" requiredextensions="ext">"#;
         let attrs = parse_xmlns_attributes(xml);
         assert_eq!(attrs, vec![
-            ("xmlns".to_string(), "http://core".to_string()),
-            ("xmlns:p".to_string(), "http://prod".to_string()),
+            XmlNamespace { prefix: None, uri: "http://core".to_string() },
+            XmlNamespace { prefix: Some("p".to_string()), uri: "http://prod".to_string() },
         ]);
     }
 }
