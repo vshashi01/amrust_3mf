@@ -30,6 +30,9 @@ mod smoke_tests {
 
                 let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
                 assert_eq!(beam_lattice_obj.len(), 2);
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -58,6 +61,9 @@ mod smoke_tests {
 
                 let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
                 assert_eq!(beam_lattice_obj.len(), 2);
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -68,7 +74,9 @@ mod smoke_tests {
     #[cfg(feature = "io-lazy-read")]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use std::collections::HashSet;
+
+        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader, XmlNamespace};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
@@ -80,19 +88,23 @@ mod smoke_tests {
 
         assert!(result.is_ok());
 
+        let mut namespaces: HashSet<XmlNamespace> = HashSet::new();
+
         match result {
             Ok(package) => {
                 // Count mesh objects using with_model pattern
                 let mut mesh_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
+                        .with_model(model_path, |(model, ns)| {
                             mesh_objects += model
                                 .resources
                                 .object
                                 .iter()
                                 .filter(|o| o.mesh.is_some())
                                 .count();
+
+                            ns.iter().all(|ns| namespaces.insert(ns.clone()))
                         })
                         .unwrap();
                 }
@@ -102,7 +114,7 @@ mod smoke_tests {
                 let mut beam_lattice_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
+                        .with_model(model_path, |(model, ns)| {
                             beam_lattice_objects += model
                                 .resources
                                 .object
@@ -115,10 +127,15 @@ mod smoke_tests {
                                     }
                                 })
                                 .count();
+
+                            ns.iter().all(|ns| namespaces.insert(ns.clone()))
                         })
                         .unwrap();
                 }
                 assert_eq!(beam_lattice_objects, 2);
+
+                //println!("Namespaces: {:?}", namespaces);
+                assert_eq!(namespaces.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);

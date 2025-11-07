@@ -132,7 +132,9 @@ mod smoke_tests {
     #[cfg(feature = "io-lazy-read")]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use std::collections::HashSet;
+
+        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader, XmlNamespace};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
@@ -144,6 +146,8 @@ mod smoke_tests {
 
         assert!(result.is_ok());
 
+        let mut namespaces: HashSet<XmlNamespace> = HashSet::new();
+
         match result {
             Ok(package) => {
                 assert_eq!(package.relationships().len(), 4);
@@ -152,8 +156,10 @@ mod smoke_tests {
                 let mut total_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
+                        .with_model(model_path, |(model, ns)| {
                             total_objects += model.resources.object.len();
+
+                            ns.iter().all(|ns| namespaces.insert(ns.clone()));
                         })
                         .unwrap();
                 }
@@ -164,7 +170,7 @@ mod smoke_tests {
                 let mut can_find_object_by_uuid = false;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
+                        .with_model(model_path, |(model, ns)| {
                             for obj in &model.resources.object {
                                 if obj.mesh.is_some() {
                                     mesh_objects += 1;
@@ -175,6 +181,8 @@ mod smoke_tests {
                                     }
                                 }
                             }
+
+                            ns.iter().all(|ns| namespaces.insert(ns.clone()));
                         })
                         .unwrap();
                 }
@@ -185,13 +193,15 @@ mod smoke_tests {
                 let mut composedpart_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
+                        .with_model(model_path, |(model, ns)| {
                             composedpart_objects += model
                                 .resources
                                 .object
                                 .iter()
                                 .filter(|o| o.components.is_some())
                                 .count();
+
+                            ns.iter().all(|ns| namespaces.insert(ns.clone()));
                         })
                         .unwrap();
                 }
@@ -200,16 +210,18 @@ mod smoke_tests {
                 // Check object by ID in specific model path
                 let mut found_object = false;
                 package
-                    .with_model("/3D/Objects/Object.model", |model| {
+                    .with_model("/3D/Objects/Object.model", |(model, ns)| {
                         if model.resources.object.iter().any(|o| o.id == 1) {
                             found_object = true;
                         }
+
+                        ns.iter().all(|ns| namespaces.insert(ns.clone()));
                     })
                     .unwrap();
                 assert!(found_object);
 
                 // Check build item UUID in root model
-                let root_model = package.root_model().unwrap();
+                let (root_model, root_ns) = package.root_model().unwrap();
                 let can_find_build_item_by_uuid = root_model.build.item.iter().find(|i| {
                     if let Some(uuid) = &i.uuid {
                         uuid == "637f47fa-39e6-4363-b3a9-100329fc5d9c"
@@ -218,6 +230,9 @@ mod smoke_tests {
                     }
                 });
                 assert!(can_find_build_item_by_uuid.is_some());
+
+                root_ns.iter().all(|ns| namespaces.insert(ns.clone()));
+                assert_eq!(namespaces.len(), 2);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);

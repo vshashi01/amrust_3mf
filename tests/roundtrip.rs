@@ -133,17 +133,23 @@ mod smoke_tests {
             .expect("Error writing package");
         #[cfg(feature = "io-memory-optimized-read")]
         {
-            let models =
+            let package =
                 ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
                     .expect("Error reading package");
-            assert_eq!(models, write_package);
+            assert_eq!(package, write_package);
+
+            let ns = package.get_namespaces_on_model(None).unwrap();
+            assert_eq!(ns.len(), 1);
         }
         #[cfg(feature = "io-speed-optimized-read")]
         {
-            let models =
+            let package =
                 ThreemfPackage::from_reader_with_speed_optimized_deserializer(&mut buf, false)
                     .expect("Error reading package");
-            assert_eq!(models, write_package);
+            assert_eq!(package, write_package);
+
+            let ns = package.get_namespaces_on_model(None).unwrap();
+            assert_eq!(ns.len(), 1);
         }
 
         // Test lazy reader roundtrip
@@ -164,7 +170,7 @@ mod smoke_tests {
             assert!(lazy_package.root_model_path().contains("3Dmodel.model"));
 
             // Verify root model content
-            let root_model = lazy_package.root_model().unwrap();
+            let (root_model, root_ns) = lazy_package.root_model().unwrap();
             assert_eq!(root_model.resources.object.len(), 1);
             assert_eq!(root_model.build.item.len(), 1);
 

@@ -1,15 +1,15 @@
 use zip::ZipArchive;
 
 use crate::io::{
+    XmlNamespace,
     content_types::{ContentTypes, DefaultContentTypeEnum},
     error::Error,
-    relationship::{RelationshipType, Relationships},
-    utils,
+    parse_xmlns_attributes,
+    relationship::Relationships,
 };
 
 use crate::core::model::Model;
 
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::io::{Read, Seek};
 use std::path::Path;
@@ -68,41 +68,24 @@ impl XmlDeserializer {
         }
     }
 
-    pub(crate) fn deserialize_model<R: Read>(&self, reader: &mut R) -> Result<Model, Error> {
-        match self {
+    pub(crate) fn deserialize_model<R: Read>(
+        &self,
+        reader: &mut R,
+    ) -> Result<(Model, Vec<XmlNamespace>), Error> {
+        let mut xml_string = String::new();
+        reader.read_to_string(&mut xml_string)?;
+
+        let namespaces = parse_xmlns_attributes(&xml_string);
+
+        let model = match self {
             #[cfg(feature = "io-memory-optimized-read")]
-            XmlDeserializer::MemoryOptimized => {
-                let mut xml_string = String::new();
-                reader.read_to_string(&mut xml_string)?;
-                instant_xml::from_str::<Model>(&xml_string).map_err(Error::from)
-            }
+            XmlDeserializer::MemoryOptimized => instant_xml::from_str::<Model>(&xml_string)?,
             #[cfg(feature = "io-speed-optimized-read")]
-            XmlDeserializer::SpeedOptimized => {
-                let mut xml_string = String::new();
-                reader.read_to_string(&mut xml_string)?;
-                serde_roxmltree::from_str::<Model>(&xml_string).map_err(Error::from)
-            }
-        }
+            XmlDeserializer::SpeedOptimized => serde_roxmltree::from_str::<Model>(&xml_string)?,
+        };
+
+        Ok((model, namespaces))
     }
-}
-
-pub(crate) trait RelationshipProcessor {
-    fn process_model(
-        &mut self,
-        target: &str,
-        xml_reader: &mut impl Read,
-        deserializer: &XmlDeserializer,
-        is_root: bool,
-    ) -> Result<(), Error>;
-
-    fn process_thumbnail(&mut self, target: &str, image_bytes: &[u8]) -> Result<(), Error>;
-
-    fn process_unknown(
-        &mut self,
-        target: &str,
-        content_type: &str,
-        data: &[u8],
-    ) -> Result<(), Error>;
 }
 
 pub(crate) fn setup_archive_and_content_types<R: Read + Seek>(
@@ -190,54 +173,4 @@ pub(crate) fn relationships_from_zip_by_name<R: Read + Seek>(
         Ok(file) => relationships_from_zipfile(file, deserializer),
         Err(err) => Err(Error::Zip(err)),
     }
-}
-
-pub(crate) fn process_relationships<R: Read + Seek, P: RelationshipProcessor>(
-    zip: &mut ZipArchive<R>,
-    relationships: &HashMap<String, Relationships>,
-    processor: &mut P,
-    deserializer: &XmlDeserializer,
-    root_model_path: &str,
-) -> Result<(), Error> {
-    for rels in relationships.values() {
-        for rel in &rels.relationships {
-            let name = utils::try_strip_leading_slash(&rel.target);
-            let zip_file = zip.by_name(name);
-
-            match zip_file {
-                Ok(mut file) => {
-                    if file.is_dir() {
-                        return Err(Error::ReadError(format!(
-                            r#"Found a folder "{:?}" instead of a file"#,
-                            file.enclosed_name()
-                        )));
-                    }
-
-                    match rel.relationship_type {
-                        RelationshipType::Thumbnail => {
-                            let mut bytes = Vec::new();
-                            file.read_to_end(&mut bytes)?;
-                            processor.process_thumbnail(&rel.target, &bytes)?;
-                        }
-                        RelationshipType::Model => {
-                            let is_root = rel.target == root_model_path;
-                            processor.process_model(
-                                &rel.target,
-                                &mut file,
-                                deserializer,
-                                is_root,
-                            )?;
-                        }
-                        RelationshipType::Unknown(ref content_type) => {
-                            let mut bytes = Vec::new();
-                            file.read_to_end(&mut bytes)?;
-                            processor.process_unknown(&rel.target, content_type, &bytes)?;
-                        }
-                    }
-                }
-                Err(err) => return Err(Error::Zip(err)),
-            }
-        }
-    }
-    Ok(())
 }

@@ -8,7 +8,7 @@ use zip::ZipArchive;
 use image::{DynamicImage, load_from_memory};
 
 use crate::core::model::Model;
-use crate::io::utils;
+use crate::io::{XmlNamespace, utils};
 use crate::io::{
     content_types::{ContentTypes, DefaultContentTypeEnum},
     error::Error,
@@ -44,10 +44,10 @@ pub struct ThreemfPackageLazyReader<R: Read + Seek> {
     root_model_path: String,
 
     // always cached on first access
-    root_model: OnceCell<Model>,
+    root_model: OnceCell<(Model, Vec<XmlNamespace>)>,
 
     // cached based on cachepolicy
-    sub_models: RefCell<HashMap<String, Model>>,
+    sub_models: RefCell<HashMap<String, (Model, Vec<XmlNamespace>)>>,
     thumbnails: RefCell<HashMap<String, DynamicImage>>,
     unknown_parts: RefCell<HashMap<String, Vec<u8>>>,
 }
@@ -165,19 +165,18 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
             })
     }
 
-    pub fn root_model(&self) -> Result<&Model, Error> {
+    pub fn root_model(&self) -> Result<&(Model, Vec<XmlNamespace>), Error> {
         self.root_model
             .get_or_try_init(|| self.load_model_from_archive(&self.root_model_path))
     }
 
     pub fn with_model<F, T>(&self, path: &str, f: F) -> Result<T, Error>
     where
-        F: FnOnce(&Model) -> T,
+        F: FnOnce(&(Model, Vec<XmlNamespace>)) -> T,
     {
         if path == self.root_model_path {
             let model = self.root_model()?;
             return Ok(f(model));
-            //return Ok(None);
         }
 
         let is_model = self
@@ -361,7 +360,7 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
         Ok(f(&xml_string))
     }
 
-    fn load_model_from_archive(&self, path: &str) -> Result<Model, Error> {
+    fn load_model_from_archive(&self, path: &str) -> Result<(Model, Vec<XmlNamespace>), Error> {
         let mut archive = self.archive.borrow_mut();
         let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         self.deserializer.deserialize_model(&mut file)
@@ -441,8 +440,9 @@ mod smoke_tests {
         let paths: Vec<_> = package.model_paths().collect();
         assert!(!paths.is_empty());
 
-        let root = package.root_model().unwrap();
-        assert_eq!(root.build.item.len(), 2);
+        let (root_model, root_ns) = package.root_model().unwrap();
+        assert_eq!(root_model.build.item.len(), 2);
+        assert_eq!(root_ns.len(), 3);
     }
 
     #[cfg(feature = "io-memory-optimized-read")]
@@ -463,8 +463,9 @@ mod smoke_tests {
         let model_paths: Vec<_> = package.model_paths().collect();
         assert!(model_paths.len() >= 2); // root + at least one sub-model
 
-        let root = package.root_model().unwrap();
-        assert!(!root.resources.object.is_empty());
+        let (root_model, root_ns) = package.root_model().unwrap();
+        assert!(!root_model.resources.object.is_empty());
+        assert_eq!(root_ns.len(), 2);
 
         let sub_model_path = "/3D/midway.model";
         let exists = package.with_model(sub_model_path, |_| true);
@@ -513,8 +514,9 @@ mod smoke_tests {
 
         assert!(!package.relationships().is_empty());
 
-        let root = package.root_model().unwrap();
-        assert_eq!(root.build.item.len(), 2);
+        let (root_model, root_ns) = package.root_model().unwrap();
+        assert_eq!(root_model.build.item.len(), 2);
+        assert_eq!(root_ns.len(), 3);
     }
 
     #[cfg(feature = "io-memory-optimized-read")]

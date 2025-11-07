@@ -7,8 +7,7 @@ pub(crate) fn try_strip_leading_slash(target: &str) -> &str {
     }
 }
 
-/// Extracts xmlns attribute declarations from an XML tag
-/// Returns vec of XmlNamespace structs containing prefix and URI
+/// Extracts xmlns attribute declarations from an XML element attribute definitions
 pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<XmlNamespace> {
     let mut attributes = Vec::new();
     let mut chars = tag_content.chars().peekable();
@@ -50,7 +49,7 @@ pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<XmlNamespace> {
                 if chars.next() == Some('=') && chars.next() == Some('"') {
                     let mut uri = String::new();
                     // Read until closing quote
-                    while let Some(ch) = chars.next() {
+                    for ch in chars.by_ref() {
                         if ch == '"' {
                             break;
                         }
@@ -66,25 +65,43 @@ pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<XmlNamespace> {
 }
 
 #[cfg(test)]
-mod tests {
+mod smoke_tests {
     use super::*;
 
     #[test]
     fn test_parse_xmlns_attributes_simple() {
         let xml = r#"<model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" unit="millimeter">"#;
         let attrs = parse_xmlns_attributes(xml);
-        assert_eq!(attrs, vec![XmlNamespace { prefix: None, uri: "http://schemas.microsoft.com/3dmanufacturing/core/2015/02".to_string() }]);
+        assert_eq!(
+            attrs,
+            vec![XmlNamespace {
+                prefix: None,
+                uri: "http://schemas.microsoft.com/3dmanufacturing/core/2015/02".to_string()
+            }]
+        );
     }
 
     #[test]
     fn test_parse_xmlns_attributes_prefixed() {
         let xml = r#"<model xmlns="http://core" xmlns:p="http://prod" xmlns:b="http://beam">"#;
         let attrs = parse_xmlns_attributes(xml);
-        assert_eq!(attrs, vec![
-            XmlNamespace { prefix: None, uri: "http://core".to_string() },
-            XmlNamespace { prefix: Some("p".to_string()), uri: "http://prod".to_string() },
-            XmlNamespace { prefix: Some("b".to_string()), uri: "http://beam".to_string() },
-        ]);
+        assert_eq!(
+            attrs,
+            vec![
+                XmlNamespace {
+                    prefix: None,
+                    uri: "http://core".to_string()
+                },
+                XmlNamespace {
+                    prefix: Some("p".to_string()),
+                    uri: "http://prod".to_string()
+                },
+                XmlNamespace {
+                    prefix: Some("b".to_string()),
+                    uri: "http://beam".to_string()
+                },
+            ]
+        );
     }
 
     #[test]
@@ -98,9 +115,18 @@ mod tests {
     fn test_parse_xmlns_attributes_mixed() {
         let xml = r#"<model xmlns="http://core" unit="millimeter" xmlns:p="http://prod" requiredextensions="ext">"#;
         let attrs = parse_xmlns_attributes(xml);
-        assert_eq!(attrs, vec![
-            XmlNamespace { prefix: None, uri: "http://core".to_string() },
-            XmlNamespace { prefix: Some("p".to_string()), uri: "http://prod".to_string() },
-        ]);
+        assert_eq!(
+            attrs,
+            vec![
+                XmlNamespace {
+                    prefix: None,
+                    uri: "http://core".to_string()
+                },
+                XmlNamespace {
+                    prefix: Some("p".to_string()),
+                    uri: "http://prod".to_string()
+                },
+            ]
+        );
     }
 }
