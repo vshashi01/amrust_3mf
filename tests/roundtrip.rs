@@ -152,7 +152,6 @@ mod smoke_tests {
             assert_eq!(ns.len(), 1);
         }
 
-        // Test lazy reader roundtrip
         #[cfg(feature = "io-lazy-read")]
         {
             use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
@@ -170,9 +169,10 @@ mod smoke_tests {
             assert!(lazy_package.root_model_path().contains("3Dmodel.model"));
 
             // Verify root model content
-            let (root_model, root_ns) = lazy_package.root_model().unwrap();
+            let (root_model, ns) = lazy_package.root_model().unwrap();
             assert_eq!(root_model.resources.object.len(), 1);
             assert_eq!(root_model.build.item.len(), 1);
+            assert_eq!(ns.len(), 1);
 
             let obj = &root_model.resources.object[0];
             assert_eq!(obj.id, 1);

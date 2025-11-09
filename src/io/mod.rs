@@ -6,7 +6,7 @@ mod utils;
 pub use utils::parse_xmlns_attributes;
 
 /// Represents an XML namespace declaration with its prefix and URI
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XmlNamespace {
     /// The namespace prefix (None for default namespace)
     pub prefix: Option<String>,
