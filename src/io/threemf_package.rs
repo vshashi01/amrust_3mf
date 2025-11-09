@@ -5,14 +5,17 @@ use zip::write::SimpleFileOptions;
 #[cfg(feature = "io-write")]
 use instant_xml::ToXml;
 
-use crate::io::content_types::DefaultContentTypes;
-use crate::io::relationship::Relationship;
+#[cfg(feature = "io-write")]
+use crate::threemf_namespaces::ThreemfNamespace;
+
 use crate::{
     core::model::Model,
     io::{
-        content_types::{ContentTypes, DefaultContentTypeEnum},
+        XmlNamespace,
+        content_types::{ContentTypes, DefaultContentTypeEnum, DefaultContentTypes},
         error::Error,
-        relationship::{RelationshipType, Relationships},
+        parse_xmlns_attributes,
+        relationship::{Relationship, RelationshipType, Relationships},
         utils,
     },
 };
@@ -29,7 +32,7 @@ use std::io::{self, Cursor, Read, Seek, Write};
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
 /// the key being the path of the part in the archive package.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct ThreemfPackage {
     /// The root model of the 3mf package.
     /// Expected to always exist and be a valid model with a [Build](crate::core::build::Build) object.
@@ -61,6 +64,49 @@ pub struct ThreemfPackage {
     /// The extensions defined in the [ContentTypes.xml]
     ///  file should match the extensions of the parts in the package.
     pub content_types: ContentTypes,
+
+    namespaces: HashMap<String, Vec<XmlNamespace>>,
+}
+
+impl ThreemfPackage {
+    pub fn new(
+        root: Model,
+        sub_models: HashMap<String, Model>,
+        thumbnails: HashMap<String, DynamicImage>,
+        unknown_parts: HashMap<String, Vec<u8>>,
+        relationships: HashMap<String, Relationships>,
+        content_types: ContentTypes,
+    ) -> Self {
+        Self {
+            root,
+            sub_models,
+            thumbnails,
+            unknown_parts,
+            relationships,
+            content_types,
+            namespaces: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn new_with_namespaces_map(
+        root: Model,
+        sub_models: HashMap<String, Model>,
+        thumbnails: HashMap<String, DynamicImage>,
+        unknown_parts: HashMap<String, Vec<u8>>,
+        relationships: HashMap<String, Relationships>,
+        content_types: ContentTypes,
+        namespaces: HashMap<String, Vec<XmlNamespace>>,
+    ) -> Self {
+        Self {
+            root,
+            sub_models,
+            thumbnails,
+            unknown_parts,
+            relationships,
+            content_types,
+            namespaces,
+        }
+    }
 }
 
 #[cfg(feature = "io-write")]
@@ -71,10 +117,15 @@ impl ThreemfPackage {
     pub fn write<W: Write + Seek>(&self, threemf_archive: W) -> Result<(), Error> {
         let mut zip = ZipWriter::new(threemf_archive);
 
-        Self::archive_write_xml_with_header(&mut zip, "[Content_Types].xml", &self.content_types)?;
+        Self::archive_write_xml_with_header(
+            &mut zip,
+            "[Content_Types].xml",
+            &self.content_types,
+            None,
+        )?;
 
         for (path, relationships) in &self.relationships {
-            Self::archive_write_xml_with_header(&mut zip, path, &relationships)?;
+            Self::archive_write_xml_with_header(&mut zip, path, &relationships, None)?;
 
             for relationship in &relationships.relationships {
                 let filename = utils::try_strip_leading_slash(&relationship.target);
@@ -90,7 +141,12 @@ impl ThreemfPackage {
                                 relationship.target
                             )));
                         };
-                        Self::archive_write_xml_with_header(&mut zip, filename, model)?;
+                        Self::archive_write_xml_with_header(
+                            &mut zip,
+                            filename,
+                            model,
+                            Some(model.used_namespaces()),
+                        )?;
                     }
                     RelationshipType::Thumbnail => {
                         if let Some(image) = self.thumbnails.get(&relationship.target) {
@@ -128,17 +184,95 @@ impl ThreemfPackage {
         archive: &mut ZipWriter<W>,
         filename: &str,
         content: &T,
+        optional_namespaces_to_keep: Option<Vec<ThreemfNamespace>>,
     ) -> Result<(), Error> {
         use instant_xml::to_string;
 
         const XML_HEADER: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?>"#;
 
         let mut content_string = to_string(&content)?;
+
+        if let Some(namespaces) = optional_namespaces_to_keep {
+            Self::filter_unused_namespaces(&mut content_string, &namespaces);
+        }
+
         content_string.insert_str(0, XML_HEADER);
 
         archive.start_file(filename, SimpleFileOptions::default())?;
         archive.write_all(content_string.as_bytes())?;
         Ok(())
+    }
+
+    fn filter_unused_namespaces(xml: &mut String, keep_namespaces: &[ThreemfNamespace]) {
+        let keep_uris: std::collections::HashSet<_> =
+            keep_namespaces.iter().map(|ns| ns.uri()).collect();
+
+        // Find model tag
+        if let Some(model_pos) = xml.find("<model")
+            && let Some(end_pos) = xml[model_pos..].find('>')
+        {
+            let tag_end = model_pos + end_pos + 1;
+            let tag_content = &xml[model_pos..tag_end];
+
+            let xmlns_attrs = parse_xmlns_attributes(tag_content);
+
+            // Parse all attributes (simple approach: split by spaces)
+            let mut all_attrs = Vec::new();
+            let mut current_attr = String::new();
+            let mut in_quotes = false;
+
+            for ch in tag_content[6..].chars() {
+                // Skip "<model"
+                if ch == '"' {
+                    in_quotes = !in_quotes;
+                    current_attr.push(ch);
+                } else if ch == ' ' && !in_quotes {
+                    if !current_attr.is_empty() {
+                        all_attrs.push(current_attr);
+                        current_attr = String::new();
+                    }
+                } else if ch == '>' {
+                    if !current_attr.is_empty() {
+                        all_attrs.push(current_attr);
+                    }
+                    break;
+                } else {
+                    current_attr.push(ch);
+                }
+            }
+
+            // Build new tag
+            let mut new_tag = String::from("<model");
+
+            // Add kept xmlns attributes
+            for ns in &xmlns_attrs {
+                if keep_uris.contains(ns.uri.as_str()) {
+                    new_tag.push(' ');
+                    let attr_name = if let Some(prefix) = &ns.prefix {
+                        prefix
+                    } else {
+                        "xmlns"
+                    };
+                    new_tag.push_str(attr_name);
+                    new_tag.push_str("=\"");
+                    new_tag.push_str(&ns.uri);
+                    new_tag.push('"');
+                }
+            }
+
+            // Add non-xmlns attributes
+            for attr in all_attrs {
+                if !attr.starts_with("xmlns") {
+                    new_tag.push(' ');
+                    new_tag.push_str(&attr);
+                }
+            }
+
+            new_tag.push('>');
+
+            // Replace in original XML
+            xml.replace_range(model_pos..tag_end, &new_tag);
+        }
     }
 }
 
@@ -226,20 +360,36 @@ impl ThreemfPackage {
             }
         }
 
-        let mut processor = processor::ThreemfPackageProcessor::new(content_types);
+        let mut processor = processor::ThreemfPackageProcessor::new(content_types, relationships);
 
-        // Process all relationships
-        zip_utils::process_relationships(
-            &mut zip,
-            &relationships,
-            &mut processor,
-            &deserializer,
-            &root_model_path,
-        )?;
-
-        processor.set_relationships(relationships);
+        processor.process_relationships(&mut zip, &deserializer, &root_model_path)?;
 
         Ok(processor.into_threemf_package())
+    }
+
+    //only exists in the loading flow and not on the writing flow
+    //if a path is not set then its the root model
+    pub fn get_namespaces_on_model(&self, model_path: Option<&str>) -> Option<Vec<XmlNamespace>> {
+        let path = model_path.unwrap_or("root model");
+
+        if self.namespaces.contains_key(path) {
+            let namespaces = self.namespaces.get(path);
+            namespaces.cloned()
+        } else {
+            None
+        }
+    }
+}
+
+impl PartialEq for ThreemfPackage {
+    fn eq(&self, other: &Self) -> bool {
+        self.root == other.root
+            && self.sub_models == other.sub_models
+            && self.thumbnails == other.thumbnails
+            && self.unknown_parts == other.unknown_parts
+            && self.relationships == other.relationships
+            && self.content_types == other.content_types
+        //skip namespaces comparison altogether
     }
 }
 
@@ -249,19 +399,24 @@ impl ThreemfPackage {
 ))]
 mod processor {
     use image::{DynamicImage, load_from_memory};
+    use zip::ZipArchive;
 
     use crate::{
         core::model::Model,
         io::{
-            ThreemfPackage,
+            ThreemfPackage, XmlNamespace,
             content_types::ContentTypes,
             error::Error,
-            relationship::Relationships,
-            zip_utils::{RelationshipProcessor, XmlDeserializer},
+            relationship::{RelationshipType, Relationships},
+            utils,
+            zip_utils::XmlDeserializer,
         },
     };
 
-    use std::{collections::HashMap, io::Read};
+    use std::{
+        collections::HashMap,
+        io::{Read, Seek},
+    };
     /// Temporary processor for building ThreemfPackage
     pub(crate) struct ThreemfPackageProcessor {
         root: Option<Model>,
@@ -270,66 +425,92 @@ mod processor {
         unknown_parts: HashMap<String, Vec<u8>>,
         relationships: HashMap<String, Relationships>,
         content_types: ContentTypes,
+        namespaces_map: HashMap<String, Vec<XmlNamespace>>,
     }
 
     impl ThreemfPackageProcessor {
-        pub(crate) fn new(content_types: ContentTypes) -> Self {
+        pub(crate) fn new(
+            content_types: ContentTypes,
+            relationships: HashMap<String, Relationships>,
+        ) -> Self {
             Self {
                 root: None,
                 sub_models: HashMap::new(),
                 thumbnails: HashMap::new(),
                 unknown_parts: HashMap::new(),
-                relationships: HashMap::new(),
+                relationships,
                 content_types,
+                namespaces_map: HashMap::new(),
             }
-        }
-
-        pub(crate) fn set_relationships(&mut self, relationships: HashMap<String, Relationships>) {
-            self.relationships = relationships;
         }
 
         pub(crate) fn into_threemf_package(self) -> ThreemfPackage {
-            ThreemfPackage {
-                root: self.root.expect("Root model should be set"),
-                sub_models: self.sub_models,
-                thumbnails: self.thumbnails,
-                unknown_parts: self.unknown_parts,
-                relationships: self.relationships,
-                content_types: self.content_types,
-            }
+            ThreemfPackage::new_with_namespaces_map(
+                self.root.expect("Root model should be set"),
+                self.sub_models,
+                self.thumbnails,
+                self.unknown_parts,
+                self.relationships,
+                self.content_types,
+                self.namespaces_map,
+            )
         }
-    }
 
-    impl RelationshipProcessor for ThreemfPackageProcessor {
-        fn process_model(
+        pub(crate) fn process_relationships<R: Read + Seek>(
             &mut self,
-            target: &str,
-            xml_reader: &mut impl Read,
+            zip: &mut ZipArchive<R>,
             deserializer: &XmlDeserializer,
-            is_root: bool,
+            root_model_path: &str,
         ) -> Result<(), Error> {
-            let model = deserializer.deserialize_model(xml_reader)?;
-            if is_root {
-                self.root = Some(model);
-            } else {
-                self.sub_models.insert(target.to_string(), model);
+            for rels in self.relationships.values() {
+                for rel in &rels.relationships {
+                    let name = utils::try_strip_leading_slash(&rel.target);
+                    let zip_file = zip.by_name(name);
+
+                    match zip_file {
+                        Ok(mut file) => {
+                            if file.is_dir() {
+                                return Err(Error::ReadError(format!(
+                                    r#"Found a folder "{:?}" instead of a file"#,
+                                    file.enclosed_name()
+                                )));
+                            }
+
+                            match rel.relationship_type {
+                                RelationshipType::Thumbnail => {
+                                    let mut bytes = Vec::new();
+                                    file.read_to_end(&mut bytes)?;
+
+                                    let img = load_from_memory(&bytes)?;
+                                    self.thumbnails.insert(rel.target.to_string(), img);
+                                }
+                                RelationshipType::Model => {
+                                    let is_root = rel.target == root_model_path;
+
+                                    let (model, namespaces) =
+                                        deserializer.deserialize_model(&mut file)?;
+                                    if is_root {
+                                        self.root = Some(model);
+                                        self.namespaces_map
+                                            .insert("root model".to_string(), namespaces);
+                                    } else {
+                                        self.sub_models.insert(rel.target.to_string(), model);
+                                        self.namespaces_map
+                                            .insert(rel.target.to_string(), namespaces);
+                                    }
+                                }
+                                RelationshipType::Unknown(_) => {
+                                    let mut bytes = Vec::new();
+                                    file.read_to_end(&mut bytes)?;
+
+                                    self.unknown_parts.insert(rel.target.to_string(), bytes);
+                                }
+                            }
+                        }
+                        Err(err) => return Err(Error::Zip(err)),
+                    }
+                }
             }
-            Ok(())
-        }
-
-        fn process_thumbnail(&mut self, target: &str, image_bytes: &[u8]) -> Result<(), Error> {
-            let image = load_from_memory(image_bytes)?;
-            self.thumbnails.insert(target.to_string(), image);
-            Ok(())
-        }
-
-        fn process_unknown(
-            &mut self,
-            target: &str,
-            _content_type: &str,
-            data: &[u8],
-        ) -> Result<(), Error> {
-            self.unknown_parts.insert(target.to_string(), data.to_vec());
             Ok(())
         }
     }
@@ -348,13 +529,13 @@ impl From<Model> for ThreemfPackage {
                 }],
             },
         );
-        Self {
-            root: value,
-            sub_models: HashMap::new(),
-            thumbnails: HashMap::new(),
-            unknown_parts: HashMap::new(),
-            relationships: rels,
-            content_types: ContentTypes {
+        Self::new(
+            value,
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            rels,
+            ContentTypes {
                 defaults: vec![
                     DefaultContentTypes {
                         extension: "model".to_owned(),
@@ -366,7 +547,7 @@ impl From<Model> for ThreemfPackage {
                     },
                 ],
             },
-        }
+        )
     }
 }
 
@@ -394,12 +575,10 @@ pub mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     pub fn from_reader_root_model_with_memory_optimized_read_test() {
-        use crate::io::zip_utils::XmlDeserializer;
-
         let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader(reader, true, XmlDeserializer::MemoryOptimized);
+        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
         // println!("{:?}", result);
 
         match result {
@@ -430,12 +609,10 @@ pub mod smoke_tests {
     #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     pub fn from_reader_root_model_with_speed_optimized_read_test() {
-        use crate::io::zip_utils::XmlDeserializer;
-
         let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader(reader, true, XmlDeserializer::SpeedOptimized);
+        let result = ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, true);
         // println!("{:?}", result);
 
         match result {
@@ -469,9 +646,8 @@ pub mod smoke_tests {
         let bytes = {
             let bytes = Vec::<u8>::new();
             let mut writer = Cursor::new(bytes);
-            let threemf = ThreemfPackage {
-                root: Model {
-                    // xmlns: None,
+            let threemf = ThreemfPackage::new(
+                Model {
                     unit: Some(model::Unit::Centimeter),
                     requiredextensions: None,
                     recommendedextensions: None,
@@ -496,10 +672,10 @@ pub mod smoke_tests {
                         item: vec![],
                     },
                 },
-                sub_models: HashMap::new(),
-                thumbnails: HashMap::new(),
-                unknown_parts: HashMap::new(),
-                relationships: HashMap::from([(
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::new(),
+                HashMap::from([(
                     "_rels/.rels".to_owned(),
                     Relationships {
                         relationships: vec![Relationship {
@@ -509,7 +685,7 @@ pub mod smoke_tests {
                         }],
                     },
                 )]),
-                content_types: ContentTypes {
+                ContentTypes {
                     defaults: vec![
                         DefaultContentTypes {
                             extension: "rels".to_owned(),
@@ -521,12 +697,12 @@ pub mod smoke_tests {
                         },
                     ],
                 },
-            };
+            );
             threemf.write(&mut writer).unwrap();
             writer
         };
 
-        assert_eq!(bytes.into_inner().len(), 976);
+        assert_eq!(bytes.into_inner().len(), 942);
     }
 
     #[cfg(all(feature = "io-memory-optimized-read", feature = "io-write"))]
@@ -536,9 +712,8 @@ pub mod smoke_tests {
         let mut writer = Cursor::new(Vec::<u8>::new());
         let unknown_target = "/Metadata/test.txt";
 
-        let package = ThreemfPackage {
-            root: Model {
-                // xmlns: None,
+        let package = ThreemfPackage::new(
+            Model {
                 unit: Some(model::Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -552,10 +727,10 @@ pub mod smoke_tests {
                     item: vec![],
                 },
             },
-            sub_models: HashMap::new(),
-            thumbnails: HashMap::new(),
-            unknown_parts: HashMap::from([(unknown_target.to_owned(), test_file_bytes.into())]),
-            relationships: HashMap::from([(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::from([(unknown_target.to_owned(), test_file_bytes.into())]),
+            HashMap::from([(
                 "_rels/.rels".to_owned(),
                 Relationships {
                     relationships: vec![
@@ -574,7 +749,7 @@ pub mod smoke_tests {
                     ],
                 },
             )]),
-            content_types: ContentTypes {
+            ContentTypes {
                 defaults: vec![
                     DefaultContentTypes {
                         content_type: DefaultContentTypeEnum::Relationship,
@@ -590,7 +765,7 @@ pub mod smoke_tests {
                     },
                 ],
             },
-        };
+        );
 
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
@@ -617,9 +792,8 @@ pub mod smoke_tests {
         let mut writer = Cursor::new(Vec::<u8>::new());
         let thumbnail_target = "/Thumbnails/test_thumbnail.png";
 
-        let package = ThreemfPackage {
-            root: Model {
-                // xmlns: None,
+        let package = ThreemfPackage::new(
+            Model {
                 unit: Some(model::Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -633,10 +807,10 @@ pub mod smoke_tests {
                     item: vec![],
                 },
             },
-            sub_models: HashMap::new(),
-            thumbnails: HashMap::from([(thumbnail_target.to_owned(), write_image)]),
-            unknown_parts: HashMap::new(),
-            relationships: HashMap::from([(
+            HashMap::new(),
+            HashMap::from([(thumbnail_target.to_owned(), write_image)]),
+            HashMap::new(),
+            HashMap::from([(
                 "_rels/.rels".to_owned(),
                 Relationships {
                     relationships: vec![
@@ -653,7 +827,7 @@ pub mod smoke_tests {
                     ],
                 },
             )]),
-            content_types: ContentTypes {
+            ContentTypes {
                 defaults: vec![
                     DefaultContentTypes {
                         content_type: DefaultContentTypeEnum::Relationship,
@@ -669,7 +843,7 @@ pub mod smoke_tests {
                     },
                 ],
             },
-        };
+        );
 
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
@@ -685,6 +859,43 @@ pub mod smoke_tests {
                 assert_eq!(read_image.width(), 300);
             }
             Err(_) => panic!("io thumbnail test failed"),
+        }
+    }
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn i_root_namespaces_tracking_test() {
+        let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
+        let reader = File::open(path).unwrap();
+
+        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        match result {
+            Ok(threemf) => {
+                let root_namespaces = threemf.get_namespaces_on_model(None).unwrap();
+                //println!("Namespaces: {:?}", root_namespaces);
+                assert_eq!(root_namespaces.len(), 5);
+            }
+            Err(err) => panic!("{:?}", err),
+        }
+    }
+
+    #[cfg(feature = "io-memory-optimized-read")]
+    #[test]
+    fn i_submodel_namespaces_tracking_test() {
+        let path =
+            PathBuf::from("./tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf");
+        let reader = File::open(path).unwrap();
+
+        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        match result {
+            Ok(threemf) => {
+                let root_namespaces = threemf
+                    .get_namespaces_on_model(Some("/3D/Objects/Object(3).model"))
+                    .unwrap();
+                //println!("Namespaces: {:?}", root_namespaces);
+                assert_eq!(root_namespaces.len(), 4);
+            }
+            Err(err) => panic!("{:?}", err),
         }
     }
 }

@@ -67,9 +67,8 @@ mod smoke_tests {
             beamlattice: None,
         };
 
-        let write_package = ThreemfPackage {
-            root: Model {
-                // xmlns: None,
+        let write_package = ThreemfPackage::new(
+            Model {
                 unit: Some(Unit::Millimeter),
                 requiredextensions: None,
                 recommendedextensions: None,
@@ -100,10 +99,10 @@ mod smoke_tests {
                     }],
                 },
             },
-            sub_models: HashMap::new(),
-            thumbnails: HashMap::new(),
-            unknown_parts: HashMap::new(),
-            relationships: HashMap::from([(
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::new(),
+            HashMap::from([(
                 "_rels/.rels".to_owned(),
                 Relationships {
                     relationships: vec![Relationship {
@@ -113,7 +112,7 @@ mod smoke_tests {
                     }],
                 },
             )]),
-            content_types: ContentTypes {
+            ContentTypes {
                 defaults: vec![
                     DefaultContentTypes {
                         extension: "rels".to_owned(),
@@ -125,7 +124,7 @@ mod smoke_tests {
                     },
                 ],
             },
-        };
+        );
 
         let mut buf = Cursor::new(Vec::new());
 
@@ -134,20 +133,25 @@ mod smoke_tests {
             .expect("Error writing package");
         #[cfg(feature = "io-memory-optimized-read")]
         {
-            let models =
+            let package =
                 ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
                     .expect("Error reading package");
-            assert_eq!(models, write_package);
+            assert_eq!(package, write_package);
+
+            let ns = package.get_namespaces_on_model(None).unwrap();
+            assert_eq!(ns.len(), 1);
         }
         #[cfg(feature = "io-speed-optimized-read")]
         {
-            let models =
+            let package =
                 ThreemfPackage::from_reader_with_speed_optimized_deserializer(&mut buf, false)
                     .expect("Error reading package");
-            assert_eq!(models, write_package);
+            assert_eq!(package, write_package);
+
+            let ns = package.get_namespaces_on_model(None).unwrap();
+            assert_eq!(ns.len(), 1);
         }
 
-        // Test lazy reader roundtrip
         #[cfg(feature = "io-lazy-read")]
         {
             use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
@@ -165,9 +169,10 @@ mod smoke_tests {
             assert!(lazy_package.root_model_path().contains("3Dmodel.model"));
 
             // Verify root model content
-            let root_model = lazy_package.root_model().unwrap();
+            let (root_model, ns) = lazy_package.root_model().unwrap();
             assert_eq!(root_model.resources.object.len(), 1);
             assert_eq!(root_model.build.item.len(), 1);
+            assert_eq!(ns.len(), 1);
 
             let obj = &root_model.resources.object[0];
             assert_eq!(obj.id, 1);

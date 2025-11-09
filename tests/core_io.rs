@@ -42,6 +42,9 @@ mod smoke_tests {
                 assert!(object_by_id.0.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 3);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -82,6 +85,9 @@ mod smoke_tests {
                 assert!(object_by_id.0.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 3);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -89,7 +95,7 @@ mod smoke_tests {
         }
     }
 
-    #[cfg(feature = "io-lazy-read")]
+    #[cfg(all(feature = "io-lazy-read", feature = "io-memory-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
         use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
@@ -104,59 +110,118 @@ mod smoke_tests {
 
         assert!(result.is_ok());
 
+        let mut namespaces = vec![];
+
         match result {
             Ok(package) => {
                 assert_eq!(package.relationships().len(), 1);
 
-                // Count total objects using with_model pattern
+                let mut total_model_paths = 0;
                 let mut total_objects = 0;
-                for model_path in package.model_paths() {
-                    package
-                        .with_model(model_path, |model| {
-                            total_objects += model.resources.object.len();
-                        })
-                        .unwrap();
-                }
-                assert_eq!(total_objects, 4);
-
-                // Count mesh objects using with_model pattern
                 let mut mesh_objects = 0;
-                for model_path in package.model_paths() {
-                    package
-                        .with_model(model_path, |model| {
-                            mesh_objects += model
-                                .resources
-                                .object
-                                .iter()
-                                .filter(|o| o.mesh.is_some())
-                                .count();
-                        })
-                        .unwrap();
-                }
-                assert_eq!(mesh_objects, 3);
-
-                // Count composedpart objects using with_model pattern
                 let mut composedpart_objects = 0;
+
+                // Check object by ID in specific model path
+                let mut found_object_by_id = false;
+
+                //iterate through all models and search for objects and the used namespaces
                 for model_path in package.model_paths() {
+                    total_model_paths += 1;
                     package
-                        .with_model(model_path, |model| {
-                            composedpart_objects += model
-                                .resources
-                                .object
-                                .iter()
-                                .filter(|o| o.components.is_some())
-                                .count();
+                        .with_model(model_path, |(model, ns)| {
+                            //check if some part with some specific id exists
+                            if model.resources.object.iter().any(|o| o.id == 1) {
+                                found_object_by_id = true;
+                            }
+
+                            for obj in &model.resources.object {
+                                total_objects += 1;
+                                if obj.mesh.is_some() {
+                                    mesh_objects += 1;
+                                } else if obj.components.is_some() {
+                                    composedpart_objects += 1;
+                                }
+                            }
+
+                            namespaces.extend_from_slice(ns);
                         })
                         .unwrap();
                 }
+                assert_eq!(total_model_paths, 1);
+                assert_eq!(total_objects, 4);
+                assert_eq!(mesh_objects, 3);
                 assert_eq!(composedpart_objects, 1);
+                assert!(found_object_by_id);
 
-                // Check object by ID (simplified - just check root model for ID 1)
-                let root_model = package.root_model().unwrap();
-                let object_by_id = root_model.resources.object.iter().find(|o| o.id == 1);
-                assert!(object_by_id.is_some());
+                //contains core, prod and material
+                assert_eq!(namespaces.len(), 3);
+            }
+            Err(err) => {
+                panic!("read failed {:?}", err);
+            }
+        }
+    }
 
-                assert_eq!(2, package.root_model().unwrap().build.item.len());
+    #[cfg(all(feature = "io-lazy-read", feature = "io-speed-optimized-read"))]
+    #[test]
+    fn read_threemf_package_lazy_speed_optimized() {
+        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+
+        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
+        let reader = File::open(path).unwrap();
+
+        let result = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
+            reader,
+            CachePolicy::NoCache,
+        );
+
+        assert!(result.is_ok());
+
+        let mut namespaces = vec![];
+
+        match result {
+            Ok(package) => {
+                assert_eq!(package.relationships().len(), 1);
+
+                let mut total_model_paths = 0;
+                let mut total_objects = 0;
+                let mut mesh_objects = 0;
+                let mut composedpart_objects = 0;
+
+                // Check object by ID in specific model path
+                let mut found_object_by_id = false;
+
+                //iterate through all models and search for objects and the used namespaces
+                for model_path in package.model_paths() {
+                    total_model_paths += 1;
+                    package
+                        .with_model(model_path, |(model, ns)| {
+                            //check if some part with some specific id exists
+                            if model.resources.object.iter().any(|o| o.id == 1) {
+                                found_object_by_id = true;
+                            }
+
+                            for obj in &model.resources.object {
+                                total_objects += 1;
+                                if obj.mesh.is_some() {
+                                    mesh_objects += 1;
+                                } else if obj.components.is_some() {
+                                    composedpart_objects += 1;
+                                }
+                            }
+
+                            namespaces.extend_from_slice(ns);
+                        })
+                        .unwrap();
+                }
+                assert_eq!(total_model_paths, 1);
+                assert_eq!(total_objects, 4);
+                assert_eq!(mesh_objects, 3);
+                assert_eq!(composedpart_objects, 1);
+                assert!(found_object_by_id);
+
+                //contains core, prod and material
+                assert_eq!(namespaces.len(), 3);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);

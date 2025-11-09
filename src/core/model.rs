@@ -9,7 +9,9 @@ use serde::Deserialize;
 
 use crate::{
     core::{build::Build, metadata::Metadata, resources::Resources},
-    threemf_namespaces::{BEAM_LATTICE_NS, CORE_NS, CORE_TRIANGLESET_NS, PROD_NS},
+    threemf_namespaces::{
+        BEAM_LATTICE_NS, CORE_NS, CORE_TRIANGLESET_NS, PROD_NS, ThreemfNamespace,
+    },
 };
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
@@ -81,6 +83,78 @@ impl From<String> for Unit {
 }
 
 #[cfg(feature = "write")]
+impl Model {
+    pub fn used_namespaces(&self) -> Vec<ThreemfNamespace> {
+        let mut used = vec![ThreemfNamespace::Core];
+
+        if self.uses_prod_ns() {
+            used.push(ThreemfNamespace::Prod);
+        }
+
+        if self.uses_beamlattice_ns() {
+            used.push(ThreemfNamespace::BeamLattice);
+        }
+
+        if self.uses_triangleset_ns() {
+            used.push(ThreemfNamespace::CoreTriangleSet);
+        }
+
+        used
+    }
+
+    fn uses_prod_ns(&self) -> bool {
+        if self.build.uuid.is_some() {
+            return true;
+        }
+
+        for item in &self.build.item {
+            if item.path.is_some() || item.uuid.is_some() {
+                return true;
+            }
+        }
+
+        for obj in &self.resources.object {
+            if obj.uuid.is_some() {
+                return true;
+            }
+
+            if let Some(components) = &obj.components {
+                for comp in &components.component {
+                    if comp.path.is_some() || comp.uuid.is_some() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    fn uses_beamlattice_ns(&self) -> bool {
+        for obj in &self.resources.object {
+            let Some(mesh) = &obj.mesh else { continue };
+            if mesh.beamlattice.is_some() {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn uses_triangleset_ns(&self) -> bool {
+        for obj in &self.resources.object {
+            if let Some(mesh) = &obj.mesh
+                && mesh.trianglesets.is_some()
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+#[cfg(feature = "write")]
 #[cfg(test)]
 pub mod write_tests {
     use instant_xml::{ToXml, to_string};
@@ -89,13 +163,14 @@ pub mod write_tests {
     use crate::{
         core::{
             build::{Build, Item},
+            mesh::{Mesh, Triangles, Vertices},
             metadata::Metadata,
             object::{Object, ObjectType},
             resources::Resources,
         },
         threemf_namespaces::{
             BEAM_LATTICE_NS, BEAM_LATTICE_PREFIX, CORE_NS, CORE_TRIANGLESET_NS,
-            CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX,
+            CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX, ThreemfNamespace,
         },
     };
 
@@ -168,6 +243,276 @@ pub mod write_tests {
         let unitsvector_string = to_string(&unitsvector).unwrap();
 
         assert_eq!(unitsvector_string, xml_string);
+    }
+
+    #[test]
+    fn test_used_namespaces_simple_model() {
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: None,
+            recommendedextensions: None,
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: None,
+                    pindex: None,
+                    uuid: None,
+                    mesh: Some(Mesh {
+                        vertices: Vertices { vertex: vec![] },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: None,
+                        beamlattice: None,
+                    }),
+                    components: None,
+                }],
+                basematerials: vec![],
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let namespaces = model.used_namespaces();
+        assert_eq!(namespaces, vec![ThreemfNamespace::Core]);
+    }
+
+    #[test]
+    fn test_used_namespaces_with_prod() {
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: None,
+            recommendedextensions: None,
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: None,
+                    pindex: None,
+                    uuid: Some("test-uuid".to_string()),
+                    mesh: Some(Mesh {
+                        vertices: Vertices { vertex: vec![] },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: None,
+                        beamlattice: None,
+                    }),
+                    components: None,
+                }],
+                basematerials: vec![],
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let namespaces = model.used_namespaces();
+        assert_eq!(
+            namespaces,
+            vec![ThreemfNamespace::Core, ThreemfNamespace::Prod]
+        );
+    }
+
+    #[test]
+    fn test_used_namespaces_with_beamlattice() {
+        use crate::core::beamlattice::BeamLattice;
+
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: None,
+            recommendedextensions: None,
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: None,
+                    pindex: None,
+                    uuid: None,
+                    mesh: Some(Mesh {
+                        vertices: Vertices { vertex: vec![] },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: None,
+                        beamlattice: Some(BeamLattice {
+                            minlength: 0.1,
+                            radius: 0.05,
+                            ballmode: None,
+                            ballradius: None,
+                            clippingmode: None,
+                            clippingmesh: None,
+                            representationmesh: None,
+                            pid: None,
+                            pindex: None,
+                            cap: None,
+                            beams: crate::core::beamlattice::Beams { beam: vec![] },
+                            balls: None,
+                            beamsets: None,
+                        }),
+                    }),
+                    components: None,
+                }],
+                basematerials: vec![],
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let namespaces = model.used_namespaces();
+        assert_eq!(
+            namespaces,
+            vec![ThreemfNamespace::Core, ThreemfNamespace::BeamLattice]
+        );
+    }
+
+    #[test]
+    fn test_used_namespaces_with_trianglesets() {
+        use crate::core::triangle_set::TriangleSets;
+
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: None,
+            recommendedextensions: None,
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: None,
+                    pindex: None,
+                    uuid: None,
+                    mesh: Some(Mesh {
+                        vertices: Vertices { vertex: vec![] },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: Some(TriangleSets {
+                            trianglesets: vec![],
+                        }),
+                        beamlattice: None,
+                    }),
+                    components: None,
+                }],
+                basematerials: vec![],
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let namespaces = model.used_namespaces();
+        assert_eq!(
+            namespaces,
+            vec![ThreemfNamespace::Core, ThreemfNamespace::CoreTriangleSet]
+        );
+    }
+
+    #[test]
+    fn test_used_namespaces_multiple_extensions() {
+        use crate::core::{beamlattice::BeamLattice, triangle_set::TriangleSets};
+
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: None,
+            recommendedextensions: None,
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: None,
+                    pindex: None,
+                    uuid: Some("test-uuid".to_string()),
+                    mesh: Some(Mesh {
+                        vertices: Vertices { vertex: vec![] },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: Some(TriangleSets {
+                            trianglesets: vec![],
+                        }),
+                        beamlattice: Some(BeamLattice {
+                            minlength: 0.1,
+                            radius: 0.05,
+                            ballmode: None,
+                            ballradius: None,
+                            clippingmode: None,
+                            clippingmesh: None,
+                            representationmesh: None,
+                            pid: None,
+                            pindex: None,
+                            cap: None,
+                            beams: crate::core::beamlattice::Beams { beam: vec![] },
+                            balls: None,
+                            beamsets: None,
+                        }),
+                    }),
+                    components: None,
+                }],
+                basematerials: vec![],
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let namespaces = model.used_namespaces();
+        assert_eq!(
+            namespaces,
+            vec![
+                ThreemfNamespace::Core,
+                ThreemfNamespace::Prod,
+                ThreemfNamespace::BeamLattice,
+                ThreemfNamespace::CoreTriangleSet
+            ]
+        );
     }
 }
 

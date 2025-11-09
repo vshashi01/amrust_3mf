@@ -30,6 +30,9 @@ mod smoke_tests {
 
                 let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
                 assert_eq!(beam_lattice_obj.len(), 2);
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -58,6 +61,9 @@ mod smoke_tests {
 
                 let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
                 assert_eq!(beam_lattice_obj.len(), 2);
+
+                let ns = package.get_namespaces_on_model(None).unwrap();
+                assert_eq!(ns.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
@@ -65,7 +71,7 @@ mod smoke_tests {
         }
     }
 
-    #[cfg(feature = "io-lazy-read")]
+    #[cfg(all(feature = "io-lazy-read", feature = "io-memory-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
         use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
@@ -80,45 +86,86 @@ mod smoke_tests {
 
         assert!(result.is_ok());
 
+        let mut namespaces = vec![];
+
         match result {
             Ok(package) => {
-                // Count mesh objects using with_model pattern
                 let mut mesh_objects = 0;
+                let mut beam_lattice_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
-                            mesh_objects += model
-                                .resources
-                                .object
-                                .iter()
-                                .filter(|o| o.mesh.is_some())
-                                .count();
+                        .with_model(model_path, |(model, ns)| {
+                            use amrust_3mf::io::query;
+
+                            mesh_objects = query::get_mesh_objects_from_model(model)
+                                .collect::<Vec<_>>()
+                                .len();
+
+                            beam_lattice_objects =
+                                query::get_beam_lattice_objects_from_model(model)
+                                    .collect::<Vec<_>>()
+                                    .len();
+
+                            namespaces.extend_from_slice(ns);
                         })
                         .unwrap();
                 }
                 assert_eq!(mesh_objects, 5);
+                assert_eq!(beam_lattice_objects, 2);
 
-                // Count beam lattice objects using with_model pattern
+                // core, prod, material, beam lattice
+                assert_eq!(namespaces.len(), 4);
+            }
+            Err(err) => {
+                panic!("read failed {:?}", err);
+            }
+        }
+    }
+
+    #[cfg(all(feature = "io-lazy-read", feature = "io-speed-optimized-read"))]
+    #[test]
+    fn read_threemf_package_lazy_speed_optimized() {
+        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+
+        let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
+        let reader = File::open(path).unwrap();
+
+        let result = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
+            reader,
+            CachePolicy::NoCache,
+        );
+
+        assert!(result.is_ok());
+
+        let mut namespaces = vec![];
+
+        match result {
+            Ok(package) => {
+                let mut mesh_objects = 0;
                 let mut beam_lattice_objects = 0;
                 for model_path in package.model_paths() {
                     package
-                        .with_model(model_path, |model| {
-                            beam_lattice_objects += model
-                                .resources
-                                .object
-                                .iter()
-                                .filter(|o| {
-                                    if let Some(mesh) = &o.mesh {
-                                        mesh.beamlattice.is_some()
-                                    } else {
-                                        false
-                                    }
-                                })
-                                .count();
+                        .with_model(model_path, |(model, ns)| {
+                            use amrust_3mf::io::query;
+
+                            mesh_objects = query::get_mesh_objects_from_model(model)
+                                .collect::<Vec<_>>()
+                                .len();
+
+                            beam_lattice_objects =
+                                query::get_beam_lattice_objects_from_model(model)
+                                    .collect::<Vec<_>>()
+                                    .len();
+
+                            namespaces.extend_from_slice(ns);
                         })
                         .unwrap();
                 }
+                assert_eq!(mesh_objects, 5);
                 assert_eq!(beam_lattice_objects, 2);
+
+                // core, prod, material, beam lattice
+                assert_eq!(namespaces.len(), 4);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);

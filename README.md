@@ -1,6 +1,6 @@
 # amrust_3mf
 
-A high-performance Rust library for reading and writing 3MF (3D Manufacturing Format) packages with both eager and lazy loading support.
+Library for reading and writing 3MF (3D Manufacturing Format) packages with both eager and lazy loading support.
 
 This crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
 
@@ -11,6 +11,8 @@ This crate provides a compact core model representation and I/O helpers for read
 | 3MF Core Spec      | Core      |    No    |                     1.3.0 |
 | Production         | Extension |    No    |                     1.1.2 |
 | Beam Lattice       | Extension |    No    |                     1.2.0 |
+
+**Note: This library is still in active development, expect frequent API changes!!**
 
 ## Overview
 
