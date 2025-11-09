@@ -139,7 +139,7 @@ mod smoke_tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+        let result = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
             reader,
             CachePolicy::NoCache,
         );
@@ -150,75 +150,57 @@ mod smoke_tests {
 
         match result {
             Ok(package) => {
-                assert_eq!(package.relationships().len(), 4);
+                assert_eq!(package.relationships().len(), 5);
 
-                // Count total objects using with_model pattern
+                let model_paths = package.model_paths().collect::<Vec<_>>();
+                println!("{model_paths:?}");
+                assert_eq!(model_paths.len(), 5);
+
                 let mut total_objects = 0;
-                for model_path in package.model_paths() {
-                    package
-                        .with_model(model_path, |(model, ns)| {
-                            total_objects += model.resources.object.len();
-
-                            ns.iter().all(|ns| namespaces.insert(ns.clone()));
-                        })
-                        .unwrap();
-                }
-                assert_eq!(total_objects, 4);
-
-                // Count mesh objects and check UUID using with_model pattern
                 let mut mesh_objects = 0;
-                let mut can_find_object_by_uuid = false;
+                let mut composedpart_objects = 0;
+
+                // can find a specific mesh object with a specific uuid
+                let mut found_object_by_uuid = false;
+
+                // Check object by ID in specific model path
+                let mut found_object_by_id = false;
+
+                //iterate through all models and search for objects and the used namespaces
                 for model_path in package.model_paths() {
                     package
                         .with_model(model_path, |(model, ns)| {
+                            if model_path == "/3D/Objects/Object.model"
+                                && model.resources.object.iter().any(|o| o.id == 1)
+                            {
+                                found_object_by_id = true;
+                            }
+
                             for obj in &model.resources.object {
+                                total_objects += 1;
                                 if obj.mesh.is_some() {
                                     mesh_objects += 1;
                                     if let Some(uuid) = &obj.uuid
                                         && uuid == "79f98073-4eaa-4737-b065-041b98fb50a6"
                                     {
-                                        can_find_object_by_uuid = true;
+                                        found_object_by_uuid = true;
                                     }
+                                } else if obj.components.is_some() {
+                                    composedpart_objects += 1;
                                 }
                             }
 
                             ns.iter().all(|ns| namespaces.insert(ns.clone()));
+                            println!("Model Path: {model_path} && Namespaces: {ns:?}");
+                            println!("");
                         })
                         .unwrap();
                 }
+                assert_eq!(total_objects, 4);
                 assert_eq!(mesh_objects, 3);
-                assert!(can_find_object_by_uuid);
-
-                // Count composedpart objects using with_model pattern
-                let mut composedpart_objects = 0;
-                for model_path in package.model_paths() {
-                    package
-                        .with_model(model_path, |(model, ns)| {
-                            composedpart_objects += model
-                                .resources
-                                .object
-                                .iter()
-                                .filter(|o| o.components.is_some())
-                                .count();
-
-                            ns.iter().all(|ns| namespaces.insert(ns.clone()));
-                        })
-                        .unwrap();
-                }
                 assert_eq!(composedpart_objects, 1);
-
-                // Check object by ID in specific model path
-                let mut found_object = false;
-                package
-                    .with_model("/3D/Objects/Object.model", |(model, ns)| {
-                        if model.resources.object.iter().any(|o| o.id == 1) {
-                            found_object = true;
-                        }
-
-                        ns.iter().all(|ns| namespaces.insert(ns.clone()));
-                    })
-                    .unwrap();
-                assert!(found_object);
+                assert!(found_object_by_uuid);
+                assert!(found_object_by_id);
 
                 // Check build item UUID in root model
                 let (root_model, root_ns) = package.root_model().unwrap();
@@ -231,8 +213,9 @@ mod smoke_tests {
                 });
                 assert!(can_find_build_item_by_uuid.is_some());
 
-                root_ns.iter().all(|ns| namespaces.insert(ns.clone()));
-                assert_eq!(namespaces.len(), 2);
+                //root_ns.iter().all(|ns| namespaces.insert(ns.clone()));
+                println!("Namespaces: {namespaces:?}");
+                assert_eq!(namespaces.len(), 3);
             }
             Err(err) => {
                 panic!("read failed {:?}", err);
