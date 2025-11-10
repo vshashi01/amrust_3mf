@@ -4,6 +4,11 @@ Library for reading and writing 3MF (3D Manufacturing Format) packages with both
 
 This crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
 
+![CI](https://github.com/vshashi01/amrust_3mf/actions/workflows/rust.yml/badge.svg)
+
+[![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/branch/main/graph/badge.
+svg)](https://codecov.io/gh/vshashi01/amrust_3mf)
+
 ## Supported 3MF Extensions and Maximum Supported Versions
 
 | 3MF Specifications | Type      | Optional | Current supported version |
