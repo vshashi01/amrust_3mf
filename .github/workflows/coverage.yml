@@ -13,18 +13,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: cargo-all-features, cargo-tarpaulin
       
       - uses: Swatinem/rust-cache@v2
       
-      # - name: Install cargo-all-features
-      #   run: cargo install cargo-all-features
+      - name: Install cargo-all-features
+        run: cargo install cargo-all-features
       
       - name: Run all feature combinations tests
         run: cargo all-features test
       
-      # - name: Install cargo-tarpaulin
-      #   run: cargo install cargo-tarpaulin
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
       
       - name: Generate coverage report
         run: cargo tarpaulin --all-features --out Lcov --output-dir ./coverage/
