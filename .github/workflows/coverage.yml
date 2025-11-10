@@ -1,0 +1,37 @@
+name: Coverage
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v5
+      
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: cargo-all-features, cargo-tarpaulin
+      
+      - uses: Swatinem/rust-cache@v2
+      
+      # - name: Install cargo-all-features
+      #   run: cargo install cargo-all-features
+      
+      - name: Run all feature combinations tests
+        run: cargo all-features test
+      
+      # - name: Install cargo-tarpaulin
+      #   run: cargo install cargo-tarpaulin
+      
+      - name: Generate coverage report
+        run: cargo tarpaulin --all-features --out Lcov --output-dir ./coverage/
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage/lcov.info
+          fail_ci_if_error: true
