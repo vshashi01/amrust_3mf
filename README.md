@@ -6,8 +6,7 @@ This crate provides a compact core model representation and I/O helpers for read
 
 ![CI](https://github.com/vshashi01/amrust_3mf/actions/workflows/rust.yml/badge.svg)
 
-[![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/branch/main/graph/badge.
-svg)](https://codecov.io/gh/vshashi01/amrust_3mf)
+[![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/amrust_3mf)
 
 ## Supported 3MF Extensions and Maximum Supported Versions
 
