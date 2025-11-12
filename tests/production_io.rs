@@ -52,7 +52,7 @@ mod smoke_tests {
                     Some("/3D/Objects/Object.model".to_string()),
                     None,
                 );
-                assert!(object_by_id.0.is_some());
+                assert!(object_by_id.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
                     if let Some(uuid) = &i.uuid {
@@ -112,7 +112,7 @@ mod smoke_tests {
                     Some("/3D/Objects/Object.model".to_string()),
                     None,
                 );
-                assert!(object_by_id.0.is_some());
+                assert!(object_by_id.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
                     if let Some(uuid) = &i.uuid {

@@ -39,7 +39,7 @@ mod smoke_tests {
                 assert_eq!(composedpart_objects.len(), 1);
 
                 let object_by_id = get_object_ref_from_id(1, &package, None, None);
-                assert!(object_by_id.0.is_some());
+                assert!(object_by_id.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
 
@@ -82,7 +82,7 @@ mod smoke_tests {
                 assert_eq!(composedpart_objects.len(), 1);
 
                 let object_by_id = get_object_ref_from_id(1, &package, None, None);
-                assert!(object_by_id.0.is_some());
+                assert!(object_by_id.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
 

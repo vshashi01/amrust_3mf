@@ -1,12 +1,23 @@
 #![allow(clippy::needless_lifetimes)]
 
 use crate::{
-    core::{model::Model, object::Object},
+    core::{
+        beamlattice::BeamLattice,
+        component::Components,
+        mesh::Mesh,
+        model::Model,
+        object::{Object, ObjectType},
+    },
     io::ThreemfPackage,
 };
 
-/// Gets a reference to the object and the path to the container Parent Model from some
-/// object id and the parent model path.
+pub struct ObjectRef<'a> {
+    pub object: &'a Object,
+    pub path: Option<String>,
+}
+
+/// Returns a reference to an ObjectRef based on the ID, if it exists (else None), if multiple with the same ID exists, the one
+/// with the path, the order probably, with the path set, then with the parent_model set, then from the root
 /// If path is not specified, then the parent model is the default place to look for the object
 /// If the parent model path is not specified then the root model is always the core search model
 pub fn get_object_ref_from_id<'a>(
@@ -14,99 +25,277 @@ pub fn get_object_ref_from_id<'a>(
     package: &'a ThreemfPackage,
     path: Option<String>,
     parent_model: Option<String>,
-) -> (Option<&'a Object>, Option<String>) {
+) -> Option<ObjectRef<'a>> {
     match path {
         Some(sub_model_path) => {
             if let Some(model) = package.sub_models.get(&sub_model_path) {
-                (
-                    get_object_ref_from_model(object_id, model),
-                    Some(sub_model_path.clone()),
-                )
+                model
+                    .resources
+                    .object
+                    .iter()
+                    .find(|o| o.id == object_id)
+                    .map(|lala| ObjectRef {
+                        object: lala,
+                        path: Some(sub_model_path.clone()),
+                    })
             } else {
-                (None, None)
+                None
             }
         }
         None => match parent_model {
             Some(model_path) => {
                 if let Some(model) = package.sub_models.get(&model_path) {
-                    (
-                        get_object_ref_from_model(object_id, model),
-                        Some(model_path.clone()),
-                    )
+                    model
+                        .resources
+                        .object
+                        .iter()
+                        .find(|o| o.id == object_id)
+                        .map(|lala| ObjectRef {
+                            object: lala,
+                            path: Some(model_path.clone()),
+                        })
                 } else {
-                    (None, None)
+                    None
                 }
             }
-            None => (get_object_ref_from_model(object_id, &package.root), None),
+            None => get_object_from_model(object_id, &package.root),
         },
     }
 }
 
-pub fn get_object_ref_from_model(object_id: usize, model: &Model) -> Option<&Object> {
-    model.resources.object.iter().find(|o| o.id == object_id)
-}
-
-pub fn get_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = &'a Object> {
-    iter_objects_from(package, get_objects_from_model)
-}
-
-pub fn get_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = &'a Object> {
-    model.resources.object.iter()
-}
-
-pub fn get_mesh_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = &'a Object> {
-    iter_objects_from(package, get_mesh_objects_from_model)
-}
-
-pub fn get_mesh_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = &'a Object> {
-    model.resources.object.iter().filter(|o| o.mesh.is_some())
-}
-
-pub fn get_composedpart_objects<'a>(
-    package: &'a ThreemfPackage,
-) -> impl Iterator<Item = &'a Object> {
-    iter_objects_from(package, get_composedpart_objects_from_model)
-}
-
-pub fn get_composedpart_objects_from_model<'a>(
-    model: &'a Model,
-) -> impl Iterator<Item = &'a Object> {
+pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<ObjectRef<'a>> {
     model
         .resources
         .object
         .iter()
+        .find(|o| o.id == object_id)
+        .map(|lala| ObjectRef {
+            object: lala,
+            path: None,
+        })
+}
+
+pub fn get_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ObjectRef<'a>> {
+    iter_objects_from(package, get_objects_from_model_ref)
+}
+
+pub fn get_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = ObjectRef<'a>> {
+    get_objects_from_model_ref(ModelRef { model, path: None })
+}
+
+pub fn get_objects_from_model_ref<'a>(
+    model_ref: ModelRef<'a>,
+) -> impl Iterator<Item = ObjectRef<'a>> {
+    let path = model_ref.path.clone();
+
+    model_ref
+        .model
+        .resources
+        .object
+        .iter()
+        .map(move |o| ObjectRef {
+            object: o,
+            path: path.clone(),
+        })
+}
+
+pub struct GenericObjectRef<'a, T> {
+    pub entity: &'a T,
+    pub id: usize,
+    pub object_type: ObjectType,
+    pub thumbnail: Option<String>,
+    pub part_number: Option<String>,
+    pub name: Option<String>,
+    pub pid: Option<usize>,
+    pub pindex: Option<usize>,
+    pub uuid: Option<String>,
+    pub origin_model_path: Option<String>,
+}
+
+pub type MeshObjectRef<'a> = GenericObjectRef<'a, Mesh>;
+
+impl<'a> MeshObjectRef<'a> {
+    fn new(o: ObjectRef<'a>) -> Self {
+        MeshObjectRef {
+            entity: o.object.mesh.as_ref().unwrap(),
+            id: o.object.id,
+            object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
+            thumbnail: o.object.thumbnail.clone(),
+            part_number: o.object.partnumber.clone(),
+            name: o.object.name.clone(),
+            pid: o.object.pid,
+            pindex: o.object.pindex,
+            uuid: o.object.uuid.clone(),
+            origin_model_path: o.path.clone(),
+        }
+    }
+}
+
+pub fn get_mesh_objects<'a>(
+    package: &'a ThreemfPackage,
+) -> impl Iterator<Item = MeshObjectRef<'a>> {
+    iter_objects_from(package, get_mesh_objects_from_model_ref).map(MeshObjectRef::new)
+}
+
+pub fn get_mesh_objects_from_model<'a>(
+    model: &'a Model,
+) -> impl Iterator<Item = MeshObjectRef<'a>> {
+    get_mesh_objects_from_model_ref(ModelRef { model, path: None }).map(MeshObjectRef::new)
+}
+
+pub fn get_mesh_objects_from_model_ref<'a>(
+    model_ref: ModelRef<'a>,
+) -> impl Iterator<Item = ObjectRef<'a>> {
+    let path = model_ref.path.clone();
+
+    model_ref
+        .model
+        .resources
+        .object
+        .iter()
+        .filter(|o| o.mesh.is_some())
+        .map(move |o| ObjectRef {
+            object: o,
+            path: path.clone(),
+        })
+}
+
+pub type ComposedPartObjectRef<'a> = GenericObjectRef<'a, Components>;
+
+impl<'a> ComposedPartObjectRef<'a> {
+    fn new(o: ObjectRef<'a>) -> Self {
+        ComposedPartObjectRef {
+            entity: o.object.components.as_ref().unwrap(),
+            id: o.object.id,
+            object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
+            thumbnail: o.object.thumbnail.clone(),
+            part_number: o.object.partnumber.clone(),
+            name: o.object.name.clone(),
+            pid: o.object.pid,
+            pindex: o.object.pindex,
+            uuid: o.object.uuid.clone(),
+            origin_model_path: o.path.clone(),
+        }
+    }
+}
+
+pub fn get_composedpart_objects<'a>(
+    package: &'a ThreemfPackage,
+) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
+    iter_objects_from(package, get_composedpart_objects_from_model_ref)
+        .map(ComposedPartObjectRef::new)
+}
+
+pub fn get_composedpart_objects_from_model<'a>(
+    model: &'a Model,
+) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
+    get_composedpart_objects_from_model_ref(ModelRef { model, path: None })
+        .map(ComposedPartObjectRef::new)
+}
+
+pub fn get_composedpart_objects_from_model_ref<'a>(
+    model_ref: ModelRef<'a>,
+) -> impl Iterator<Item = ObjectRef<'a>> {
+    let path = model_ref.path.clone();
+
+    model_ref
+        .model
+        .resources
+        .object
+        .iter()
         .filter(|o| o.components.is_some())
+        .map(move |o| ObjectRef {
+            object: o,
+            path: path.to_owned(),
+        })
+}
+
+pub type BeamLatticeObjectRef<'a> = GenericObjectRef<'a, BeamLattice>;
+
+impl<'a> BeamLatticeObjectRef<'a> {
+    fn new(o: ObjectRef<'a>) -> Self {
+        BeamLatticeObjectRef {
+            entity: o
+                .object
+                .mesh
+                .as_ref()
+                .unwrap()
+                .beamlattice
+                .as_ref()
+                .unwrap(),
+            id: o.object.id,
+            object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
+            thumbnail: o.object.thumbnail.clone(),
+            part_number: o.object.partnumber.clone(),
+            name: o.object.name.clone(),
+            pid: o.object.pid,
+            pindex: o.object.pindex,
+            uuid: o.object.uuid.clone(),
+            origin_model_path: o.path.clone(),
+        }
+    }
 }
 
 pub fn get_beam_lattice_objects<'a>(
     package: &'a ThreemfPackage,
-) -> impl Iterator<Item = &'a Object> {
-    iter_objects_from(package, get_beam_lattice_objects_from_model)
+) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
+    iter_objects_from(package, get_beam_lattice_objects_from_model_ref)
+        .map(BeamLatticeObjectRef::new)
 }
 
 pub fn get_beam_lattice_objects_from_model<'a>(
     model: &'a Model,
-) -> impl Iterator<Item = &'a Object> {
-    model.resources.object.iter().filter(|o| {
-        if let Some(mesh) = &o.mesh {
-            mesh.beamlattice.is_some()
-        } else {
-            false
-        }
-    })
+) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
+    get_beam_lattice_objects_from_model_ref(ModelRef { model, path: None })
+        .map(BeamLatticeObjectRef::new)
 }
 
-pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = &'a Model> {
-    std::iter::once(&package.root).chain(package.sub_models.values())
+pub fn get_beam_lattice_objects_from_model_ref<'a>(
+    model_ref: ModelRef<'a>,
+) -> impl Iterator<Item = ObjectRef<'a>> {
+    let path = model_ref.path.clone();
+
+    model_ref
+        .model
+        .resources
+        .object
+        .iter()
+        .filter(|o| {
+            if let Some(mesh) = &o.mesh {
+                mesh.beamlattice.is_some()
+            } else {
+                false
+            }
+        })
+        .map(move |o| ObjectRef {
+            object: o,
+            path: path.clone(),
+        })
+}
+
+pub struct ModelRef<'a> {
+    pub model: &'a Model,
+    pub path: Option<String>,
+}
+
+pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ModelRef<'a>> {
+    std::iter::once(ModelRef {
+        model: &package.root,
+        path: None,
+    })
+    .chain(package.sub_models.iter().map(|(path, model)| ModelRef {
+        model,
+        path: Some(path.to_owned()),
+    }))
 }
 
 fn iter_objects_from<'a, I, F>(
     package: &'a ThreemfPackage,
     f: F,
-) -> impl Iterator<Item = &'a Object>
+) -> impl Iterator<Item = ObjectRef<'a>>
 where
-    F: Fn(&'a Model) -> I + Copy,
-    I: IntoIterator<Item = &'a Object>,
+    F: Fn(ModelRef<'a>) -> I + Copy,
+    I: IntoIterator<Item = ObjectRef<'a>>,
 {
     iter_models(package).flat_map(f)
 }
@@ -128,17 +317,17 @@ mod smoke_tests {
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let (object, _) = get_object_ref_from_id(
+        let object_ref = get_object_ref_from_id(
             1,
             &package,
             Some("/3D/Objects/Object.model".to_string()),
             None,
         );
 
-        match object {
-            Some(obj) => {
-                assert!(obj.mesh.is_some());
-                assert_eq!(obj.id, 1);
+        match object_ref {
+            Some(obj_ref) => {
+                assert!(obj_ref.object.mesh.is_some());
+                assert_eq!(obj_ref.object.id, 1);
             }
             None => panic!("Object ref not found"),
         }
@@ -232,12 +421,12 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let object = get_object_ref_from_model(1, &model);
+        let object_ref = get_object_from_model(1, &model);
 
-        match object {
-            Some(obj) => {
-                assert!(obj.mesh.is_some());
-                assert_eq!(obj.id, 1);
+        match object_ref {
+            Some(obj_ref) => {
+                assert!(obj_ref.object.mesh.is_some());
+                assert_eq!(obj_ref.object.id, 1);
             }
             None => panic!("Object ref not found"),
         }
