@@ -13,54 +13,7 @@ use crate::{
 
 pub struct ObjectRef<'a> {
     pub object: &'a Object,
-    pub path: Option<String>,
-}
-
-/// Returns a reference to an ObjectRef based on the ID, if it exists (else None), if multiple with the same ID exists, the one
-/// with the path, the order probably, with the path set, then with the parent_model set, then from the root
-/// If path is not specified, then the parent model is the default place to look for the object
-/// If the parent model path is not specified then the root model is always the core search model
-pub fn get_object_ref_from_id<'a>(
-    object_id: usize,
-    package: &'a ThreemfPackage,
-    path: Option<String>,
-    parent_model: Option<String>,
-) -> Option<ObjectRef<'a>> {
-    match path {
-        Some(sub_model_path) => {
-            if let Some(model) = package.sub_models.get(&sub_model_path) {
-                model
-                    .resources
-                    .object
-                    .iter()
-                    .find(|o| o.id == object_id)
-                    .map(|lala| ObjectRef {
-                        object: lala,
-                        path: Some(sub_model_path.clone()),
-                    })
-            } else {
-                None
-            }
-        }
-        None => match parent_model {
-            Some(model_path) => {
-                if let Some(model) = package.sub_models.get(&model_path) {
-                    model
-                        .resources
-                        .object
-                        .iter()
-                        .find(|o| o.id == object_id)
-                        .map(|lala| ObjectRef {
-                            object: lala,
-                            path: Some(model_path.clone()),
-                        })
-                } else {
-                    None
-                }
-            }
-            None => get_object_from_model(object_id, &package.root),
-        },
-    }
+    pub path: Option<&'a str>,
 }
 
 pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<ObjectRef<'a>> {
@@ -86,8 +39,6 @@ pub fn get_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = Obje
 pub fn get_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
-    let path = model_ref.path.clone();
-
     model_ref
         .model
         .resources
@@ -95,7 +46,7 @@ pub fn get_objects_from_model_ref<'a>(
         .iter()
         .map(move |o| ObjectRef {
             object: o,
-            path: path.clone(),
+            path: model_ref.path,
         })
 }
 
@@ -109,7 +60,7 @@ pub struct GenericObjectRef<'a, T> {
     pub pid: Option<usize>,
     pub pindex: Option<usize>,
     pub uuid: Option<String>,
-    pub origin_model_path: Option<String>,
+    pub origin_model_path: Option<&'a str>,
 }
 
 pub type MeshObjectRef<'a> = GenericObjectRef<'a, Mesh>;
@@ -126,7 +77,7 @@ impl<'a> MeshObjectRef<'a> {
             pid: o.object.pid,
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
-            origin_model_path: o.path.clone(),
+            origin_model_path: o.path,
         }
     }
 }
@@ -146,8 +97,6 @@ pub fn get_mesh_objects_from_model<'a>(
 pub fn get_mesh_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
-    let path = model_ref.path.clone();
-
     model_ref
         .model
         .resources
@@ -156,7 +105,7 @@ pub fn get_mesh_objects_from_model_ref<'a>(
         .filter(|o| o.mesh.is_some())
         .map(move |o| ObjectRef {
             object: o,
-            path: path.clone(),
+            path: model_ref.path,
         })
 }
 
@@ -174,7 +123,7 @@ impl<'a> ComposedPartObjectRef<'a> {
             pid: o.object.pid,
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
-            origin_model_path: o.path.clone(),
+            origin_model_path: o.path,
         }
     }
 }
@@ -196,8 +145,6 @@ pub fn get_composedpart_objects_from_model<'a>(
 pub fn get_composedpart_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
-    let path = model_ref.path.clone();
-
     model_ref
         .model
         .resources
@@ -206,7 +153,7 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
         .filter(|o| o.components.is_some())
         .map(move |o| ObjectRef {
             object: o,
-            path: path.to_owned(),
+            path: model_ref.path,
         })
 }
 
@@ -231,7 +178,7 @@ impl<'a> BeamLatticeObjectRef<'a> {
             pid: o.object.pid,
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
-            origin_model_path: o.path.clone(),
+            origin_model_path: o.path,
         }
     }
 }
@@ -253,8 +200,6 @@ pub fn get_beam_lattice_objects_from_model<'a>(
 pub fn get_beam_lattice_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
-    let path = model_ref.path.clone();
-
     model_ref
         .model
         .resources
@@ -269,13 +214,13 @@ pub fn get_beam_lattice_objects_from_model_ref<'a>(
         })
         .map(move |o| ObjectRef {
             object: o,
-            path: path.clone(),
+            path: model_ref.path,
         })
 }
 
 pub struct ModelRef<'a> {
     pub model: &'a Model,
-    pub path: Option<String>,
+    pub path: Option<&'a str>,
 }
 
 pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ModelRef<'a>> {
@@ -285,7 +230,7 @@ pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = Mode
     })
     .chain(package.sub_models.iter().map(|(path, model)| ModelRef {
         model,
-        path: Some(path.to_owned()),
+        path: Some(path),
     }))
 }
 
@@ -317,12 +262,9 @@ mod smoke_tests {
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let object_ref = get_object_ref_from_id(
-            1,
-            &package,
-            Some("/3D/Objects/Object.model".to_string()),
-            None,
-        );
+        let object_ref = get_objects(&package)
+            .filter(|r| matches!(r.path, Some("/3D/Objects/Object.model")))
+            .find(|r| r.object.id == 1);
 
         match object_ref {
             Some(obj_ref) => {
