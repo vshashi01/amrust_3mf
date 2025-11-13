@@ -56,9 +56,8 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --all-features -- -W warnings
 
-  #ToDo
-  #audit:
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #  - uses: actions/checkout@v5
-  #  - uses: EmbarkStudios/cargo-deny-action@v2
+  audit:
+   runs-on: ubuntu-latest
+   steps:
+   - uses: actions/checkout@v5
+   - uses: EmbarkStudios/cargo-deny-action@v2
