@@ -14,11 +14,15 @@ use crate::{
     io::ThreemfPackage,
 };
 
+/// A reference to an object within a 3MF model, including its path if from a sub-model.
 pub struct ObjectRef<'a> {
+    /// The object itself.
     pub object: &'a Object,
+    /// The path to the model containing this object, if None then it is the root model.
     pub path: Option<&'a str>,
 }
 
+/// Retrieves an object by ID from a given model. Returns None if not found.
 pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<ObjectRef<'a>> {
     model
         .resources
@@ -31,14 +35,17 @@ pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<O
         })
 }
 
+/// Returns an iterator over all objects in the package, including sub-models.
 pub fn get_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ObjectRef<'a>> {
     iter_objects_from(package, get_objects_from_model_ref)
 }
 
+/// Returns an iterator over all objects in the model.
 pub fn get_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = ObjectRef<'a>> {
     get_objects_from_model_ref(ModelRef { model, path: None })
 }
 
+/// Returns an iterator over all objects in the model reference.
 pub fn get_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -53,7 +60,9 @@ pub fn get_objects_from_model_ref<'a>(
         })
 }
 
+/// A generic reference to an object entity with common metadata fields.
 pub struct GenericObjectRef<'a, T> {
+    /// The entity itself (e.g., Mesh, Components).
     entity: &'a T,
     pub id: usize,
     pub object_type: ObjectType,
@@ -63,9 +72,11 @@ pub struct GenericObjectRef<'a, T> {
     pub pid: Option<usize>,
     pub pindex: Option<usize>,
     pub uuid: Option<String>,
+    /// Path to the originating model.
     pub origin_model_path: Option<&'a str>,
 }
 
+/// A reference to a mesh object with all the object data.
 pub struct MeshObjectRef<'a>(GenericObjectRef<'a, Mesh>);
 
 impl<'a> MeshObjectRef<'a> {
@@ -84,6 +95,7 @@ impl<'a> MeshObjectRef<'a> {
         })
     }
 
+    /// Returns the mesh data.
     pub fn mesh(&self) -> &'a Mesh {
         self.entity
     }
@@ -97,18 +109,21 @@ impl<'a> Deref for MeshObjectRef<'a> {
     }
 }
 
+/// Returns an iterator over mesh objects in the package.
 pub fn get_mesh_objects<'a>(
     package: &'a ThreemfPackage,
 ) -> impl Iterator<Item = MeshObjectRef<'a>> {
     iter_objects_from(package, get_mesh_objects_from_model_ref).map(MeshObjectRef::new)
 }
 
+/// Returns an iterator over mesh objects in the model.
 pub fn get_mesh_objects_from_model<'a>(
     model: &'a Model,
 ) -> impl Iterator<Item = MeshObjectRef<'a>> {
     get_mesh_objects_from_model_ref(ModelRef { model, path: None }).map(MeshObjectRef::new)
 }
 
+/// Returns an iterator over mesh objects in the model reference.
 pub fn get_mesh_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -124,6 +139,7 @@ pub fn get_mesh_objects_from_model_ref<'a>(
         })
 }
 
+/// A reference to a composed part object with metadata.
 pub struct ComposedPartObjectRef<'a>(GenericObjectRef<'a, Components>);
 
 impl<'a> ComposedPartObjectRef<'a> {
@@ -142,6 +158,7 @@ impl<'a> ComposedPartObjectRef<'a> {
         })
     }
 
+    /// Returns an iterator over the components.
     pub fn components(&self) -> impl Iterator<Item = ComponentRef> {
         self.entity.component.iter().map(|c| {
             let comp_path = match &c.path {
@@ -169,13 +186,20 @@ impl<'a> Deref for ComposedPartObjectRef<'a> {
     }
 }
 
+/// A reference to a component within a composed part.
 pub struct ComponentRef {
+    /// ID of the referenced object.
     pub objectid: usize,
+    /// Path to look for the object,
+    /// if specified else it will be the parent Model where the object is originating from.
     pub path_to_look_for: Option<String>,
+    /// Transform applied to the component.
     pub transform: Option<Transform>,
+    /// UUID of the component.
     pub uuid: Option<String>,
 }
 
+/// Returns an iterator over composed part objects in the package.
 pub fn get_composedpart_objects<'a>(
     package: &'a ThreemfPackage,
 ) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
@@ -183,6 +207,7 @@ pub fn get_composedpart_objects<'a>(
         .map(ComposedPartObjectRef::new)
 }
 
+/// Returns an iterator over composed part objects in the model.
 pub fn get_composedpart_objects_from_model<'a>(
     model: &'a Model,
 ) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
@@ -190,6 +215,7 @@ pub fn get_composedpart_objects_from_model<'a>(
         .map(ComposedPartObjectRef::new)
 }
 
+/// Returns an iterator over composed part objects in the model reference.
 pub fn get_composedpart_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -205,6 +231,7 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
         })
 }
 
+/// A reference to a beam lattice object with metadata.
 pub struct BeamLatticeObjectRef<'a>(GenericObjectRef<'a, BeamLattice>);
 
 impl<'a> BeamLatticeObjectRef<'a> {
@@ -230,6 +257,7 @@ impl<'a> BeamLatticeObjectRef<'a> {
         })
     }
 
+    /// Returns the beam lattice data.
     pub fn beamlattice(&self) -> &'a BeamLattice {
         self.entity
     }
@@ -242,6 +270,7 @@ impl<'a> Deref for BeamLatticeObjectRef<'a> {
         &self.0
     }
 }
+/// Returns an iterator over beam lattice objects in the package.
 pub fn get_beam_lattice_objects<'a>(
     package: &'a ThreemfPackage,
 ) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
@@ -249,6 +278,7 @@ pub fn get_beam_lattice_objects<'a>(
         .map(BeamLatticeObjectRef::new)
 }
 
+/// Returns an iterator over beam lattice objects in the model.
 pub fn get_beam_lattice_objects_from_model<'a>(
     model: &'a Model,
 ) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
@@ -256,6 +286,7 @@ pub fn get_beam_lattice_objects_from_model<'a>(
         .map(BeamLatticeObjectRef::new)
 }
 
+/// Returns an iterator over beam lattice objects in the model reference.
 pub fn get_beam_lattice_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -277,11 +308,15 @@ pub fn get_beam_lattice_objects_from_model_ref<'a>(
         })
 }
 
+/// A reference to a model within a package, including its path.
 pub struct ModelRef<'a> {
+    /// The model itself.
     pub model: &'a Model,
+    /// The path to the model, if it's a sub-model.
     pub path: Option<&'a str>,
 }
 
+/// Returns an iterator over all models in the package, including the root and sub-models.
 pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ModelRef<'a>> {
     std::iter::once(ModelRef {
         model: &package.root,
