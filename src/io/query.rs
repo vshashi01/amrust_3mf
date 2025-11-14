@@ -437,6 +437,55 @@ mod smoke_tests {
 
         let models = iter_models(&package).collect::<Vec<_>>();
         assert_eq!(models.len(), 5);
+        assert!(models[0].path.is_none());
+        for model_ref in &models[1..] {
+            assert!(model_ref.path.is_some());
+        }
+    }
+
+    #[test]
+    fn test_integration_query_all_types() {
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
+        let file = std::fs::File::open(path).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+
+        let all_objects = get_objects(&package).count();
+        let mesh_objects = get_mesh_objects(&package).count();
+        let composed_objects = get_composedpart_objects(&package).count();
+        let beam_objects = get_beam_lattice_objects(&package).count();
+
+        // Beam lattice objects are a subset of mesh objects
+        assert!(beam_objects <= mesh_objects);
+        assert_eq!(all_objects, mesh_objects + composed_objects);
+        assert_eq!(all_objects, 6);
+        assert_eq!(mesh_objects, 5);
+        assert_eq!(composed_objects, 1);
+        assert_eq!(beam_objects, 2);
+    }
+
+    #[test]
+    fn test_integration_component_resolution() {
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
+        let file = std::fs::File::open(path).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+
+        let composed_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
+        assert_eq!(composed_objects.len(), 1);
+        let components = composed_objects[0].components().collect::<Vec<_>>();
+        assert!(!components.is_empty());
+        // Check that components have valid objectids
+        for comp in components {
+            assert!(comp.objectid > 0);
+            // Optionally check if path is set for sub-model references
+        }
     }
 }
 
@@ -514,5 +563,120 @@ mod tests {
 
         let objects = get_beam_lattice_objects_from_model(&model).collect::<Vec<_>>();
         assert_eq!(objects.len(), 2)
+    }
+
+    #[test]
+    fn test_get_object_from_model_non_existent_id() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let object_ref = get_object_from_model(999, &model);
+        assert!(object_ref.is_none());
+    }
+
+    #[test]
+    fn test_get_objects_from_model_ref() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+        let model_ref = ModelRef {
+            model: &model,
+            path: Some("test_path"),
+        };
+
+        let objects = get_objects_from_model_ref(model_ref).collect::<Vec<_>>();
+        assert_eq!(objects.len(), 6);
+        for obj in objects {
+            assert_eq!(obj.path, Some("test_path"));
+        }
+    }
+
+    #[test]
+    fn test_get_mesh_objects_from_model_ref() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+        let model_ref = ModelRef {
+            model: &model,
+            path: None,
+        };
+
+        let objects = get_mesh_objects_from_model_ref(model_ref).collect::<Vec<_>>();
+        assert_eq!(objects.len(), 5);
+        for obj in objects {
+            assert!(obj.object.mesh.is_some());
+        }
+    }
+
+    #[test]
+    fn test_mesh_object_ref_impl() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let mesh_objects = get_mesh_objects_from_model(&model).collect::<Vec<_>>();
+        assert!(!mesh_objects.is_empty());
+        let mesh_ref = &mesh_objects[0];
+        assert_eq!(mesh_ref.id, 1);
+        assert!(!mesh_ref.mesh().vertices.vertex.is_empty());
+    }
+
+    #[test]
+    fn test_composedpart_object_ref_impl() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let composedpart_objects = get_composedpart_objects_from_model(&model).collect::<Vec<_>>();
+        assert!(!composedpart_objects.is_empty());
+        let composed_part = &composedpart_objects[0];
+        assert_eq!(composed_part.id, 4);
+        assert_eq!(composed_part.components().count(), 2);
+
+        for comp in composed_part.components() {
+            assert!(comp.objectid > 0);
+        }
+    }
+
+    #[test]
+    fn test_beam_lattice_object_ref_impl() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let beam_objects = get_beam_lattice_objects_from_model(&model).collect::<Vec<_>>();
+        assert!(!beam_objects.is_empty());
+        let beam_ref = &beam_objects[0];
+        assert_eq!(beam_ref.id, 5);
+        assert!(!beam_ref.beamlattice().beams.beam.is_empty());
+    }
+
+    #[test]
+    fn test_model_ref_fields() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let model_ref = ModelRef {
+            model: &model,
+            path: Some("sub/model.model"),
+        };
+        assert_eq!(model_ref.path, Some("sub/model.model"));
+        assert_eq!(model_ref.model as *const _, &model as *const _);
     }
 }
