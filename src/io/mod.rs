@@ -1,6 +1,8 @@
 pub mod content_types;
-pub mod error;
 pub mod relationship;
+
+mod error;
+pub use error::Error;
 
 mod utils;
 pub use utils::parse_xmlns_attributes;

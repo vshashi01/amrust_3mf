@@ -13,7 +13,6 @@ mod smoke_tests {
     #[test]
     fn read_threemf_package_memory_optimized() {
         use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_beam_lattice_objects;
         use amrust_3mf::io::query::get_mesh_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
@@ -28,8 +27,10 @@ mod smoke_tests {
                 let mesh_obj = get_mesh_objects(&package).collect::<Vec<_>>();
                 assert_eq!(mesh_obj.len(), 5);
 
-                let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
-                assert_eq!(beam_lattice_obj.len(), 2);
+                let beam_lattice_obj = get_mesh_objects(&package)
+                    .filter(|mesh_ref| mesh_ref.mesh().beamlattice.is_some())
+                    .count();
+                assert_eq!(beam_lattice_obj, 2);
 
                 let ns = package.get_namespaces_on_model(None).unwrap();
                 assert_eq!(ns.len(), 4);
@@ -44,7 +45,6 @@ mod smoke_tests {
     #[test]
     fn read_threemf_package_speed_optimized() {
         use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_beam_lattice_objects;
         use amrust_3mf::io::query::get_mesh_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
@@ -59,8 +59,11 @@ mod smoke_tests {
                 let mesh_obj = get_mesh_objects(&package).collect::<Vec<_>>();
                 assert_eq!(mesh_obj.len(), 5);
 
-                let beam_lattice_obj = get_beam_lattice_objects(&package).collect::<Vec<_>>();
-                assert_eq!(beam_lattice_obj.len(), 2);
+                let beam_lattice_obj = mesh_obj
+                    .iter()
+                    .filter(|mesh_rep| mesh_rep.mesh().beamlattice.is_some())
+                    .count();
+                assert_eq!(beam_lattice_obj, 2);
 
                 let ns = package.get_namespaces_on_model(None).unwrap();
                 assert_eq!(ns.len(), 4);
@@ -97,14 +100,11 @@ mod smoke_tests {
                         .with_model(model_path, |(model, ns)| {
                             use amrust_3mf::io::query;
 
-                            mesh_objects = query::get_mesh_objects_from_model(model)
-                                .collect::<Vec<_>>()
-                                .len();
+                            mesh_objects = query::get_mesh_objects_from_model(model).count();
 
-                            beam_lattice_objects =
-                                query::get_beam_lattice_objects_from_model(model)
-                                    .collect::<Vec<_>>()
-                                    .len();
+                            beam_lattice_objects = query::get_mesh_objects_from_model(model)
+                                .filter(|mesh_rep| mesh_rep.mesh().beamlattice.is_some())
+                                .count();
 
                             namespaces.extend_from_slice(ns);
                         })
@@ -148,14 +148,11 @@ mod smoke_tests {
                         .with_model(model_path, |(model, ns)| {
                             use amrust_3mf::io::query;
 
-                            mesh_objects = query::get_mesh_objects_from_model(model)
-                                .collect::<Vec<_>>()
-                                .len();
+                            mesh_objects = query::get_mesh_objects_from_model(model).count();
 
-                            beam_lattice_objects =
-                                query::get_beam_lattice_objects_from_model(model)
-                                    .collect::<Vec<_>>()
-                                    .len();
+                            beam_lattice_objects = query::get_mesh_objects_from_model(model)
+                                .filter(|mesh_rep| mesh_rep.mesh().beamlattice.is_some())
+                                .count();
 
                             namespaces.extend_from_slice(ns);
                         })

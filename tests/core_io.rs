@@ -15,7 +15,6 @@ mod smoke_tests {
         use amrust_3mf::io::ThreemfPackage;
         use amrust_3mf::io::query::get_composedpart_objects;
         use amrust_3mf::io::query::get_mesh_objects;
-        use amrust_3mf::io::query::get_object_ref_from_id;
         use amrust_3mf::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
@@ -38,8 +37,12 @@ mod smoke_tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(1, &package, None, None);
-                assert!(object_by_id.0.is_some());
+                // let object_by_id = get_object_ref_from_id(1, &package, None, None);
+                let object_by_id = objects
+                    .iter()
+                    .filter(|r| r.path.is_none())
+                    .find(|r| r.object.id == 1);
+                assert!(object_by_id.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
 
@@ -58,7 +61,6 @@ mod smoke_tests {
         use amrust_3mf::io::ThreemfPackage;
         use amrust_3mf::io::query::get_composedpart_objects;
         use amrust_3mf::io::query::get_mesh_objects;
-        use amrust_3mf::io::query::get_object_ref_from_id;
         use amrust_3mf::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
@@ -81,8 +83,12 @@ mod smoke_tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(1, &package, None, None);
-                assert!(object_by_id.0.is_some());
+                // let object_by_id = get_object_ref_from_id(1, &package, None, None);
+                let object_by_id = objects
+                    .iter()
+                    .filter(|r| r.path.is_none())
+                    .find(|r| r.object.id == 1);
+                assert!(object_by_id.is_some());
 
                 assert_eq!(2, package.root.build.item.len());
 

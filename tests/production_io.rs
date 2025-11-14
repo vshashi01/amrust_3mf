@@ -15,7 +15,6 @@ mod smoke_tests {
         use amrust_3mf::io::ThreemfPackage;
         use amrust_3mf::io::query::get_composedpart_objects;
         use amrust_3mf::io::query::get_mesh_objects;
-        use amrust_3mf::io::query::get_object_ref_from_id;
         use amrust_3mf::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
@@ -46,13 +45,11 @@ mod smoke_tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(
-                    1,
-                    &package,
-                    Some("/3D/Objects/Object.model".to_string()),
-                    None,
-                );
-                assert!(object_by_id.0.is_some());
+                let object_by_id = objects
+                    .iter()
+                    .filter(|r| matches!(r.path, Some("/3D/Objects/Object.model")))
+                    .find(|r| r.object.id == 1);
+                assert!(object_by_id.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
                     if let Some(uuid) = &i.uuid {
@@ -75,7 +72,7 @@ mod smoke_tests {
         use amrust_3mf::io::ThreemfPackage;
         use amrust_3mf::io::query::get_composedpart_objects;
         use amrust_3mf::io::query::get_mesh_objects;
-        use amrust_3mf::io::query::get_object_ref_from_id;
+        // use amrust_3mf::io::query::get_object_ref_from_id;
         use amrust_3mf::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
@@ -106,13 +103,11 @@ mod smoke_tests {
                 let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
-                let object_by_id = get_object_ref_from_id(
-                    1,
-                    &package,
-                    Some("/3D/Objects/Object.model".to_string()),
-                    None,
-                );
-                assert!(object_by_id.0.is_some());
+                let object_by_id = objects
+                    .iter()
+                    .filter(|r| matches!(r.path, Some("/3D/Objects/Object.model")))
+                    .find(|r| r.object.id == 1);
+                assert!(object_by_id.is_some());
 
                 let can_find_build_item_by_uuid = package.root.build.item.iter().find(|i| {
                     if let Some(uuid) = &i.uuid {
