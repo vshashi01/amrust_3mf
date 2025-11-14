@@ -4,7 +4,6 @@ use std::ops::Deref;
 
 use crate::{
     core::{
-        beamlattice::BeamLattice,
         component::Components,
         mesh::Mesh,
         model::Model,
@@ -231,83 +230,6 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
         })
 }
 
-/// A reference to a beam lattice object with metadata.
-pub struct BeamLatticeObjectRef<'a>(GenericObjectRef<'a, BeamLattice>);
-
-impl<'a> BeamLatticeObjectRef<'a> {
-    fn new(o: ObjectRef<'a>) -> Self {
-        BeamLatticeObjectRef(GenericObjectRef {
-            entity: o
-                .object
-                .mesh
-                .as_ref()
-                .unwrap()
-                .beamlattice
-                .as_ref()
-                .unwrap(),
-            id: o.object.id,
-            object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
-            thumbnail: o.object.thumbnail.clone(),
-            part_number: o.object.partnumber.clone(),
-            name: o.object.name.clone(),
-            pid: o.object.pid,
-            pindex: o.object.pindex,
-            uuid: o.object.uuid.clone(),
-            origin_model_path: o.path,
-        })
-    }
-
-    /// Returns the beam lattice data.
-    pub fn beamlattice(&self) -> &'a BeamLattice {
-        self.entity
-    }
-}
-
-impl<'a> Deref for BeamLatticeObjectRef<'a> {
-    type Target = GenericObjectRef<'a, BeamLattice>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-/// Returns an iterator over beam lattice objects in the package.
-pub fn get_beam_lattice_objects<'a>(
-    package: &'a ThreemfPackage,
-) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
-    iter_objects_from(package, get_beam_lattice_objects_from_model_ref)
-        .map(BeamLatticeObjectRef::new)
-}
-
-/// Returns an iterator over beam lattice objects in the model.
-pub fn get_beam_lattice_objects_from_model<'a>(
-    model: &'a Model,
-) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
-    get_beam_lattice_objects_from_model_ref(ModelRef { model, path: None })
-        .map(BeamLatticeObjectRef::new)
-}
-
-/// Returns an iterator over beam lattice objects in the model reference.
-pub fn get_beam_lattice_objects_from_model_ref<'a>(
-    model_ref: ModelRef<'a>,
-) -> impl Iterator<Item = ObjectRef<'a>> {
-    model_ref
-        .model
-        .resources
-        .object
-        .iter()
-        .filter(|o| {
-            if let Some(mesh) = &o.mesh {
-                mesh.beamlattice.is_some()
-            } else {
-                false
-            }
-        })
-        .map(move |o| ObjectRef {
-            object: o,
-            path: model_ref.path,
-        })
-}
-
 /// A reference to a model within a package, including its path.
 pub struct ModelRef<'a> {
     /// The model itself.
@@ -421,8 +343,10 @@ mod smoke_tests {
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let objects = get_beam_lattice_objects(&package).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 2);
+        let objects = get_mesh_objects(&package)
+            .filter(|mesh_ref| mesh_ref.mesh().beamlattice.is_some())
+            .count();
+        assert_eq!(objects, 2);
     }
 
     #[test]
@@ -441,30 +365,6 @@ mod smoke_tests {
         for model_ref in &models[1..] {
             assert!(model_ref.path.is_some());
         }
-    }
-
-    #[test]
-    fn test_integration_query_all_types() {
-        let path =
-            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
-                .canonicalize()
-                .unwrap();
-        let file = std::fs::File::open(path).unwrap();
-        let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
-
-        let all_objects = get_objects(&package).count();
-        let mesh_objects = get_mesh_objects(&package).count();
-        let composed_objects = get_composedpart_objects(&package).count();
-        let beam_objects = get_beam_lattice_objects(&package).count();
-
-        // Beam lattice objects are a subset of mesh objects
-        assert!(beam_objects <= mesh_objects);
-        assert_eq!(all_objects, mesh_objects + composed_objects);
-        assert_eq!(all_objects, 6);
-        assert_eq!(mesh_objects, 5);
-        assert_eq!(composed_objects, 1);
-        assert_eq!(beam_objects, 2);
     }
 
     #[test]
@@ -561,8 +461,10 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let objects = get_beam_lattice_objects_from_model(&model).collect::<Vec<_>>();
-        assert_eq!(objects.len(), 2)
+        let objects = get_mesh_objects_from_model(&model)
+            .filter(|mesh_ref| mesh_ref.mesh().beamlattice.is_some())
+            .count();
+        assert_eq!(objects, 2)
     }
 
     #[test]
@@ -657,11 +559,22 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let beam_objects = get_beam_lattice_objects_from_model(&model).collect::<Vec<_>>();
+        let beam_objects = get_mesh_objects_from_model(&model)
+            .filter(|mesh_ref| mesh_ref.mesh().beamlattice.is_some())
+            .collect::<Vec<_>>();
         assert!(!beam_objects.is_empty());
-        let beam_ref = &beam_objects[0];
-        assert_eq!(beam_ref.id, 5);
-        assert!(!beam_ref.beamlattice().beams.beam.is_empty());
+        let mesh_ref = &beam_objects[0];
+        assert_eq!(mesh_ref.id, 5);
+        assert!(
+            !mesh_ref
+                .mesh()
+                .beamlattice
+                .as_ref()
+                .unwrap()
+                .beams
+                .beam
+                .is_empty()
+        );
     }
 
     #[test]
