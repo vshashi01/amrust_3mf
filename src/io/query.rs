@@ -1,5 +1,7 @@
 #![allow(clippy::needless_lifetimes)]
 
+use std::ops::Deref;
+
 use crate::{
     core::{
         beamlattice::BeamLattice,
@@ -7,6 +9,7 @@ use crate::{
         mesh::Mesh,
         model::Model,
         object::{Object, ObjectType},
+        transform::Transform,
     },
     io::ThreemfPackage,
 };
@@ -51,7 +54,7 @@ pub fn get_objects_from_model_ref<'a>(
 }
 
 pub struct GenericObjectRef<'a, T> {
-    pub entity: &'a T,
+    entity: &'a T,
     pub id: usize,
     pub object_type: ObjectType,
     pub thumbnail: Option<String>,
@@ -63,11 +66,11 @@ pub struct GenericObjectRef<'a, T> {
     pub origin_model_path: Option<&'a str>,
 }
 
-pub type MeshObjectRef<'a> = GenericObjectRef<'a, Mesh>;
+pub struct MeshObjectRef<'a>(GenericObjectRef<'a, Mesh>);
 
 impl<'a> MeshObjectRef<'a> {
     fn new(o: ObjectRef<'a>) -> Self {
-        MeshObjectRef {
+        MeshObjectRef(GenericObjectRef {
             entity: o.object.mesh.as_ref().unwrap(),
             id: o.object.id,
             object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
@@ -78,7 +81,19 @@ impl<'a> MeshObjectRef<'a> {
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
             origin_model_path: o.path,
-        }
+        })
+    }
+
+    pub fn mesh(&self) -> &'a Mesh {
+        self.entity
+    }
+}
+
+impl<'a> Deref for MeshObjectRef<'a> {
+    type Target = GenericObjectRef<'a, Mesh>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -109,11 +124,11 @@ pub fn get_mesh_objects_from_model_ref<'a>(
         })
 }
 
-pub type ComposedPartObjectRef<'a> = GenericObjectRef<'a, Components>;
+pub struct ComposedPartObjectRef<'a>(GenericObjectRef<'a, Components>);
 
 impl<'a> ComposedPartObjectRef<'a> {
     fn new(o: ObjectRef<'a>) -> Self {
-        ComposedPartObjectRef {
+        ComposedPartObjectRef(GenericObjectRef {
             entity: o.object.components.as_ref().unwrap(),
             id: o.object.id,
             object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
@@ -124,8 +139,41 @@ impl<'a> ComposedPartObjectRef<'a> {
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
             origin_model_path: o.path,
-        }
+        })
     }
+
+    pub fn components(&self) -> impl Iterator<Item = ComponentRef> {
+        self.entity.component.iter().map(|c| {
+            let comp_path = match &c.path {
+                Some(path) => Some(path.clone()),
+                None => self
+                    .origin_model_path
+                    .map(|parent_path| parent_path.to_owned()),
+            };
+
+            ComponentRef {
+                objectid: c.objectid,
+                transform: c.transform.clone(),
+                path_to_look_for: comp_path,
+                uuid: c.uuid.clone(),
+            }
+        })
+    }
+}
+
+impl<'a> Deref for ComposedPartObjectRef<'a> {
+    type Target = GenericObjectRef<'a, Components>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct ComponentRef {
+    pub objectid: usize,
+    pub path_to_look_for: Option<String>,
+    pub transform: Option<Transform>,
+    pub uuid: Option<String>,
 }
 
 pub fn get_composedpart_objects<'a>(
@@ -157,11 +205,11 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
         })
 }
 
-pub type BeamLatticeObjectRef<'a> = GenericObjectRef<'a, BeamLattice>;
+pub struct BeamLatticeObjectRef<'a>(GenericObjectRef<'a, BeamLattice>);
 
 impl<'a> BeamLatticeObjectRef<'a> {
     fn new(o: ObjectRef<'a>) -> Self {
-        BeamLatticeObjectRef {
+        BeamLatticeObjectRef(GenericObjectRef {
             entity: o
                 .object
                 .mesh
@@ -179,10 +227,21 @@ impl<'a> BeamLatticeObjectRef<'a> {
             pindex: o.object.pindex,
             uuid: o.object.uuid.clone(),
             origin_model_path: o.path,
-        }
+        })
+    }
+
+    pub fn beamlattice(&self) -> &'a BeamLattice {
+        self.entity
     }
 }
 
+impl<'a> Deref for BeamLatticeObjectRef<'a> {
+    type Target = GenericObjectRef<'a, BeamLattice>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 pub fn get_beam_lattice_objects<'a>(
     package: &'a ThreemfPackage,
 ) -> impl Iterator<Item = BeamLatticeObjectRef<'a>> {
