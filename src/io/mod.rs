@@ -7,6 +7,8 @@ pub use error::Error;
 mod utils;
 pub use utils::parse_xmlns_attributes;
 
+pub mod thumbnail_handle;
+
 /// Represents an XML namespace declaration with its prefix and URI
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct XmlNamespace {

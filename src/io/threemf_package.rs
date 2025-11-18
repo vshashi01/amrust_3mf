@@ -1,4 +1,3 @@
-use image::DynamicImage;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
@@ -16,6 +15,7 @@ use crate::{
         error::Error,
         parse_xmlns_attributes,
         relationship::{Relationship, RelationshipType, Relationships},
+        thumbnail_handle::ThumbnailHandle,
         utils,
     },
 };
@@ -27,7 +27,7 @@ use crate::{
 use crate::io::zip_utils::XmlDeserializer;
 
 use std::collections::HashMap;
-use std::io::{self, Cursor, Read, Seek, Write};
+use std::io::{self, Read, Seek, Write};
 
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
@@ -46,7 +46,7 @@ pub struct ThreemfPackage {
     /// The thumbnails contained in the file.
     /// The key is the path of the thumbnail in the archive package.
     /// The thumbnail paths defined in the [Model](crate::core::model::Model) object should match the keys in this dictionary.
-    pub thumbnails: HashMap<String, DynamicImage>,
+    pub thumbnails: HashMap<String, ThumbnailHandle>,
 
     /// Bytes of additional data found through Unknown relationship
     /// The key is the path of the thumbnail in the archive package.
@@ -72,7 +72,7 @@ impl ThreemfPackage {
     pub fn new(
         root: Model,
         sub_models: HashMap<String, Model>,
-        thumbnails: HashMap<String, DynamicImage>,
+        thumbnails: HashMap<String, ThumbnailHandle>,
         unknown_parts: HashMap<String, Vec<u8>>,
         relationships: HashMap<String, Relationships>,
         content_types: ContentTypes,
@@ -91,7 +91,7 @@ impl ThreemfPackage {
     pub(crate) fn new_with_namespaces_map(
         root: Model,
         sub_models: HashMap<String, Model>,
-        thumbnails: HashMap<String, DynamicImage>,
+        thumbnails: HashMap<String, ThumbnailHandle>,
         unknown_parts: HashMap<String, Vec<u8>>,
         relationships: HashMap<String, Relationships>,
         content_types: ContentTypes,
@@ -150,11 +150,8 @@ impl ThreemfPackage {
                     }
                     RelationshipType::Thumbnail => {
                         if let Some(image) = self.thumbnails.get(&relationship.target) {
-                            let mut buf = Cursor::new(Vec::<u8>::new());
-                            image.write_to(&mut buf, image::ImageFormat::Png)?;
-
                             zip.start_file(filename, SimpleFileOptions::default())?;
-                            zip.write_all(&buf.into_inner())?;
+                            zip.write_all(&image.data)?;
                         } else {
                             return Err(Error::WriteError(format!(
                                 "No thumbnail image found for relationship target {}",
@@ -398,7 +395,6 @@ impl PartialEq for ThreemfPackage {
     feature = "io-speed-optimized-read"
 ))]
 mod processor {
-    use image::{DynamicImage, load_from_memory};
     use zip::ZipArchive;
 
     use crate::{
@@ -408,6 +404,7 @@ mod processor {
             content_types::ContentTypes,
             error::Error,
             relationship::{RelationshipType, Relationships},
+            thumbnail_handle::{ImageFormat, ThumbnailHandle},
             utils,
             zip_utils::XmlDeserializer,
         },
@@ -421,7 +418,7 @@ mod processor {
     pub(crate) struct ThreemfPackageProcessor {
         root: Option<Model>,
         sub_models: HashMap<String, Model>,
-        thumbnails: HashMap<String, DynamicImage>,
+        thumbnails: HashMap<String, ThumbnailHandle>,
         unknown_parts: HashMap<String, Vec<u8>>,
         relationships: HashMap<String, Relationships>,
         content_types: ContentTypes,
@@ -481,8 +478,23 @@ mod processor {
                                     let mut bytes = Vec::new();
                                     file.read_to_end(&mut bytes)?;
 
-                                    let img = load_from_memory(&bytes)?;
-                                    self.thumbnails.insert(rel.target.to_string(), img);
+                                    let format = {
+                                        if let Some(filepath) = file.enclosed_name()
+                                            && let Some(os_ext) = filepath.extension()
+                                            && let Some(ext) = os_ext.to_str()
+                                        {
+                                            ImageFormat::from_ext(ext)
+                                        } else {
+                                            ImageFormat::Unknown
+                                        }
+                                    };
+
+                                    let thumbnail_rep = ThumbnailHandle {
+                                        data: bytes,
+                                        format: format,
+                                    };
+                                    self.thumbnails
+                                        .insert(rel.target.to_string(), thumbnail_rep);
                                 }
                                 RelationshipType::Model => {
                                     let is_root = rel.target == root_model_path;
@@ -552,8 +564,7 @@ impl From<Model> for ThreemfPackage {
 }
 
 #[cfg(test)]
-pub mod smoke_tests {
-    use image::load_from_memory;
+mod smoke_tests {
     use pretty_assertions::assert_eq;
 
     use crate::{
@@ -786,8 +797,13 @@ pub mod smoke_tests {
     #[cfg(all(feature = "io-memory-optimized-read", feature = "io-write"))]
     #[test]
     pub fn io_thumbnail_content_test() {
+        use crate::io::thumbnail_handle::{ImageFormat, ThumbnailHandle};
+
         let test_file_bytes = include_bytes!("../../tests/data/test_thumbnail.png");
-        let write_image = load_from_memory(test_file_bytes).unwrap();
+        let thumbnail_rep = ThumbnailHandle {
+            data: test_file_bytes.to_vec(),
+            format: ImageFormat::Png,
+        };
 
         let mut writer = Cursor::new(Vec::<u8>::new());
         let thumbnail_target = "/Thumbnails/test_thumbnail.png";
@@ -808,7 +824,7 @@ pub mod smoke_tests {
                 },
             },
             HashMap::new(),
-            HashMap::from([(thumbnail_target.to_owned(), write_image)]),
+            HashMap::from([(thumbnail_target.to_owned(), thumbnail_rep)]),
             HashMap::new(),
             HashMap::from([(
                 "_rels/.rels".to_owned(),
@@ -853,10 +869,12 @@ pub mod smoke_tests {
 
         match read_result {
             Ok(package) => {
+                use crate::io::thumbnail_handle::ImageFormat;
+
                 assert!(package.thumbnails.contains_key(thumbnail_target));
-                let read_image = package.thumbnails.get(thumbnail_target).unwrap();
-                assert_eq!(read_image.height(), 300);
-                assert_eq!(read_image.width(), 300);
+                let thumbnail_rep = package.thumbnails.get(thumbnail_target).unwrap();
+                assert_eq!(thumbnail_rep.data.len(), 8571);
+                assert_eq!(thumbnail_rep.format, ImageFormat::Png);
             }
             Err(_) => panic!("io thumbnail test failed"),
         }

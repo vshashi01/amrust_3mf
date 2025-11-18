@@ -5,9 +5,8 @@ use std::io::{Read, Seek};
 use once_cell::unsync::OnceCell;
 use zip::ZipArchive;
 
-use image::{DynamicImage, load_from_memory};
-
 use crate::core::model::Model;
+use crate::io::thumbnail_handle::{ImageFormat, ThumbnailHandle};
 use crate::io::{XmlNamespace, utils};
 use crate::io::{
     content_types::{ContentTypes, DefaultContentTypeEnum},
@@ -48,7 +47,7 @@ pub struct ThreemfPackageLazyReader<R: Read + Seek> {
 
     // cached based on cachepolicy
     sub_models: RefCell<HashMap<String, (Model, Vec<XmlNamespace>)>>,
-    thumbnails: RefCell<HashMap<String, DynamicImage>>,
+    thumbnails: RefCell<HashMap<String, ThumbnailHandle>>,
     unknown_parts: RefCell<HashMap<String, Vec<u8>>>,
 }
 
@@ -228,7 +227,7 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
 
     pub fn with_thumbnail<F, T>(&self, path: &str, f: F) -> Result<T, Error>
     where
-        F: FnOnce(&DynamicImage) -> T,
+        F: FnOnce(&ThumbnailHandle) -> T,
     {
         // Check if it's a valid thumbnail path
         let is_thumbnail = self
@@ -366,14 +365,28 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
         self.deserializer.deserialize_model(&mut file)
     }
 
-    fn load_thumbnail_from_archive(&self, path: &str) -> Result<DynamicImage, Error> {
+    fn load_thumbnail_from_archive(&self, path: &str) -> Result<ThumbnailHandle, Error> {
         let mut archive = self.archive.borrow_mut();
         let mut file = archive.by_name(utils::try_strip_leading_slash(path))?;
         let mut bytes: Vec<u8> = vec![];
         file.read_to_end(&mut bytes)?;
 
-        let image = load_from_memory(&bytes)?;
-        Ok(image)
+        let format = {
+            if let Some(filepath) = file.enclosed_name()
+                && let Some(os_ext) = filepath.extension()
+                && let Some(ext) = os_ext.to_str()
+            {
+                ImageFormat::from_ext(ext)
+            } else {
+                ImageFormat::Unknown
+            }
+        };
+
+        let thumbnail_rep = ThumbnailHandle {
+            data: bytes,
+            format: format,
+        };
+        Ok(thumbnail_rep)
     }
 
     fn load_unknown_part_from_archive(&self, path: &str) -> Result<Vec<u8>, Error> {
@@ -493,9 +506,9 @@ mod smoke_tests {
 
         let thumbnail_path = thumbnail_paths[0];
         package
-            .with_thumbnail(thumbnail_path, |img| {
-                assert!(img.width() > 0);
-                assert!(img.height() > 0);
+            .with_thumbnail(thumbnail_path, |rep| {
+                assert_eq!(rep.data.len(), 8571);
+                assert_eq!(rep.format, ImageFormat::Png);
             })
             .unwrap();
     }

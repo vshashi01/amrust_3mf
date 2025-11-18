@@ -20,28 +20,13 @@ default = [
 write = ["dep:instant-xml"]
 memory-optimized-read = ["dep:instant-xml"]
 speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
-io-write = ["dep:image", "dep:zip", "dep:thiserror", "write"]
-io-memory-optimized-read = [
-    "dep:image",
-    "dep:zip",
-    "dep:thiserror",
-    "memory-optimized-read",
-]
-io-speed-optimized-read = [
-    "dep:image",
-    "dep:zip",
-    "dep:thiserror",
-    "speed-optimized-read",
-]
-
+io-write = ["dep:zip", "dep:thiserror", "write"]
+io-memory-optimized-read = ["dep:zip", "dep:thiserror", "memory-optimized-read"]
+io-speed-optimized-read = ["dep:zip", "dep:thiserror", "speed-optimized-read"]
 io-lazy-read = ["dep:once_cell", "io-memory-optimized-read"]
 
 [dependencies]
 instant-xml = { version = "0.6.0", optional = true }
-image = { version = "0.25.5", default-features = false, features = [
-    "png",
-    "jpeg",
-], optional = true }
 thiserror = { version = "2.0.3", optional = true }
 zip = { version = "6.0.0", default-features = false, features = [
     "deflate",

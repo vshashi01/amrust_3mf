@@ -1,7 +1,7 @@
 #[cfg(any(feature = "io-memory-optimized-read", feature = "io-lazy-read"))]
 #[cfg(test)]
-pub mod tests {
-    pub mod test_utilities;
+mod tests {
+    mod test_utilities;
 
     use std::fs::File;
     use std::path::PathBuf;

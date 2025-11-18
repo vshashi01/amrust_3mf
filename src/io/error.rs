@@ -1,10 +1,3 @@
-#[cfg(any(
-    feature = "io-write",
-    feature = "io-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
-use image::ImageError;
-
 use thiserror::Error;
 use zip::result::ZipError;
 
@@ -21,14 +14,6 @@ pub enum Error {
 
     #[error("Error reading 3mf file: {0}")]
     ReadError(String),
-
-    #[cfg(any(
-        feature = "io-write",
-        feature = "io-memory-optimized-read",
-        feature = "io-speed-optimized-read"
-    ))]
-    #[error("Error reading thumbnail image: {0}")]
-    ImageIOError(#[from] ImageError),
 
     #[error("Error writing 3mf file: {0}")]
     WriteError(String),
