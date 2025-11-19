@@ -32,6 +32,8 @@ amrust_3mf provides:
 
 ## Quick Start
 
+### Reading 3MF Files
+
 ```rust
 use amrust_3mf::io::ThreemfPackage;
 use std::fs::File;
@@ -43,6 +45,31 @@ let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(fil
 // Access the root model
 let root_model = &package.root;
 println!("Build items: {}", root_model.build.item.len());
+```
+
+### Creating 3MF Models with Builders
+
+```rust
+use amrust_3mf::io::ModelBuilder;
+use amrust_3mf::core::model::Unit;
+use amrust_3mf::core::object::ObjectType;
+
+// Create a model using the fluent builder API
+let mut builder = ModelBuilder::new();
+builder.unit(Unit::Millimeter);
+
+let cube_id = builder.add_object(|obj| {
+    obj.name("Cube")
+        .object_type(ObjectType::Model)
+        .mesh(|mesh| {
+            mesh.add_vertex([0.0, 0.0, 0.0])
+                .add_vertex([10.0, 0.0, 0.0])
+                .add_triangle([0, 1, 2]);
+        });
+});
+
+builder.add_build_item(cube_id);
+let model = builder.build();
 ```
 
 ## Performance Options
@@ -98,6 +125,7 @@ amrust_3mf = { version = "0.1", features = ["io-speed-optimized-read"] }
 The [examples/](examples/) directory contains runnable examples for different use cases:
 
 - **`write.rs`** - Create and write 3MF packages
+- **`builder_example.rs`** - Using ModelBuilder for ergonomic model construction
 - **`unpack.rs`** - Lazy loading with `ThreemfPackageLazyReader`
 - **`memory-optimized-read.rs`** - Memory-efficient reading
 - **`speed-optimized-read.rs`** - High-performance reading

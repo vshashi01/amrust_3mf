@@ -68,3 +68,8 @@ mod threemf_package_lazy_reader;
     )
 ))]
 pub use threemf_package_lazy_reader::{CachePolicy, ThreemfPackageLazyReader};
+
+#[cfg(feature = "io-write")]
+mod builder;
+#[cfg(feature = "io-write")]
+pub use builder::*;
