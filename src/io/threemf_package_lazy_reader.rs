@@ -384,7 +384,7 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
 
         let thumbnail_rep = ThumbnailHandle {
             data: bytes,
-            format: format,
+            format,
         };
         Ok(thumbnail_rep)
     }

@@ -491,7 +491,7 @@ mod processor {
 
                                     let thumbnail_rep = ThumbnailHandle {
                                         data: bytes,
-                                        format: format,
+                                        format,
                                     };
                                     self.thumbnails
                                         .insert(rel.target.to_string(), thumbnail_rep);
