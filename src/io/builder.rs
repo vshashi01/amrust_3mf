@@ -6,39 +6,39 @@ use crate::{
         component::{Component, Components},
         mesh::{Mesh, Triangle, Triangles, Vertex, Vertices},
         metadata::Metadata,
-        model::{Model, Unit},
-        object::{Object, ObjectType},
+        model::Model,
+        object::Object,
         resources::Resources,
         transform::Transform,
     },
     io::XmlNamespace,
-    threemf_namespaces::{self, PROD_NS, PROD_PREFIX},
+    threemf_namespaces::{
+        self, BEAM_LATTICE_BALLS_NS, BEAM_LATTICE_BALLS_PREFIX, BEAM_LATTICE_NS,
+        BEAM_LATTICE_PREFIX, PROD_NS, PROD_PREFIX,
+    },
 };
 
+use std::{
+    collections::HashSet,
+    ops::{Deref, DerefMut},
+};
+
+pub use crate::core::model::Unit;
+pub use crate::core::object::ObjectType;
+
 #[derive(Debug, Error, Clone)]
-pub enum BuilderError {
+pub enum ModelError {
     #[error("Build is not set for the Model. Root Model and adding Build Items requires a Build!")]
     BuildItemNotSet,
 
     #[error("Build is not allowed in non-root Model")]
     BuildOnlyAllowedInRootModel,
 
-    #[error(
-        "UUID is not set for the Object. UUID is required when production extension is enabled!"
-    )]
-    UuidNotSet,
+    #[error("Something wrong when adding Build")]
+    BuildError(#[from] BuildError),
 
-    #[error("Production extension is required for setting Path!")]
-    ProductionExtensionRequiredForPath,
-
-    #[error("ObjectBuilder already has a Mesh set")]
-    ObjectBuilderAlreadyContainsMesh,
-
-    #[error("ObjectBuilder already has a Composed Part set")]
-    ObjectBuilderAlreadyContainsComposedPart,
-
-    #[error("An unknown object specified in Component")]
-    ObjectBuilderReferencesANonExistentComponent,
+    #[error("Something wrong when adding Items")]
+    ItemError(#[from] ItemError),
 }
 
 /// Builder for constructing 3MF Model structs with a fluent API
@@ -61,6 +61,9 @@ pub struct ModelBuilder {
     // tracks if the model requires production ext
     // ensures UUID is set at the minimum
     is_production_ext_required: bool,
+
+    is_beam_lattice_ext_required: bool,
+    is_beam_lattice_balls_ext_required: bool,
 }
 
 impl ModelBuilder {
@@ -73,9 +76,11 @@ impl ModelBuilder {
             metadata: Vec::new(),
             resources: ResourcesBuilder::new(),
             build: None,
+            is_root,
             next_object_id: 1.into(),
             is_production_ext_required: false,
-            is_root,
+            is_beam_lattice_ext_required: false,
+            is_beam_lattice_balls_ext_required: false,
         }
     }
 
@@ -91,16 +96,16 @@ impl ModelBuilder {
     }
 
     pub fn make_production_extension_required(&mut self) -> &mut Self {
-        use threemf_namespaces::{PROD_NS, PROD_PREFIX};
-
         self.is_production_ext_required = true;
-        let is_prod_ext_set = self.requiredextensions.iter().find(|ns| ns.uri == PROD_NS);
-        if is_prod_ext_set.is_none() {
-            self.requiredextensions.push(XmlNamespace {
-                prefix: Some(PROD_PREFIX.to_owned()),
-                uri: PROD_NS.to_owned(),
-            });
-        }
+        self
+    }
+
+    pub fn make_beam_lattice_extension_required(
+        &mut self,
+        enable_beam_lattice_balls: bool,
+    ) -> &mut Self {
+        self.is_beam_lattice_ext_required = true;
+        self.is_beam_lattice_balls_ext_required = enable_beam_lattice_balls;
 
         self
     }
@@ -128,12 +133,41 @@ impl ModelBuilder {
     }
 
     /// Add an object using a builder function, returns the assigned ObjectId
-    pub fn add_object<F>(&mut self, f: F) -> Result<ObjectId, BuilderError>
+    pub fn add_mesh_object<F>(&mut self, f: F) -> Result<ObjectId, MeshObjectError>
     where
-        F: FnOnce(&mut ObjectBuilder),
+        F: FnOnce(&mut MeshObjectBuilder) -> Result<(), MeshObjectError>,
     {
         let id = self.next_object_id;
+
+        let mut obj_builder = MeshObjectBuilder::new(id, self.is_production_ext_required);
+        f(&mut obj_builder)?;
+
+        self.add_mesh_object_from_builder(obj_builder)
+    }
+
+    pub fn add_mesh_object_from_builder(
+        &mut self,
+        builder: MeshObjectBuilder,
+    ) -> Result<ObjectId, MeshObjectError> {
+        let id = builder.object_id;
+        let object = builder.build()?;
+
+        if let Some(mesh) = &object.mesh {
+            self.set_recommended_namespaces_for_mesh(mesh);
+        }
+
+        self.resources.objects.push(object);
         self.next_object_id = ObjectId(id.0 + 1);
+
+        Ok(id)
+    }
+
+    /// Add an object using a builder function, returns the assigned ObjectId
+    pub fn add_composed_part_object<F>(&mut self, f: F) -> Result<ObjectId, ComponentsObjectError>
+    where
+        F: FnOnce(&mut ComponentsObjectBuilder) -> Result<(), ComponentsObjectError>,
+    {
+        let id = self.next_object_id;
 
         let all_object_ids = self
             .resources
@@ -143,28 +177,31 @@ impl ModelBuilder {
             .collect::<Vec<_>>();
 
         let mut obj_builder =
-            ObjectBuilder::new(id, &all_object_ids, self.is_production_ext_required);
-        f(&mut obj_builder);
-        let object = obj_builder.build();
+            ComponentsObjectBuilder::new(id, &all_object_ids, self.is_production_ext_required);
+        f(&mut obj_builder)?;
 
-        match object {
-            Ok(o) => self.resources.objects.push(o),
-            Err(err) => return Err(err),
-        }
+        self.add_composed_part_object_from_builder(obj_builder)
+    }
+
+    pub fn add_composed_part_object_from_builder(
+        &mut self,
+        builder: ComponentsObjectBuilder,
+    ) -> Result<ObjectId, ComponentsObjectError> {
+        let id = builder.object_id;
+        let object = builder.build()?;
+
+        self.resources.objects.push(object);
+        self.next_object_id = ObjectId(id.0 + 1);
 
         Ok(id)
     }
 
-    pub fn add_build(&mut self, uuid: Option<String>) -> Result<&mut Self, BuilderError> {
+    pub fn add_build(&mut self, uuid: Option<String>) -> Result<&mut Self, ModelError> {
         if !self.is_root {
-            return Err(BuilderError::BuildOnlyAllowedInRootModel);
+            return Err(ModelError::BuildOnlyAllowedInRootModel);
         }
 
-        if self.is_production_ext_required && uuid.is_none() {
-            return Err(BuilderError::UuidNotSet);
-        }
-
-        let mut build_builder = BuildBuilder::new(self.is_production_ext_required);
+        let mut build_builder = BuildBuilder::new();
         if let Some(uuid) = uuid {
             build_builder.uuid(uuid);
         }
@@ -174,69 +211,46 @@ impl ModelBuilder {
     }
 
     /// Add a build item referencing an object by ID
-    pub fn add_build_item(&mut self, object_id: ObjectId) -> Result<&mut Self, BuilderError> {
-        if self.is_production_ext_required {
-            return Err(BuilderError::UuidNotSet);
-        }
-
-        match &mut self.build {
-            Some(build) => {
-                build.items.push(BuildItem {
-                    objectid: object_id,
-                    transform: None,
-                    partnumber: None,
-                    path: None,
-                    uuid: None,
-                });
-
-                Ok(self)
-            }
-            None => Err(BuilderError::BuildItemNotSet),
-        }
+    pub fn add_build_item(&mut self, object_id: ObjectId) -> Result<&mut Self, ModelError> {
+        self.add_build_item_advanced(object_id, |f| {})
     }
 
-    pub fn add_build_item_advanced(
+    /// Add a build item referencing an object by ID
+    pub fn add_build_item_advanced<F>(
         &mut self,
         object_id: ObjectId,
-        transform: Option<Transform>,
-        partnumber: Option<String>,
-        path: Option<String>,
-        uuid: Option<String>,
-    ) -> Result<&mut Self, BuilderError> {
-        if self.is_production_ext_required && uuid.is_none() {
-            return Err(BuilderError::UuidNotSet);
-        }
+        f: F,
+    ) -> Result<&mut Self, ModelError>
+    where
+        F: FnOnce(&mut ItemBuilder),
+    {
         match &mut self.build {
             Some(build) => {
-                build.items.push(BuildItem {
-                    objectid: object_id,
-                    transform,
-                    partnumber,
-                    path,
-                    uuid,
-                });
+                build.add_build_item(object_id, self.is_production_ext_required, f)?;
 
                 Ok(self)
             }
-            None => Err(BuilderError::BuildItemNotSet),
+            None => Err(ModelError::BuildItemNotSet),
         }
     }
 
     /// Build the final Model
-    pub fn build(self) -> Result<Model, BuilderError> {
-        let requiredextensions = get_extensions_definition(&self.requiredextensions);
+    pub fn build(self) -> Result<Model, ModelError> {
+        let required_extensions = self.process_required_extensions();
+
+        let requiredextensions = get_extensions_definition(&required_extensions);
         let recommendedextensions = get_extensions_definition(&self.recommendedextensions);
 
         if self.is_root && self.build.is_none() {
-            return Err(BuilderError::BuildItemNotSet);
+            return Err(ModelError::BuildItemNotSet);
         }
 
         if !self.is_root && self.build.is_some() {
-            return Err(BuilderError::BuildOnlyAllowedInRootModel);
+            return Err(ModelError::BuildOnlyAllowedInRootModel);
         }
 
         let build = if let Some(builder) = self.build {
-            builder.build()?
+            builder.build(self.is_production_ext_required)?
         } else {
             Build {
                 uuid: None,
@@ -253,6 +267,60 @@ impl ModelBuilder {
             build,
         })
     }
+
+    fn set_recommended_namespaces_for_mesh(&mut self, mesh: &Mesh) {
+        use threemf_namespaces::{CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX};
+        if mesh.trianglesets.is_some()
+            && self
+                .recommendedextensions
+                .iter()
+                .all(|ns| ns.uri == CORE_TRIANGLESET_NS)
+        {
+            self.recommendedextensions.push(XmlNamespace {
+                prefix: Some(CORE_TRIANGLESET_PREFIX.to_owned()),
+                uri: CORE_TRIANGLESET_NS.to_owned(),
+            });
+        }
+    }
+
+    fn process_required_extensions(&self) -> Vec<XmlNamespace> {
+        let mut required_extensions = self.requiredextensions.clone();
+        if self.is_production_ext_required {
+            let is_prod_ext_set = required_extensions.iter().find(|ns| ns.uri == PROD_NS);
+            if is_prod_ext_set.is_none() {
+                required_extensions.push(XmlNamespace {
+                    prefix: Some(PROD_PREFIX.to_owned()),
+                    uri: PROD_NS.to_owned(),
+                });
+            }
+        }
+
+        if self.is_beam_lattice_ext_required {
+            let is_bl_ext_set = required_extensions
+                .iter()
+                .find(|ns| ns.uri == BEAM_LATTICE_NS);
+            if is_bl_ext_set.is_none() {
+                required_extensions.push(XmlNamespace {
+                    prefix: Some(BEAM_LATTICE_PREFIX.to_owned()),
+                    uri: BEAM_LATTICE_NS.to_owned(),
+                });
+            }
+
+            if self.is_beam_lattice_balls_ext_required {
+                let is_bl_balls_ext_set = required_extensions
+                    .iter()
+                    .find(|ns| ns.uri == BEAM_LATTICE_BALLS_NS);
+                if is_bl_balls_ext_set.is_none() {
+                    required_extensions.push(XmlNamespace {
+                        prefix: Some(BEAM_LATTICE_BALLS_PREFIX.to_owned()),
+                        uri: BEAM_LATTICE_BALLS_NS.to_owned(),
+                    });
+                }
+            }
+        }
+
+        required_extensions
+    }
 }
 
 impl Default for ModelBuilder {
@@ -266,12 +334,18 @@ fn get_extensions_definition(extensions: &[XmlNamespace]) -> Option<String> {
         None
     } else {
         let mut extension_string = String::new();
-        extensions.iter().for_each(|ns| {
+        let mut unique_namespaces: HashSet<XmlNamespace> = HashSet::new();
+
+        for ns in extensions {
+            unique_namespaces.insert(ns.clone());
+        }
+
+        for ns in unique_namespaces {
             if let Some(prefix) = &ns.prefix {
                 extension_string.push_str(prefix);
                 extension_string.push(' ');
             }
-        });
+        }
 
         Some(extension_string)
     }
@@ -292,25 +366,28 @@ impl ResourcesBuilder {
     fn build(self) -> Resources {
         Resources {
             object: self.objects,
-            basematerials: Vec::new(), // TODO: Add base materials support
+            basematerials: Vec::new(),
         }
     }
 }
 
+#[derive(Debug, Error, Clone, Copy)]
+pub enum BuildError {
+    #[error("Production extension is enabled but Uuid for the Build is not set")]
+    BuildUuidNotSet,
+}
+
 /// Builder for Build section
 pub struct BuildBuilder {
-    items: Vec<BuildItem>,
+    items: Vec<Item>,
     uuid: Option<String>,
-
-    is_production_ext_required: bool,
 }
 
 impl BuildBuilder {
-    fn new(is_production_ext_required: bool) -> Self {
+    fn new() -> Self {
         Self {
             items: Vec::new(),
             uuid: None,
-            is_production_ext_required,
         }
     }
 
@@ -320,35 +397,98 @@ impl BuildBuilder {
         self
     }
 
-    fn build(self) -> Result<Build, BuilderError> {
-        if self.is_production_ext_required && self.uuid.is_none() {
-            return Err(BuilderError::UuidNotSet);
+    fn add_build_item<F>(
+        &mut self,
+        objectid: ObjectId,
+        is_production_ext_enabled: bool,
+        f: F,
+    ) -> Result<&mut Self, ItemError>
+    where
+        F: FnOnce(&mut ItemBuilder),
+    {
+        let mut builder = ItemBuilder::new(objectid);
+        f(&mut builder);
+
+        let item = builder.build(is_production_ext_enabled)?;
+        self.items.push(item);
+        Ok(self)
+    }
+
+    fn build(self, is_production_ext_required: bool) -> Result<Build, BuildError> {
+        if is_production_ext_required && self.uuid.is_none() {
+            return Err(BuildError::BuildUuidNotSet);
         }
 
         Ok(Build {
             uuid: None,
-            item: self
-                .items
-                .into_iter()
-                .map(|bi| Item {
-                    objectid: bi.objectid.0,
-                    transform: bi.transform,
-                    partnumber: bi.partnumber,
-                    path: bi.path,
-                    uuid: bi.uuid,
-                })
-                .collect(),
+            item: self.items,
         })
     }
 }
 
-/// Internal representation of build items during building
-struct BuildItem {
+#[derive(Debug, Error, Clone, Copy, PartialEq)]
+pub enum ItemError {
+    #[error("Item path is set without the Production extension enabled!")]
+    ItemPathSetWithoutProductionExtension,
+
+    #[error("Production extension is enabled but Uuid is not set!")]
+    ItemUuidNotSet,
+}
+
+/// Builder to setup a Build item
+pub struct ItemBuilder {
     objectid: ObjectId,
     transform: Option<Transform>,
     partnumber: Option<String>,
     path: Option<String>,
     uuid: Option<String>,
+}
+
+impl ItemBuilder {
+    fn new(objectid: ObjectId) -> Self {
+        Self {
+            objectid,
+            transform: None,
+            partnumber: None,
+            path: None,
+            uuid: None,
+        }
+    }
+
+    pub fn transform(&mut self, transform: Transform) -> &mut Self {
+        self.transform = Some(transform);
+        self
+    }
+
+    pub fn partnumber(&mut self, partnumber: &str) -> &mut Self {
+        self.partnumber = Some(partnumber.to_owned());
+        self
+    }
+
+    pub fn uuid(&mut self, uuid: &str) -> &mut Self {
+        self.uuid = Some(uuid.to_owned());
+        self
+    }
+
+    pub fn path(&mut self, path: &str) -> &mut Self {
+        self.path = Some(path.to_owned());
+        self
+    }
+
+    fn build(self, is_production_ext_enabled: bool) -> Result<Item, ItemError> {
+        if !is_production_ext_enabled && self.path.is_some() {
+            return Err(ItemError::ItemPathSetWithoutProductionExtension);
+        } else if is_production_ext_enabled && self.uuid.is_none() {
+            return Err(ItemError::ItemUuidNotSet);
+        }
+        Ok(Item {
+            objectid: self.objectid.0,
+            transform: self.transform,
+            partnumber: self.partnumber,
+            path: self.path,
+            uuid: self.uuid,
+        })
+    }
 }
 
 /// Type-safe wrapper for object IDs to prevent mix-ups
@@ -368,7 +508,8 @@ impl From<ObjectId> for usize {
 }
 
 /// Builder for Object
-pub struct ObjectBuilder {
+pub struct ObjectBuilder<T> {
+    entity: T,
     object_id: ObjectId,
     objecttype: Option<ObjectType>,
     thumbnail: Option<String>,
@@ -377,38 +518,13 @@ pub struct ObjectBuilder {
     pid: Option<usize>,
     pindex: Option<usize>,
     uuid: Option<String>,
-    mesh: Option<Mesh>,
-    components: Option<Components>,
-
-    all_existing_object_ids: Vec<ObjectId>,
 
     // sets if the production ext is required.
     // if yes will ensure UUID is set before building the object
     is_production_ext_required: bool,
 }
 
-impl ObjectBuilder {
-    fn new(
-        object_id: ObjectId,
-        all_existing_object_ids: &[ObjectId],
-        is_production_ext_required: bool,
-    ) -> Self {
-        Self {
-            object_id,
-            objecttype: Some(ObjectType::Model),
-            thumbnail: None,
-            partnumber: None,
-            name: None,
-            pid: None,
-            pindex: None,
-            uuid: None,
-            mesh: None,
-            components: None,
-            all_existing_object_ids: all_existing_object_ids.to_vec(),
-            is_production_ext_required,
-        }
-    }
-
+impl<T> ObjectBuilder<T> {
     /// Set the object type
     pub fn object_type(&mut self, object_type: ObjectType) -> &mut Self {
         self.objecttype = Some(object_type);
@@ -431,48 +547,51 @@ impl ObjectBuilder {
         self.uuid = Some(uuid.to_owned());
         self
     }
+}
 
-    /// Add a mesh using a builder function
-    pub fn mesh<F>(&mut self, f: F) -> Result<&mut Self, BuilderError>
-    where
-        F: FnOnce(&mut MeshBuilder),
-    {
-        if self.components.is_some() {
-            return Err(BuilderError::ObjectBuilderAlreadyContainsComposedPart);
+impl<T> Deref for ObjectBuilder<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entity
+    }
+}
+
+impl<T> DerefMut for ObjectBuilder<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entity
+    }
+}
+
+#[derive(Debug, Error, Clone, PartialEq)]
+pub enum MeshObjectError {
+    #[error("Production extension is enabled but Uuid is not set!")]
+    ObjectUuidNotSet,
+}
+
+pub type MeshObjectBuilder = ObjectBuilder<MeshBuilder>;
+
+impl MeshObjectBuilder {
+    fn new(object_id: ObjectId, is_production_ext_required: bool) -> Self {
+        Self {
+            entity: MeshBuilder::new(),
+            object_id,
+            objecttype: Some(ObjectType::Model),
+            thumbnail: None,
+            partnumber: None,
+            name: None,
+            pid: None,
+            pindex: None,
+            uuid: None,
+            is_production_ext_required,
         }
-        let mut mesh_builder = MeshBuilder::new();
-        f(&mut mesh_builder);
-        self.mesh = Some(mesh_builder.build());
-        Ok(self)
     }
 
-    pub fn composed_part<F>(&mut self, f: F) -> Result<&mut Self, BuilderError>
-    where
-        F: FnOnce(&mut ComposedPartBuilder) -> Result<&mut ComposedPartBuilder, BuilderError>,
-    {
-        if self.mesh.is_some() {
-            return Err(BuilderError::ObjectBuilderAlreadyContainsMesh);
-        }
-        let mut cp_builder = ComposedPartBuilder::new(self.is_production_ext_required);
-        f(&mut cp_builder)?;
+    fn build(self) -> Result<Object, MeshObjectError> {
+        let mesh = self.entity.build_mesh().unwrap();
 
-        let all_object_exists = cp_builder
-            .components
-            .iter()
-            .all(|c| self.all_existing_object_ids.contains(&ObjectId(c.objectid)));
-
-        if !all_object_exists {
-            return Err(BuilderError::ObjectBuilderReferencesANonExistentComponent);
-        }
-
-        self.components = Some(cp_builder.build());
-
-        Ok(self)
-    }
-
-    fn build(self) -> Result<Object, BuilderError> {
         if self.is_production_ext_required && self.uuid.is_none() {
-            return Err(BuilderError::UuidNotSet);
+            return Err(MeshObjectError::ObjectUuidNotSet);
         }
 
         Ok(Object {
@@ -484,8 +603,8 @@ impl ObjectBuilder {
             pid: self.pid,
             pindex: self.pindex,
             uuid: self.uuid,
-            mesh: self.mesh,
-            components: self.components,
+            mesh: Some(mesh),
+            components: None,
         })
     }
 }
@@ -493,7 +612,7 @@ impl ObjectBuilder {
 /// Builder for Mesh
 pub struct MeshBuilder {
     vertices: Vec<Vertex>,
-    triangles: Vec<crate::core::mesh::Triangle>,
+    triangles: Vec<Triangle>,
 }
 
 impl MeshBuilder {
@@ -577,8 +696,8 @@ impl MeshBuilder {
         self
     }
 
-    fn build(self) -> Mesh {
-        Mesh {
+    fn build_mesh(self) -> Result<Mesh, MeshObjectError> {
+        Ok(Mesh {
             vertices: Vertices {
                 vertex: self.vertices,
             },
@@ -587,101 +706,207 @@ impl MeshBuilder {
             },
             trianglesets: None,
             beamlattice: None,
-        }
+        })
     }
 }
 
-pub struct ComposedPartBuilder {
-    components: Vec<Component>,
+#[derive(Debug, Error, Clone)]
+pub enum ComponentsObjectError {
+    #[error("Production extension is enabled but Uuid is not set")]
+    ComponentUuidNotSet,
 
-    is_production_ext_required: bool,
+    #[error("Path is set for a Component without enabling the Production extension")]
+    PathSetWithoutProductionExtension,
+
+    #[error("One or more Component References unknown objects")]
+    ObjectReferenceNotFoundForComponent,
+
+    #[error("Production extension is enabled but Uuid is not set")]
+    ObjectUuidNotSet,
 }
 
-impl ComposedPartBuilder {
-    fn new(is_production_ext_required: bool) -> Self {
-        ComposedPartBuilder {
-            components: vec![],
+pub type ComponentsObjectBuilder = ObjectBuilder<ComponentsBuilder>;
+
+impl ComponentsObjectBuilder {
+    fn new(
+        object_id: ObjectId,
+        all_existing_object_ids: &[ObjectId],
+        is_production_ext_required: bool,
+    ) -> Self {
+        Self {
+            entity: ComponentsBuilder::new(all_existing_object_ids),
+            object_id,
+            objecttype: Some(ObjectType::Model),
+            thumbnail: None,
+            partnumber: None,
+            name: None,
+            pid: None,
+            pindex: None,
+            uuid: None,
             is_production_ext_required,
         }
     }
 
-    pub fn add_component(
-        &mut self,
-        object_id: ObjectId,
-        transform: Option<Transform>,
-    ) -> Result<&mut Self, BuilderError> {
-        if self.is_production_ext_required {
-            return Err(BuilderError::UuidNotSet);
+    fn build(self) -> Result<Object, ComponentsObjectError> {
+        let components = self
+            .entity
+            .build_components(self.is_production_ext_required)?;
+
+        if self.is_production_ext_required && self.uuid.is_none() {
+            return Err(ComponentsObjectError::ObjectUuidNotSet);
         }
 
-        self.components.push(Component {
-            objectid: object_id.into(),
-            transform,
+        Ok(Object {
+            id: self.object_id.0,
+            objecttype: self.objecttype,
+            thumbnail: self.thumbnail,
+            partnumber: self.partnumber,
+            name: self.name,
+            pid: self.pid,
+            pindex: self.pindex,
+            uuid: self.uuid,
+            mesh: None,
+            components: Some(components),
+        })
+    }
+}
+
+pub struct ComponentsBuilder {
+    components: Vec<Component>,
+
+    all_existing_object_ids: Vec<ObjectId>,
+}
+
+impl ComponentsBuilder {
+    fn new(all_existing_object_ids: &[ObjectId]) -> Self {
+        ComponentsBuilder {
+            components: vec![],
+            all_existing_object_ids: all_existing_object_ids.to_vec(),
+        }
+    }
+
+    pub fn add_component(&mut self, object_id: ObjectId) -> &mut Self {
+        self.add_component_advanced(object_id, |_| {});
+        self
+    }
+
+    pub fn add_component_advanced<F>(&mut self, object_id: ObjectId, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut ComponentBuilder),
+    {
+        let mut builder = ComponentBuilder::new(object_id);
+        f(&mut builder);
+
+        let component = builder.build();
+        self.components.push(component);
+
+        self
+    }
+
+    fn build_components(
+        self,
+        is_production_ext_required: bool,
+    ) -> Result<Components, ComponentsObjectError> {
+        if is_production_ext_required {
+            let all_uuid_set = self.components.iter().all(|c| c.uuid.is_some());
+            if !all_uuid_set {
+                return Err(ComponentsObjectError::ComponentUuidNotSet);
+            }
+        } else {
+            let all_path_is_not_set = self.components.iter().all(|c| c.path.is_none());
+            if !all_path_is_not_set {
+                return Err(ComponentsObjectError::ComponentUuidNotSet);
+            }
+        }
+
+        let all_object_exists = self
+            .components
+            .iter()
+            .all(|c| self.all_existing_object_ids.contains(&ObjectId(c.objectid)));
+
+        if !all_object_exists {
+            return Err(ComponentsObjectError::ObjectReferenceNotFoundForComponent);
+        }
+
+        Ok(Components {
+            component: self.components,
+        })
+    }
+}
+
+pub struct ComponentBuilder {
+    objectid: usize,
+    transform: Option<Transform>,
+    path: Option<String>,
+    uuid: Option<String>,
+}
+
+impl ComponentBuilder {
+    pub fn new(object_id: ObjectId) -> Self {
+        Self {
+            objectid: object_id.0,
+            transform: None,
             path: None,
             uuid: None,
-        });
-
-        Ok(self)
-    }
-
-    pub fn add_component_advanced(
-        &mut self,
-        object_id: ObjectId,
-        uuid: String,
-        transform: Option<Transform>,
-        path: Option<String>,
-    ) -> Result<&mut Self, BuilderError> {
-        if path.is_some() && !self.is_production_ext_required {
-            return Err(BuilderError::ProductionExtensionRequiredForPath);
         }
-
-        self.components.push(Component {
-            objectid: object_id.into(),
-            transform,
-            path,
-            uuid: Some(uuid),
-        });
-
-        Ok(self)
     }
 
-    pub fn build(self) -> Components {
-        Components {
-            component: self.components,
+    pub fn transform(&mut self, transform: Transform) -> &mut Self {
+        self.transform = Some(transform);
+        self
+    }
+
+    pub fn uuid(&mut self, uuid: &str) -> &mut Self {
+        self.uuid = Some(uuid.to_owned());
+        self
+    }
+
+    pub fn path(&mut self, path: &str) -> &mut Self {
+        self.path = Some(path.to_owned());
+        self
+    }
+
+    fn build(self) -> Component {
+        Component {
+            objectid: self.objectid,
+            transform: self.transform,
+            path: self.path,
+            uuid: self.uuid,
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod smoke_tests {
     use crate::core::object::ObjectType;
+
+    use super::*;
 
     #[test]
     fn test_model_builder_basic() {
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
         builder.unit(Unit::Millimeter);
         builder.add_metadata("Application", Some("Test App"));
+        builder.add_build(None).unwrap();
 
         let cube_id = builder
-            .add_object(|obj| {
-                if obj
-                    .name("Cube")
-                    .object_type(ObjectType::Model)
-                    .mesh(|mesh| {
-                        mesh.add_vertex(&[0.0, 0.0, 0.0])
-                            .add_vertex(&[10.0, 0.0, 0.0])
-                            .add_vertex(&[10.0, 10.0, 0.0])
-                            .add_vertex(&[0.0, 10.0, 0.0])
-                            .add_triangle(&[0, 1, 2])
-                            .add_triangle(&[0, 2, 3]);
-                    })
-                    .is_ok()
-                {}
+            .add_mesh_object(|obj| {
+                obj.name("Cube");
+                obj.object_type(ObjectType::Model);
+                //obj.mesh(|mesh| {
+                obj.add_vertex(&[0.0, 0.0, 0.0])
+                    .add_vertex(&[10.0, 0.0, 0.0])
+                    .add_vertex(&[10.0, 10.0, 0.0])
+                    .add_vertex(&[0.0, 10.0, 0.0])
+                    .add_triangle(&[0, 1, 2])
+                    .add_triangle(&[0, 2, 3]);
+                //});
+
+                Ok(())
             })
             .unwrap();
 
-        builder.add_build_item(cube_id);
+        builder.add_build_item(cube_id).unwrap();
 
         let model = builder.build().unwrap();
 
@@ -696,16 +921,18 @@ mod tests {
 
     #[test]
     fn test_object_id_assignment() {
-        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        let mut builder = ModelBuilder::new(Unit::Millimeter, false);
 
         let id1 = builder
-            .add_object(|obj| {
+            .add_mesh_object(|obj| {
                 obj.name("Obj1");
+                Ok(())
             })
             .unwrap();
         let id2 = builder
-            .add_object(|obj| {
+            .add_composed_part_object(|obj| {
                 obj.name("Obj2");
+                Ok(())
             })
             .unwrap();
 
@@ -725,27 +952,353 @@ mod tests {
         // First pass
         builder.unit(Unit::Centimeter);
         let obj1_id = builder
-            .add_object(|obj| {
+            .add_mesh_object(|obj| {
                 obj.name("First");
+                Ok(())
             })
             .unwrap();
 
         // Second pass
         builder.add_metadata("Pass", Some("Second"));
         let obj2_id = builder
-            .add_object(|obj| {
+            .add_composed_part_object(|obj| {
                 obj.name("Second");
+                Ok(())
             })
             .unwrap();
 
         // Third pass
-        builder.add_build_item(obj1_id);
-        builder.add_build_item(obj2_id);
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj1_id).unwrap();
+        builder.add_build_item(obj2_id).unwrap();
 
         let model = builder.build().unwrap();
         assert_eq!(model.unit, Some(Unit::Centimeter));
         assert_eq!(model.metadata.len(), 1);
         assert_eq!(model.resources.object.len(), 2);
         assert_eq!(model.build.item.len(), 2);
+    }
+
+    #[test]
+    fn test_error_cases_for_build_in_model() {
+        // Test BuildItemNotSet: root model without build
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        assert!(matches!(builder.build(), Err(ModelError::BuildItemNotSet)));
+
+        // Test BuildOnlyAllowedInRootModel: non-root model with build
+        let mut builder = ModelBuilder::new(Unit::Millimeter, false);
+        assert!(matches!(
+            builder.add_build(None),
+            Err(ModelError::BuildOnlyAllowedInRootModel)
+        ));
+
+        // Test UuidNotSet: production ext required but no uuid for build
+        // let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        // builder.make_production_extension_required();
+        // assert!(matches!(
+        //     builder.add_build(None),
+        //     Err(BuilderError::UuidNotSet)
+        // ));
+    }
+
+    #[test]
+    fn test_production_ext_add_prod_ns_to_required_extensions() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+        builder.add_build(Some("build-uuid".to_string())).unwrap();
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.uuid("obj-uuid");
+                obj.name("test");
+
+                Ok(())
+            })
+            .unwrap();
+        builder
+            .add_build_item_advanced(obj_id, |i| {
+                i.uuid("item-uuid");
+            })
+            .unwrap();
+        let model = builder.build().unwrap();
+        assert_eq!(model.requiredextensions, Some("p ".to_string()));
+    }
+
+    #[test]
+    fn test_production_ext_requires_object_uuid() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+        builder.add_build(Some("build-uuid".to_string())).unwrap();
+        let obj_id = builder.add_mesh_object(|obj| {
+            obj.name("test");
+            // no uuid
+            Ok(())
+        });
+        assert!(matches!(obj_id, Err(MeshObjectError::ObjectUuidNotSet)));
+    }
+
+    #[test]
+    fn test_production_ext_requires_build_uuid() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+        builder.add_build(None).unwrap();
+        let err = builder.build();
+        assert!(matches!(
+            err,
+            Err(ModelError::BuildError(BuildError::BuildUuidNotSet))
+        ));
+    }
+
+    #[test]
+    fn test_production_ext_requires_build_item_uuid() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+        builder.add_build(Some("build-uuid".to_string())).unwrap();
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.name("test");
+                obj.uuid("some-uuid");
+                Ok(())
+            })
+            .unwrap();
+
+        let err = builder.add_build_item(obj_id);
+        assert!(matches!(
+            err,
+            Err(ModelError::ItemError(ItemError::ItemUuidNotSet))
+        ));
+    }
+
+    #[test]
+    fn test_production_ext_required_for_build_item_path() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.add_build(None).unwrap();
+        let obj_id = builder.add_mesh_object(|obj| Ok(())).unwrap();
+        let result = builder.add_build_item_advanced(obj_id, |i| {
+            i.path("some-path");
+        });
+        assert!(matches!(
+            result,
+            Err(ModelError::ItemError(
+                ItemError::ItemPathSetWithoutProductionExtension
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_production_ext_allows_path_on_component_and_build_item() {
+        // Test path allowed when production ext enabled
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+
+        let mesh_obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.uuid("object-uuid");
+                Ok(())
+            })
+            .unwrap();
+
+        if let Err(err) = builder.add_composed_part_object(|obj| {
+            obj.uuid("obj-uuid");
+            //obj.composed_part(|cp| {
+            obj.add_component_advanced(mesh_obj_id, |c| {
+                c.uuid("comp-uuid").path("comp-path");
+            });
+            //});
+
+            Ok(())
+        }) {
+            panic!("{err:?}");
+        }
+
+        builder.add_build(Some("build-uuid".to_owned())).unwrap();
+        if let Err(err) = builder.add_build_item_advanced(mesh_obj_id, |i| {
+            i.uuid("some-uuid").path("some-path");
+        }) {
+            panic!("{err:?}");
+        }
+    }
+
+    #[test]
+    fn test_extension_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.add_required_extension(crate::io::XmlNamespace {
+            prefix: Some("test".to_string()),
+            uri: "http://example.com/test".to_string(),
+        });
+        builder.add_recommended_extension(crate::io::XmlNamespace {
+            prefix: Some("rec".to_string()),
+            uri: "http://example.com/rec".to_string(),
+        });
+        builder.add_build(None).unwrap();
+        let model = builder.build().unwrap();
+        assert_eq!(model.requiredextensions, Some("test ".to_string()));
+        assert_eq!(model.recommendedextensions, Some("rec ".to_string()));
+    }
+
+    #[test]
+    fn test_build_item_advanced_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_production_extension_required();
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.name("test").uuid("obj-uuid");
+                Ok(())
+            })
+            .unwrap();
+        builder.add_build(Some("build-uuid".to_owned())).unwrap();
+
+        let transform = crate::core::transform::Transform([
+            1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        ]);
+        builder
+            .add_build_item_advanced(obj_id, |i| {
+                i.transform(transform.clone())
+                    .partnumber("part")
+                    .path("path")
+                    .uuid("uuid");
+            })
+            .unwrap();
+
+        let model = builder.build().unwrap();
+        let item = &model.build.item[0];
+        assert_eq!(item.objectid, 1);
+        assert_eq!(item.transform, Some(transform));
+        assert_eq!(item.partnumber, Some("part".to_string()));
+        assert_eq!(item.path, Some("path".to_string()));
+        assert_eq!(item.uuid, Some("uuid".to_string()));
+    }
+
+    #[test]
+    fn test_object_builder_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.object_type(crate::core::object::ObjectType::Support);
+                obj.name("support obj");
+                obj.part_number("part123");
+                obj.uuid("obj-uuid");
+                Ok(())
+            })
+            .unwrap();
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj_id).unwrap();
+        let model = builder.build().unwrap();
+        let obj = &model.resources.object[0];
+        assert_eq!(
+            obj.objecttype,
+            Some(crate::core::object::ObjectType::Support)
+        );
+        assert_eq!(obj.name, Some("support obj".to_string()));
+        assert_eq!(obj.partnumber, Some("part123".to_string()));
+        assert_eq!(obj.uuid, Some("obj-uuid".to_string()));
+    }
+
+    #[test]
+    fn test_mesh_builder_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                //match obj.mesh(|mesh| {
+                obj.add_vertices(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
+                obj.add_vertices_flat(&[0.0, 0.0, 1.0, 1.0, 1.0, 0.0]);
+                obj.add_triangles(&[[0, 1, 2]]);
+                obj.add_triangles_flat(&[0, 2, 3, 1, 3, 4]);
+                // }) {
+                //    Ok(_) => Ok(()),
+                //    Err(err) => panic!("{err:?}"),
+                // }
+                Ok(())
+            })
+            .unwrap();
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj_id).unwrap();
+        let model = builder.build().unwrap();
+        let mesh = model.resources.object[0].mesh.as_ref().unwrap();
+        assert_eq!(mesh.vertices.vertex.len(), 5);
+        assert_eq!(mesh.triangles.triangle.len(), 3);
+    }
+
+    #[test]
+    fn test_composed_part_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        let obj1_id = builder
+            .add_composed_part_object(|obj| {
+                obj.name("obj1");
+                Ok(())
+            })
+            .unwrap();
+        let obj2_id = builder
+            .add_composed_part_object(|obj| {
+                //obj.composed_part(|cp| {
+                obj.add_component(obj1_id);
+                // });
+                Ok(())
+            })
+            .unwrap();
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj2_id).unwrap();
+        let model = builder.build().unwrap();
+        let obj = &model.resources.object[1];
+        assert!(obj.components.is_some());
+        let comp = &obj.components.as_ref().unwrap().component[0];
+        assert_eq!(comp.objectid, obj1_id.into());
+
+        // // Test non-existent object reference
+        // let result = builder.add_object(|obj| {
+        //     obj.composed_part(|cp| cp.add_component(ObjectId(999), None))?;
+        //     Ok(())
+        // });
+        // assert!(matches!(
+        //     result,
+        //     Err(BuilderError::ObjectBuilderReferencesANonExistentComponent)
+        // ));
+    }
+
+    #[test]
+    fn test_root_nonroot_tests() {
+        // Non-root cannot have build
+        let mut builder = ModelBuilder::new(Unit::Millimeter, false);
+        assert!(matches!(
+            builder.add_build(None),
+            Err(ModelError::BuildOnlyAllowedInRootModel)
+        ));
+
+        // Root requires build
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        assert!(matches!(builder.build(), Err(ModelError::BuildItemNotSet)));
+
+        // make_root(false) allows no build
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.make_root(false);
+        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        let model = builder.build().unwrap();
+        assert!(model.build.item.is_empty());
+    }
+
+    #[test]
+    fn test_metadata_tests() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        builder.add_metadata("key1", Some("value1"));
+        builder.add_metadata("key2", None);
+        builder.add_metadata("key3", Some("value3"));
+        builder.add_build(None).unwrap();
+        let model = builder.build().unwrap();
+        assert_eq!(model.metadata.len(), 3);
+        assert_eq!(model.metadata[0].name, "key1");
+        assert_eq!(model.metadata[0].value, Some("value1".to_string()));
+        assert_eq!(model.metadata[1].name, "key2");
+        assert_eq!(model.metadata[1].value, None);
+        assert_eq!(model.metadata[2].name, "key3");
+        assert_eq!(model.metadata[2].value, Some("value3".to_string()));
+    }
+
+    #[test]
+    fn test_object_id_tests() {
+        let id: ObjectId = 42.into();
+        assert_eq!(id.0, 42);
+        let usize_id: usize = id.into();
+        assert_eq!(usize_id, 42);
     }
 }
