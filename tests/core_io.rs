@@ -13,7 +13,7 @@ mod smoke_tests {
     #[test]
     fn read_threemf_package_memory_optimized() {
         use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_composedpart_objects;
+        use amrust_3mf::io::query::get_components_objects;
         use amrust_3mf::io::query::get_mesh_objects;
         use amrust_3mf::io::query::get_objects;
 
@@ -34,7 +34,7 @@ mod smoke_tests {
                 let mesh_objects = get_mesh_objects(&package).collect::<Vec<_>>();
                 assert_eq!(mesh_objects.len(), 3);
 
-                let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
+                let composedpart_objects = get_components_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
                 // let object_by_id = get_object_ref_from_id(1, &package, None, None);
@@ -59,7 +59,7 @@ mod smoke_tests {
     #[test]
     fn read_threemf_package_speed_optimized() {
         use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_composedpart_objects;
+        use amrust_3mf::io::query::get_components_objects;
         use amrust_3mf::io::query::get_mesh_objects;
         use amrust_3mf::io::query::get_objects;
 
@@ -80,7 +80,7 @@ mod smoke_tests {
                 let mesh_objects = get_mesh_objects(&package).collect::<Vec<_>>();
                 assert_eq!(mesh_objects.len(), 3);
 
-                let composedpart_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
+                let composedpart_objects = get_components_objects(&package).collect::<Vec<_>>();
                 assert_eq!(composedpart_objects.len(), 1);
 
                 // let object_by_id = get_object_ref_from_id(1, &package, None, None);

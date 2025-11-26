@@ -1,3 +1,160 @@
+//! Query API for inspecting 3MF packages and models.
+//!
+//! This module provides helper functions and reference types for querying objects, build items,
+//! and other entities within 3MF packages. It supports eager-loaded [`ThreemfPackage`] instances
+//! and handles multi-model packages (root model + sub-models) seamlessly.
+//!
+//! # Overview
+//!
+//! The query API is organized around lightweight reference types that wrap entities with
+//! additional context like the originating model path:
+//!
+//! - [`ObjectRef`] - References to any object (mesh or composed)
+//! - [`MeshObjectRef`] - References to mesh objects with triangle geometry
+//! - [`ComponentsObjectRef`] - References to Components Object
+//! - [`ItemRef`] - References to build items (objects to be manufactured)
+//! - [`ComponentRef`] - References to components within composed parts
+//! - [`ModelRef`] - References to models with their path information
+//!
+//! # Common Patterns
+//!
+//! ## Iterating All Objects
+//!
+//! ```rust,ignore
+//! use amrust_3mf::io::{ThreemfPackage, query::*};
+//!
+//! let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+//!
+//! // Iterate all objects across root and sub-models
+//! for obj_ref in get_objects(&package) {
+//!     println!("Object ID: {}", obj_ref.object.id);
+//!     if let Some(path) = obj_ref.path {
+//!         println!("  From sub-model: {}", path);
+//!     }
+//! }
+//! ```
+//!
+//! ## Finding Build Items
+//!
+//! ```rust,ignore
+//! // Get all build items
+//! for item in get_items(&package) {
+//!     println!("Item references object {}", item.objectid());
+//!     if let Some(transform) = item.transform() {
+//!         println!("  With transform: {:?}", transform);
+//!     }
+//! }
+//!
+//! // Find items that reference a specific object
+//! for item in get_items_by_objectid(&package, 42) {
+//!     println!("Found item referencing object 42");
+//! }
+//! ```
+//!
+//! ## Working with Mesh Objects
+//!
+//! ```rust,ignore
+//! // Get only mesh objects (filters out composed parts)
+//! for mesh_ref in get_mesh_objects(&package) {
+//!     let mesh = mesh_ref.mesh();
+//!     println!("Mesh with {} vertices, {} triangles",
+//!         mesh.vertices.vertex.len(),
+//!         mesh.triangles.triangle.len()
+//!     );
+//!     
+//!     // Access object metadata via Deref
+//!     if let Some(name) = &mesh_ref.name {
+//!         println!("  Name: {}", name);
+//!     }
+//! }
+//! ```
+//!
+//! ## Traversing Composed Parts
+//!
+//! ```rust,ignore
+//! // Get composed objects (assemblies)
+//! for composed in get_components_objects(&package) {
+//!     println!("Assembly ID: {}", composed.id);
+//!     
+//!     // Iterate components within this assembly
+//!     for component in composed.components() {
+//!         println!("  References object {}", component.objectid);
+//!         if let Some(path) = &component.path_to_look_for {
+//!             println!("    In model: {}", path);
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! ## Working with Multi-Model Packages
+//!
+//! ```rust,ignore
+//! // Iterate all models (root + sub-models)
+//! for model_ref in iter_models(&package) {
+//!     if let Some(path) = model_ref.path {
+//!         println!("Sub-model at: {}", path);
+//!     } else {
+//!         println!("Root model");
+//!     }
+//!     
+//!     // Query objects in this specific model
+//!     for obj in get_objects_from_model(model_ref.model) {
+//!         println!("  Object {}", obj.object.id);
+//!     }
+//! }
+//! ```
+//!
+//! # Production Extension Support
+//!
+//! The 3MF Production extension adds UUIDs for tracking objects and items through
+//! manufacturing workflows. When present, you can query by UUID:
+//!
+//! ```rust,ignore
+//! // Find build item by UUID
+//! if let Some(item) = get_item_by_uuid(&package, "550e8400-e29b-41d4-a716-446655440000") {
+//!     println!("Found item with UUID");
+//! }
+//!
+//! // Access UUIDs on items and objects
+//! for item in get_items(&package) {
+//!     if let Some(uuid) = item.uuid() {
+//!         println!("Item UUID: {}", uuid);
+//!     }
+//! }
+//! ```
+//!
+//! # Reference Types and Model Paths
+//!
+//! Reference types like [`ObjectRef`] and [`ItemRef`] include path information to track
+//! which model an entity came from:
+//!
+//! - `path: None` or `origin_model_path: None` - Entity is from the root model
+//! - `path: Some("path/to/model.model")` - Entity is from a sub-model
+//!
+//! This is essential for resolving cross-model references in the production extension,
+//! where components can reference objects in different model files.
+//!
+//! # Model-Level vs Package-Level Queries
+//!
+//! Most query functions come in two variants:
+//!
+//! - **Package-level** (e.g., [`get_items`]) - Query across all models (root + sub-models)
+//! - **Model-level** (e.g., [`get_items_from_model`]) - Query a single model
+//!
+//! Use package-level queries for most cases. Use model-level queries when you need
+//! fine-grained control or are working with a specific model instance.
+//!
+//! # Performance Considerations
+//!
+//! - All query functions return iterators, enabling lazy evaluation
+//! - Reference types are lightweight wrappers with no data copying
+//! - Queries work directly on the loaded package data with no additional allocations
+//!
+//! # See Also
+//!
+//! - [`ThreemfPackage`] - The eager-loaded package type these queries work with
+//! - [`examples/query_example.rs`](https://github.com/vshashi01/amrust_3mf/blob/main/examples/query_example.rs) - Complete usage examples
+
 #![allow(clippy::needless_lifetimes)]
 
 use std::ops::Deref;
@@ -15,6 +172,47 @@ use crate::{
 };
 
 /// A reference to an object within a 3MF model, including its path if from a sub-model.
+///
+/// Objects are the primary resources in 3MF models and can be either mesh objects
+/// (containing triangle geometry) or composed parts (assemblies of other objects).
+///
+/// # Fields
+///
+/// * `object` - Reference to the underlying [`Object`] data
+/// * `path` - Path to the model containing this object (`None` for root model)
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for obj_ref in get_objects(&package) {
+///     println!("Object ID: {}", obj_ref.object.id);
+///     
+///     if let Some(name) = &obj_ref.object.name {
+///         println!("  Name: {}", name);
+///     }
+///     
+///     if let Some(path) = obj_ref.path {
+///         println!("  From sub-model: {}", path);
+///     }
+///     
+///     // Check what type of object this is
+///     if obj_ref.object.mesh.is_some() {
+///         println!("  Type: Mesh object");
+///     } else if obj_ref.object.components.is_some() {
+///         println!("  Type: Composed part");
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`MeshObjectRef`] - Specialized reference for mesh objects
+/// * [`ComponentsObjectRef`] - Specialized reference for composed parts
+/// * [`get_objects()`] - Get all objects from a package
 pub struct ObjectRef<'a> {
     /// The object itself.
     pub object: &'a Object,
@@ -22,30 +220,150 @@ pub struct ObjectRef<'a> {
     pub path: Option<&'a str>,
 }
 
-/// Retrieves an object by ID from a given model. Returns None if not found.
+/// Retrieves an object by ID from a given model.
+///
+/// Object IDs are unique within a single model but may be duplicated across
+/// different sub-models. This function only searches within the specified model.
+///
+/// # Arguments
+///
+/// * `object_id` - The object ID to search for
+/// * `model` - The model to search in
+///
+/// # Returns
+///
+/// `Some(ObjectRef)` if found, `None` otherwise. The returned reference will
+/// have `path` set to `None` since this is a single-model query.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Find object in root model
+/// if let Some(obj) = get_object_from_model(42, &package.root) {
+///     println!("Found object 42: {:?}", obj.object.name);
+/// }
+///
+/// // Find object in a specific sub-model
+/// if let Some(model) = package.sub_models.get("/3D/Objects/parts.model") {
+///     if let Some(obj) = get_object_from_model(1, model) {
+///         println!("Found object 1 in sub-model");
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_objects()`] - Search across all models in a package
 pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<ObjectRef<'a>> {
     model
         .resources
         .object
         .iter()
         .find(|o| o.id == object_id)
-        .map(|lala| ObjectRef {
-            object: lala,
-            path: None,
-        })
+        .map(|object| ObjectRef { object, path: None })
 }
 
 /// Returns an iterator over all objects in the package, including sub-models.
+///
+/// Objects are the primary resources in 3MF and can be mesh objects (with triangle
+/// geometry) or composed parts (assemblies). This function traverses all models
+/// (root + sub-models) and returns every object with path tracking.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+///
+/// # Returns
+///
+/// An iterator over [`ObjectRef`] for all objects in the package.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Count objects by type
+/// let mut mesh_count = 0;
+/// let mut composed_count = 0;
+///
+/// for obj_ref in get_objects(&package) {
+///     if obj_ref.object.mesh.is_some() {
+///         mesh_count += 1;
+///     } else if obj_ref.object.components.is_some() {
+///         composed_count += 1;
+///     }
+/// }
+///
+/// println!("Mesh objects: {}", mesh_count);
+/// println!("Composed parts: {}", composed_count);
+///
+/// // Find objects by name
+/// for obj_ref in get_objects(&package) {
+///     if let Some(name) = &obj_ref.object.name {
+///         if name.contains("gear") {
+///             println!("Found gear part: {} (ID: {})", name, obj_ref.object.id);
+///         }
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_mesh_objects()`] - Get only mesh objects (filters out composed parts)
+/// * [`get_components_objects()`] - Get only composed parts
+/// * [`get_objects_from_model()`] - Query a specific model
 pub fn get_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ObjectRef<'a>> {
     iter_objects_from(package, get_objects_from_model_ref)
 }
 
-/// Returns an iterator over all objects in the model.
+/// Returns an iterator over all objects in a specific model.
+///
+/// Unlike [`get_objects()`], this only queries a single model instance.
+/// The returned objects will have `path` set to `None`.
+///
+/// # Arguments
+///
+/// * `model` - The model to query
+///
+/// # Returns
+///
+/// An iterator over [`ObjectRef`] for objects in this model only.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Get objects only from root model
+/// let root_objects: Vec<_> = get_objects_from_model(&package.root).collect();
+/// println!("Root model has {} objects", root_objects.len());
+///
+/// // Compare with sub-model objects
+/// for (path, model) in &package.sub_models {
+///     let sub_objects = get_objects_from_model(model).count();
+///     println!("Sub-model {} has {} objects", path, sub_objects);
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_objects()`] - Query all objects across all models
 pub fn get_objects_from_model<'a>(model: &'a Model) -> impl Iterator<Item = ObjectRef<'a>> {
     get_objects_from_model_ref(ModelRef { model, path: None })
 }
 
 /// Returns an iterator over all objects in the model reference.
+///
+/// This is an internal helper function that preserves model path information.
+/// Most users should use [`get_objects()`] or [`get_objects_from_model()`] instead.
 pub fn get_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -76,7 +394,54 @@ pub struct GenericObjectRef<'a, T> {
     pub origin_model_path: Option<&'a str>,
 }
 
-/// A reference to a mesh object with all the object data.
+/// A reference to a mesh object with convenient access to both mesh data and object metadata.
+///
+/// Mesh objects contain triangle geometry and are the primary printable entities in 3MF.
+/// This type provides direct access to the [`Mesh`] data plus all object metadata through
+/// the [`Deref`] trait.
+///
+/// # Accessing Data
+///
+/// * Call [`mesh()`](MeshObjectRef::mesh) to get the mesh geometry
+/// * Access object metadata directly (id, name, uuid, etc.) via [`Deref`]
+/// * Check `origin_model_path` to see which model the object came from
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for mesh_ref in get_mesh_objects(&package) {
+///     // Access object metadata via Deref
+///     println!("Object ID: {}", mesh_ref.id);
+///     if let Some(name) = &mesh_ref.name {
+///         println!("  Name: {}", name);
+///     }
+///     
+///     // Access mesh geometry
+///     let mesh = mesh_ref.mesh();
+///     println!("  Vertices: {}", mesh.vertices.vertex.len());
+///     println!("  Triangles: {}", mesh.triangles.triangle.len());
+///     
+///     // Check for beam lattice
+///     if let Some(beamlattice) = &mesh.beamlattice {
+///         println!("  Has beam lattice with {} beams", beamlattice.beams.beam.len());
+///     }
+///     
+///     // Check model origin
+///     if let Some(path) = mesh_ref.origin_model_path {
+///         println!("  From: {}", path);
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_mesh_objects()`] - Get all mesh objects from a package
+/// * [`Mesh`] - The mesh geometry type
+/// * [`ObjectRef`] - Generic object reference (includes composed parts)
 pub struct MeshObjectRef<'a>(GenericObjectRef<'a, Mesh>);
 
 impl<'a> MeshObjectRef<'a> {
@@ -95,7 +460,28 @@ impl<'a> MeshObjectRef<'a> {
         })
     }
 
-    /// Returns the mesh data.
+    /// Returns a reference to the mesh geometry data.
+    ///
+    /// The mesh contains vertices, triangles, and optional extensions like
+    /// beam lattice structures or triangle sets.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for mesh_ref in get_mesh_objects(&package) {
+    ///     let mesh = mesh_ref.mesh();
+    ///     
+    ///     // Access vertices
+    ///     for vertex in &mesh.vertices.vertex {
+    ///         println!("Vertex: ({}, {}, {})", vertex.x, vertex.y, vertex.z);
+    ///     }
+    ///     
+    ///     // Access triangles
+    ///     for triangle in &mesh.triangles.triangle {
+    ///         println!("Triangle: ({}, {}, {})", triangle.v1, triangle.v2, triangle.v3);
+    ///     }
+    /// }
+    /// ```
     pub fn mesh(&self) -> &'a Mesh {
         self.entity
     }
@@ -110,13 +496,94 @@ impl<'a> Deref for MeshObjectRef<'a> {
 }
 
 /// Returns an iterator over mesh objects in the package.
+///
+/// Filters out composed parts and returns only objects containing triangle geometry.
+/// Mesh objects are the primary printable entities in 3MF.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+///
+/// # Returns
+///
+/// An iterator over [`MeshObjectRef`] for all mesh objects.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Analyze mesh complexity
+/// for mesh_ref in get_mesh_objects(&package) {
+///     let mesh = mesh_ref.mesh();
+///     let vertex_count = mesh.vertices.vertex.len();
+///     let triangle_count = mesh.triangles.triangle.len();
+///     
+///     println!("Mesh {} ({:?}): {} vertices, {} triangles",
+///         mesh_ref.id,
+///         mesh_ref.name,
+///         vertex_count,
+///         triangle_count
+///     );
+///     
+///     // Check for material properties
+///     if mesh_ref.pid.is_some() {
+///         println!("  Has material assigned");
+///     }
+/// }
+///
+/// // Find meshes with beam lattice
+/// let lattice_count = get_mesh_objects(&package)
+///     .filter(|m| m.mesh().beamlattice.is_some())
+///     .count();
+/// println!("Objects with beam lattice: {}", lattice_count);
+/// ```
+///
+/// # See Also
+///
+/// * [`get_objects()`] - Get all objects (includes composed parts)
+/// * [`get_components_objects()`] - Get only composed parts
+/// * [`MeshObjectRef`] - The reference type returned
 pub fn get_mesh_objects<'a>(
     package: &'a ThreemfPackage,
 ) -> impl Iterator<Item = MeshObjectRef<'a>> {
     iter_objects_from(package, get_mesh_objects_from_model_ref).map(MeshObjectRef::new)
 }
 
-/// Returns an iterator over mesh objects in the model.
+/// Returns an iterator over mesh objects in a specific model.
+///
+/// Like [`get_mesh_objects()`] but queries only a single model instance.
+///
+/// # Arguments
+///
+/// * `model` - The model to query
+///
+/// # Returns
+///
+/// An iterator over [`MeshObjectRef`] for mesh objects in this model.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Compare mesh counts across models
+/// let root_meshes = get_mesh_objects_from_model(&package.root).count();
+/// println!("Root model: {} mesh objects", root_meshes);
+///
+/// for (path, model) in &package.sub_models {
+///     let sub_meshes = get_mesh_objects_from_model(model).count();
+///     println!("{}: {} mesh objects", path, sub_meshes);
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_mesh_objects()`] - Query all mesh objects across all models
 pub fn get_mesh_objects_from_model<'a>(
     model: &'a Model,
 ) -> impl Iterator<Item = MeshObjectRef<'a>> {
@@ -124,6 +591,9 @@ pub fn get_mesh_objects_from_model<'a>(
 }
 
 /// Returns an iterator over mesh objects in the model reference.
+///
+/// Internal helper that preserves model path information.
+/// Most users should use [`get_mesh_objects()`] or [`get_mesh_objects_from_model()`].
 pub fn get_mesh_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
@@ -139,12 +609,57 @@ pub fn get_mesh_objects_from_model_ref<'a>(
         })
 }
 
-/// A reference to a composed part object with metadata.
-pub struct ComposedPartObjectRef<'a>(GenericObjectRef<'a, Components>);
+/// A reference to a composed part object (assembly) with convenient access to components.
+///
+/// Composed parts are assemblies that reference other objects (which can be mesh objects
+/// or other composed parts). Each component can have its own transform and can reference
+/// objects in different model files (via the production extension).
+///
+/// # Accessing Data
+///
+/// * Call [`components()`](ComponentsObjectRef::components) to iterate components
+/// * Access object metadata directly (id, name, uuid, etc.) via [`Deref`]
+/// * Check `origin_model_path` to see which model the composed part came from
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for composed in get_components_objects(&package) {
+///     // Access object metadata via Deref
+///     println!("Assembly: {} (ID: {})", composed.name.as_deref().unwrap_or("unnamed"), composed.id);
+///     
+///     // Iterate components
+///     let mut component_count = 0;
+///     for component in composed.components() {
+///         component_count += 1;
+///         println!("  Component references object {}", component.objectid);
+///         
+///         if let Some(path) = &component.path_to_look_for {
+///             println!("    Look in model: {}", path);
+///         }
+///         
+///         if component.transform.is_some() {
+///             println!("    Has transform");
+///         }
+///     }
+///     println!("  Total components: {}", component_count);
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_components_objects()`] - Get all composed parts from a package
+/// * [`ComponentRef`] - References to individual components
+/// * [`MeshObjectRef`] - References to mesh objects (not assemblies)
+pub struct ComponentsObjectRef<'a>(GenericObjectRef<'a, Components>);
 
-impl<'a> ComposedPartObjectRef<'a> {
+impl<'a> ComponentsObjectRef<'a> {
     fn new(o: ObjectRef<'a>) -> Self {
-        ComposedPartObjectRef(GenericObjectRef {
+        ComponentsObjectRef(GenericObjectRef {
             entity: o.object.components.as_ref().unwrap(),
             id: o.object.id,
             object_type: o.object.objecttype.unwrap_or(ObjectType::Model),
@@ -158,7 +673,30 @@ impl<'a> ComposedPartObjectRef<'a> {
         })
     }
 
-    /// Returns an iterator over the components.
+    /// Returns an iterator over the components within this composed part.
+    ///
+    /// Components reference other objects and can apply transforms. The `path_to_look_for`
+    /// field indicates which model file contains the referenced object (production extension).
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for composed in get_components_objects(&package) {
+    ///     for component in composed.components() {
+    ///         println!("Component references object {}", component.objectid);
+    ///         
+    ///         // Check for cross-model references
+    ///         if let Some(path) = &component.path_to_look_for {
+    ///             println!("  In model: {}", path);
+    ///         }
+    ///         
+    ///         // Check for UUID (production extension)
+    ///         if let Some(uuid) = &component.uuid {
+    ///             println!("  UUID: {}", uuid);
+    ///         }
+    ///     }
+    /// }
+    /// ```
     pub fn components(&self) -> impl Iterator<Item = ComponentRef> {
         self.entity.component.iter().map(|c| {
             let comp_path = match &c.path {
@@ -178,7 +716,7 @@ impl<'a> ComposedPartObjectRef<'a> {
     }
 }
 
-impl<'a> Deref for ComposedPartObjectRef<'a> {
+impl<'a> Deref for ComponentsObjectRef<'a> {
     type Target = GenericObjectRef<'a, Components>;
 
     fn deref(&self) -> &Self::Target {
@@ -186,7 +724,54 @@ impl<'a> Deref for ComposedPartObjectRef<'a> {
     }
 }
 
-/// A reference to a component within a composed part.
+/// A reference to a component within a composed part (assembly).
+///
+/// Components are references to other objects with optional transforms.
+/// They enable building assemblies and hierarchical structures.
+///
+/// # Fields
+///
+/// * `objectid` - The ID of the object this component references
+/// * `path_to_look_for` - Model file path for cross-model references (production extension)
+/// * `transform` - Optional transform applied to this component instance
+/// * `uuid` - Optional UUID for tracking (production extension)
+///
+/// # Cross-Model References
+///
+/// The `path_to_look_for` field enables referencing objects in different model files:
+/// * `None` - Object is in the same model as the composed part
+/// * `Some(path)` - Object is in the specified sub-model file
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for composed in get_components_objects(&package) {
+///     for component in composed.components() {
+///         // Basic info
+///         println!("Component -> Object {}", component.objectid);
+///         
+///         // Cross-model reference?
+///         match &component.path_to_look_for {
+///             Some(path) => println!("  References object in: {}", path),
+///             None => println!("  References object in same model"),
+///         }
+///         
+///         // Transform info
+///         if let Some(transform) = &component.transform {
+///             println!("  Transform: {:?}", &transform.0[..3]);
+///         }
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`ComponentsObjectRef::components()`] - Get components from a composed part
+/// * [`get_components_objects()`] - Find composed parts in a package
 pub struct ComponentRef {
     /// ID of the referenced object.
     pub objectid: usize,
@@ -198,8 +783,54 @@ pub struct ComponentRef {
     /// UUID of the component.
     pub uuid: Option<String>,
 }
-
-/// A reference to a build item within a 3MF model, including its path if from a sub-model.
+/// A reference to a build item with convenient accessor methods.
+///
+/// Build items specify which objects should be manufactured and optionally
+/// apply transforms. Items are part of the `Build` section in a 3MF model.
+///
+/// # Fields
+///
+/// * `item` - Reference to the underlying [`Item`] data
+/// * `origin_model_path` - Path to the model containing this item (`None` for root model)
+///
+/// # Accessor Methods
+///
+/// This type provides convenient accessor methods for common item properties:
+/// * [`objectid()`](ItemRef::objectid) - Get the referenced object ID
+/// * [`transform()`](ItemRef::transform) - Get optional transform matrix
+/// * [`partnumber()`](ItemRef::partnumber) - Get optional part number
+/// * [`uuid()`](ItemRef::uuid) - Get UUID (production extension)
+/// * [`path()`](ItemRef::path) - Get path for cross-model references (production extension)
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for item in get_items(&package) {
+///     println!("Item references object {}", item.objectid());
+///     
+///     if let Some(partnumber) = item.partnumber() {
+///         println!("  Part number: {}", partnumber);
+///     }
+///     
+///     if let Some(transform) = item.transform() {
+///         println!("  Has transform");
+///     }
+///     
+///     if item.origin_model_path.is_none() {
+///         println!("  From root model");
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_items()`] - Get all items from a package
+/// * [`get_items_by_objectid()`] - Find items referencing a specific object
+/// * [`Item`] - The underlying 3MF item type
 pub struct ItemRef<'a> {
     /// The item itself.
     pub item: &'a Item,
@@ -208,50 +839,209 @@ pub struct ItemRef<'a> {
 }
 
 impl<'a> ItemRef<'a> {
-    /// Returns the objectid that this item references.
+    /// Returns the ID of the object this item references.
+    ///
+    /// Build items reference objects from the resources section that should be manufactured.
+    /// Multiple items can reference the same object with different transforms or part numbers.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for item in get_items(&package) {
+    ///     println!("Item references object {}", item.objectid());
+    /// }
+    /// ```
     pub fn objectid(&self) -> usize {
         self.item.objectid
     }
 
-    /// Returns the transform applied to this item.
+    /// Returns the transform applied to this item, if any.
+    ///
+    /// The transform is a 4x3 affine transformation matrix (stored as 12 floats)
+    /// that positions and orients the object on the build plate.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for item in get_items(&package) {
+    ///     if let Some(transform) = item.transform() {
+    ///         println!("Item has transform: {:?}", &transform.0[..3]);
+    ///     }
+    /// }
+    /// ```
     pub fn transform(&self) -> Option<&Transform> {
         self.item.transform.as_ref()
     }
 
     /// Returns the part number of this item.
+    ///
+    /// Part numbers are used for manufacturing tracking and can be set independently
+    /// from the referenced object's name or properties.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for item in get_items(&package) {
+    ///     if let Some(partnumber) = item.partnumber() {
+    ///         println!("Part number: {}", partnumber);
+    ///     }
+    /// }
+    /// ```
     pub fn partnumber(&self) -> Option<&str> {
         self.item.partnumber.as_deref()
     }
 
-    /// Returns the path attribute (production extension) for cross-model references.
+    /// Returns the path attribute for cross-model object references (production extension).
+    ///
+    /// When set, this indicates the item references an object in a different model file
+    /// within the package. This is part of the 3MF production extension.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for item in get_items(&package) {
+    ///     if let Some(path) = item.path() {
+    ///         println!("References object in model: {}", path);
+    ///     }
+    /// }
+    /// ```
     pub fn path(&self) -> Option<&str> {
         self.item.path.as_deref()
     }
 
     /// Returns the UUID of this item (production extension).
+    ///
+    /// UUIDs provide unique identification for tracking items through manufacturing
+    /// workflows. This is part of the 3MF production extension.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// for item in get_items(&package) {
+    ///     if let Some(uuid) = item.uuid() {
+    ///         println!("Item UUID: {}", uuid);
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// * [`get_item_by_uuid()`] - Find an item by its UUID
     pub fn uuid(&self) -> Option<&str> {
         self.item.uuid.as_deref()
     }
 }
 
-/// Returns an iterator over composed part objects in the package.
-pub fn get_composedpart_objects<'a>(
+/// Returns an iterator over composed part objects (assemblies) in the package.
+///
+/// Filters out mesh objects and returns only objects that are assemblies of components.
+/// Composed parts enable building hierarchical structures where objects reference other objects.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+///
+/// # Returns
+///
+/// An iterator over [`ComponentsObjectRef`] for all composed parts.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Find and analyze assemblies
+/// for composed in get_components_objects(&package) {
+///     println!("Assembly: {} (ID: {})",
+///         composed.name.as_deref().unwrap_or("unnamed"),
+///         composed.id
+///     );
+///     
+///     // Count components
+///     let component_count = composed.components().count();
+///     println!("  Contains {} components", component_count);
+///     
+///     // List referenced objects
+///     for component in composed.components() {
+///         print!("  -> Object {}", component.objectid);
+///         if let Some(path) = &component.path_to_look_for {
+///             print!(" in {}", path);
+///         }
+///         println!();
+///     }
+/// }
+///
+/// // Find assemblies referencing a specific object
+/// let target_id = 42;
+/// for composed in get_components_objects(&package) {
+///     let references_target = composed.components()
+///         .any(|c| c.objectid == target_id);
+///     
+///     if references_target {
+///         println!("Assembly {} references object {}", composed.id, target_id);
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_mesh_objects()`] - Get mesh objects (not assemblies)
+/// * [`get_objects()`] - Get all objects (meshes and composed parts)
+/// * [`ComponentsObjectRef`] - The reference type returned
+pub fn get_components_objects<'a>(
     package: &'a ThreemfPackage,
-) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
-    iter_objects_from(package, get_composedpart_objects_from_model_ref)
-        .map(ComposedPartObjectRef::new)
+) -> impl Iterator<Item = ComponentsObjectRef<'a>> {
+    iter_objects_from(package, get_components_objects_from_model_ref).map(ComponentsObjectRef::new)
 }
 
-/// Returns an iterator over composed part objects in the model.
-pub fn get_composedpart_objects_from_model<'a>(
+/// Returns an iterator over composed part objects in a specific model.
+///
+/// Like [`get_components_objects()`] but queries only a single model instance.
+///
+/// # Arguments
+///
+/// * `model` - The model to query
+///
+/// # Returns
+///
+/// An iterator over [`ComponentsObjectRef`] for composed parts in this model.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Count assemblies per model
+/// let root_assemblies = get_composedpart_objects_from_model(&package.root).count();
+/// println!("Root model: {} assemblies", root_assemblies);
+///
+/// for (path, model) in &package.sub_models {
+///     let count = get_composedpart_objects_from_model(model).count();
+///     if count > 0 {
+///         println!("{}: {} assemblies", path, count);
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_components_objects()`] - Query across all models
+pub fn get_components_objects_from_model<'a>(
     model: &'a Model,
-) -> impl Iterator<Item = ComposedPartObjectRef<'a>> {
-    get_composedpart_objects_from_model_ref(ModelRef { model, path: None })
-        .map(ComposedPartObjectRef::new)
+) -> impl Iterator<Item = ComponentsObjectRef<'a>> {
+    get_components_objects_from_model_ref(ModelRef { model, path: None })
+        .map(ComponentsObjectRef::new)
 }
 
 /// Returns an iterator over composed part objects in the model reference.
-pub fn get_composedpart_objects_from_model_ref<'a>(
+///
+/// Internal helper that preserves model path information.
+/// Most users should use [`get_components_objects()`] or [`get_components_objects_from_model()`].
+pub fn get_components_objects_from_model_ref<'a>(
     model_ref: ModelRef<'a>,
 ) -> impl Iterator<Item = ObjectRef<'a>> {
     model_ref
@@ -267,16 +1057,110 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
 }
 
 /// Returns an iterator over all build items in the package, including sub-models.
+///
+/// Build items specify which objects should be manufactured. This function
+/// traverses the root model and all sub-models, returning items with their
+/// origin model path tracked via [`ItemRef::origin_model_path`].
+///
+/// Use this when you need to:
+/// - List all objects scheduled for manufacturing
+/// - Find which items reference specific objects
+/// - Inspect transforms applied to build items
+/// - Access production extension attributes (UUIDs, part numbers)
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+///
+/// # Returns
+///
+/// An iterator over [`ItemRef`] containing all build items across all models.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Print all build items
+/// for item in get_items(&package) {
+///     println!("Item references object {}", item.objectid());
+///     if let Some(path) = item.origin_model_path {
+///         println!("  From model: {}", path);
+///     }
+/// }
+///
+/// // Count items per model
+/// let root_items = get_items(&package)
+///     .filter(|i| i.origin_model_path.is_none())
+///     .count();
+/// println!("Root model has {} items", root_items);
+/// ```
+///
+/// # See Also
+///
+/// * [`get_items_from_model()`] - Query items from a specific model
+/// * [`get_items_by_objectid()`] - Find items referencing a specific object
+/// * [`get_item_by_uuid()`] - Find item by UUID (production extension)
+/// * [`ItemRef`] - The reference type returned by this function
 pub fn get_items<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ItemRef<'a>> {
     iter_models(package).flat_map(get_items_from_model_ref)
 }
 
-/// Returns an iterator over all build items in the model.
+/// Returns an iterator over all build items in a specific model.
+///
+/// Unlike [`get_items()`], this function only queries a single model instance,
+/// not the entire package. The returned items will have `origin_model_path` set to `None`
+/// since we don't track path information for single-model queries.
+///
+/// Use this when:
+/// - Working with a specific model instance
+/// - You already know which model contains the items you need
+/// - Building custom traversal logic
+///
+/// # Arguments
+///
+/// * `model` - The model to query
+///
+/// # Returns
+///
+/// An iterator over [`ItemRef`] containing build items from this model only.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Query items only from the root model
+/// for item in get_items_from_model(&package.root) {
+///     println!("Root item references object {}", item.objectid());
+/// }
+///
+/// // Query items from a specific sub-model
+/// if let Some(model) = package.sub_models.get("/3D/model.model") {
+///     for item in get_items_from_model(model) {
+///         println!("Sub-model item: {}", item.objectid());
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_items()`] - Query items across all models in a package
+/// * [`get_items_from_model_ref()`] - Internal function that preserves model path
 pub fn get_items_from_model<'a>(model: &'a Model) -> impl Iterator<Item = ItemRef<'a>> {
     get_items_from_model_ref(ModelRef { model, path: None })
 }
 
 /// Returns an iterator over all build items in the model reference.
+///
+/// This is an internal helper function used by [`get_items()`] and [`get_items_from_model()`].
+/// It preserves the model path information when iterating across multiple models.
+///
+/// Most users should use [`get_items()`] or [`get_items_from_model()`] instead.
 pub fn get_items_from_model_ref<'a>(model_ref: ModelRef<'a>) -> impl Iterator<Item = ItemRef<'a>> {
     model_ref.model.build.item.iter().map(move |item| ItemRef {
         item,
@@ -285,7 +1169,48 @@ pub fn get_items_from_model_ref<'a>(model_ref: ModelRef<'a>) -> impl Iterator<It
 }
 
 /// Returns an iterator over build items that reference a specific object ID.
-/// Note: Multiple items can reference the same object ID.
+///
+/// In 3MF, multiple build items can reference the same object with different
+/// transforms, part numbers, or other properties. This function finds all such items.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+/// * `objectid` - The object ID to search for
+///
+/// # Returns
+///
+/// An iterator over [`ItemRef`] for items referencing the specified object.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Find all items that reference object 42
+/// for item in get_items_by_objectid(&package, 42) {
+///     println!("Found item with part number: {:?}", item.partnumber());
+///     
+///     if let Some(transform) = item.transform() {
+///         println!("  Position on build plate: {:?}", &transform.0[9..12]);
+///     }
+/// }
+///
+/// // Count how many times each object appears in the build
+/// for obj_ref in get_objects(&package) {
+///     let count = get_items_by_objectid(&package, obj_ref.object.id).count();
+///     if count > 0 {
+///         println!("Object {} appears {} times", obj_ref.object.id, count);
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`get_items()`] - Get all items in a package
+/// * [`get_objects()`] - Get all objects to find IDs to query
 pub fn get_items_by_objectid<'a>(
     package: &'a ThreemfPackage,
     objectid: usize,
@@ -294,7 +1219,51 @@ pub fn get_items_by_objectid<'a>(
 }
 
 /// Finds a build item by its UUID (production extension).
-/// Returns None if not found. UUIDs should be unique across the package.
+///
+/// UUIDs provide unique identification for items in manufacturing workflows.
+/// This is part of the 3MF production extension. UUIDs should be unique across
+/// the entire package, so this function returns at most one item.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+/// * `uuid` - The UUID string to search for
+///
+/// # Returns
+///
+/// `Some(ItemRef)` if an item with the UUID exists, `None` otherwise.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Find item by UUID
+/// let uuid = "550e8400-e29b-41d4-a716-446655440000";
+/// if let Some(item) = get_item_by_uuid(&package, uuid) {
+///     println!("Found item referencing object {}", item.objectid());
+///     println!("  Part number: {:?}", item.partnumber());
+/// } else {
+///     println!("No item found with UUID: {}", uuid);
+/// }
+///
+/// // Collect all item UUIDs
+/// for item in get_items(&package) {
+///     if let Some(item_uuid) = item.uuid() {
+///         println!("Item UUID: {}", item_uuid);
+///         
+///         // Verify we can find it again
+///         assert!(get_item_by_uuid(&package, item_uuid).is_some());
+///     }
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`ItemRef::uuid()`] - Get UUID from an item reference
+/// * [`get_items()`] - Get all items (to find items with UUIDs)
 pub fn get_item_by_uuid<'a>(package: &'a ThreemfPackage, uuid: &str) -> Option<ItemRef<'a>> {
     get_items(package).find(|item_ref| {
         if let Some(item_uuid) = &item_ref.item.uuid {
@@ -305,7 +1274,47 @@ pub fn get_item_by_uuid<'a>(package: &'a ThreemfPackage, uuid: &str) -> Option<I
     })
 }
 
-/// A reference to a model within a package, including its path.
+/// A reference to a model within a package, with path information for sub-models.
+///
+/// 3MF packages can contain multiple model files: one root model and zero or more sub-models.
+/// This type wraps a model reference with its path for tracking purposes.
+///
+/// # Fields
+///
+/// * `model` - Reference to the [`Model`] data
+/// * `path` - Path to the model file (`None` for root model, `Some(path)` for sub-models)
+///
+/// # Root vs Sub-Models
+///
+/// - **Root model** (`path = None`): The main model file, always has a `Build` section
+/// - **Sub-model** (`path = Some(...)`): Additional model files referenced by other models
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// for model_ref in iter_models(&package) {
+///     match model_ref.path {
+///         None => {
+///             println!("Root model:");
+///             println!("  Build items: {}", model_ref.model.build.item.len());
+///         }
+///         Some(path) => {
+///             println!("Sub-model: {}", path);
+///         }
+///     }
+///     
+///     println!("  Objects: {}", model_ref.model.resources.object.len());
+/// }
+/// ```
+///
+/// # See Also
+///
+/// * [`iter_models()`] - Get all models from a package
+/// * [`Model`] - The underlying model type
 pub struct ModelRef<'a> {
     /// The model itself.
     pub model: &'a Model,
@@ -314,6 +1323,59 @@ pub struct ModelRef<'a> {
 }
 
 /// Returns an iterator over all models in the package, including the root and sub-models.
+///
+/// 3MF packages consist of a root model (which must have a Build section) and optional
+/// sub-models that contain additional resources. This function provides access to all of them.
+///
+/// The root model is always returned first with `path = None`, followed by sub-models
+/// with their file paths.
+///
+/// # Arguments
+///
+/// * `package` - The 3MF package to query
+///
+/// # Returns
+///
+/// An iterator over [`ModelRef`] for all models (root first, then sub-models).
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::{ThreemfPackage, query::*};
+///
+/// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
+///
+/// // Count models
+/// let total_models = iter_models(&package).count();
+/// println!("Package contains {} model(s)", total_models);
+///
+/// // Analyze each model
+/// for model_ref in iter_models(&package) {
+///     let location = model_ref.path.unwrap_or("root");
+///     let objects = model_ref.model.resources.object.len();
+///     
+///     println!("{}: {} objects", location, objects);
+///     
+///     // Root model specific
+///     if model_ref.path.is_none() {
+///         let items = model_ref.model.build.item.len();
+///         println!("  {} build items", items);
+///     }
+/// }
+///
+/// // Get specific model statistics
+/// let root_objects = iter_models(&package)
+///     .find(|m| m.path.is_none())
+///     .map(|m| m.model.resources.object.len())
+///     .unwrap_or(0);
+/// println!("Root model has {} objects", root_objects);
+/// ```
+///
+/// # See Also
+///
+/// * [`ModelRef`] - The reference type returned
+/// * [`get_objects()`] - Query objects across all models
+/// * [`get_items()`] - Query items across all models
 pub fn iter_models<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ModelRef<'a>> {
     std::iter::once(ModelRef {
         model: &package.root,
@@ -404,7 +1466,7 @@ mod smoke_tests {
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let objects = get_composedpart_objects(&package).collect::<Vec<_>>();
+        let objects = get_components_objects(&package).collect::<Vec<_>>();
         assert_eq!(objects.len(), 1);
     }
 
@@ -452,7 +1514,7 @@ mod smoke_tests {
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
 
-        let composed_objects = get_composedpart_objects(&package).collect::<Vec<_>>();
+        let composed_objects = get_components_objects(&package).collect::<Vec<_>>();
         assert_eq!(composed_objects.len(), 1);
         let components = composed_objects[0].components().collect::<Vec<_>>();
         assert!(!components.is_empty());
@@ -581,7 +1643,7 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let objects = get_composedpart_objects_from_model(&model).collect::<Vec<_>>();
+        let objects = get_components_objects_from_model(&model).collect::<Vec<_>>();
         assert_eq!(objects.len(), 1)
     }
 
@@ -672,7 +1734,7 @@ mod tests {
         let text = std::fs::read_to_string(path).unwrap();
         let model = from_str::<Model>(&text).unwrap();
 
-        let composedpart_objects = get_composedpart_objects_from_model(&model).collect::<Vec<_>>();
+        let composedpart_objects = get_components_objects_from_model(&model).collect::<Vec<_>>();
         assert!(!composedpart_objects.is_empty());
         let composed_part = &composedpart_objects[0];
         assert_eq!(composed_part.id, 4);

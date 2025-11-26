@@ -123,7 +123,7 @@ pub enum BallMode {
     /// No balls are created at beam vertices
     #[default]
     None,
-    /// Balls are created at vertices with a corresponding <ball> element. Other vertices do not get a ball.
+    /// Balls are created at vertices with a corresponding ball element. Other vertices do not get a ball.
     Mixed,
     /// Balls are created at every vertex that maps to the end of a beam
     All,
