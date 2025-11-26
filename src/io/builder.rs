@@ -2,6 +2,7 @@ use thiserror::Error;
 
 use crate::{
     core::{
+        beamlattice::{Ball, BallRef, Balls, Beam, BeamLattice, BeamRef, BeamSet, BeamSets, Beams},
         build::{Build, Item},
         component::{Component, Components},
         mesh::{Mesh, Triangle, Triangles, Vertex, Vertices},
@@ -23,6 +24,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub use crate::core::beamlattice::{BallMode, CapMode, ClippingMode};
 pub use crate::core::model::Unit;
 pub use crate::core::object::ObjectType;
 
@@ -711,6 +713,7 @@ pub struct MeshBuilder {
     vertices: Vec<Vertex>,
     triangles: Vec<Triangle>,
     triangle_sets: Option<TriangleSetsBuilder>,
+    beam_lattice: Option<BeamLatticeBuilder>,
 }
 
 impl MeshBuilder {
@@ -719,6 +722,7 @@ impl MeshBuilder {
             vertices: Vec::new(),
             triangles: Vec::new(),
             triangle_sets: None,
+            beam_lattice: None,
         }
     }
 
@@ -811,8 +815,24 @@ impl MeshBuilder {
         self
     }
 
+    /// Configure beam lattice for the mesh
+    pub fn add_beam_lattice<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut BeamLatticeBuilder),
+    {
+        if let Some(builder) = &mut self.beam_lattice {
+            f(builder);
+        } else {
+            let mut builder = BeamLatticeBuilder::new();
+            f(&mut builder);
+            self.beam_lattice = Some(builder);
+        }
+        self
+    }
+
     fn build_mesh(self) -> Result<Mesh, MeshObjectError> {
         let trianglesets = self.triangle_sets.map(|b| b.build());
+        let beamlattice = self.beam_lattice.map(|b| b.build());
         Ok(Mesh {
             vertices: Vertices {
                 vertex: self.vertices,
@@ -821,8 +841,407 @@ impl MeshBuilder {
                 triangle: self.triangles,
             },
             trianglesets,
-            beamlattice: None,
+            beamlattice,
         })
+    }
+}
+
+/// Builder for individual beams in a beam lattice
+pub struct BeamBuilder {
+    v1: usize,
+    v2: usize,
+    r1: Option<f64>,
+    r2: Option<f64>,
+    p1: Option<usize>,
+    p2: Option<usize>,
+    pid: Option<usize>,
+    cap1: Option<CapMode>,
+    cap2: Option<CapMode>,
+}
+
+impl BeamBuilder {
+    /// Create a new beam with the specified vertex indices
+    pub fn new(v1: usize, v2: usize) -> Self {
+        Self {
+            v1,
+            v2,
+            r1: None,
+            r2: None,
+            p1: None,
+            p2: None,
+            pid: None,
+            cap1: None,
+            cap2: None,
+        }
+    }
+
+    /// Set the radius at the first vertex
+    pub fn radius_1(mut self, radius: f64) -> Self {
+        self.r1 = Some(radius);
+        self
+    }
+
+    /// Set the radius at the second vertex
+    pub fn radius_2(mut self, radius: f64) -> Self {
+        self.r2 = Some(radius);
+        self
+    }
+
+    /// Set the property index for the first vertex
+    pub fn pindex_1(mut self, pindex: usize) -> Self {
+        self.p1 = Some(pindex);
+        self
+    }
+
+    /// Set the property index for the second vertex
+    pub fn pindex_2(mut self, pindex: usize) -> Self {
+        self.p2 = Some(pindex);
+        self
+    }
+
+    /// Set the property ID for the beam
+    pub fn pid(mut self, pid: usize) -> Self {
+        self.pid = Some(pid);
+        self
+    }
+
+    /// Set the cap mode for the first end of the beam
+    pub fn cap_1(mut self, cap: CapMode) -> Self {
+        self.cap1 = Some(cap);
+        self
+    }
+
+    /// Set the cap mode for the second end of the beam
+    pub fn cap_2(mut self, cap: CapMode) -> Self {
+        self.cap2 = Some(cap);
+        self
+    }
+
+    fn build(self) -> Beam {
+        Beam {
+            v1: self.v1,
+            v2: self.v2,
+            r1: self.r1,
+            r2: self.r2,
+            p1: self.p1,
+            p2: self.p2,
+            pid: self.pid,
+            cap1: self.cap1,
+            cap2: self.cap2,
+        }
+    }
+}
+
+/// Builder for balls in a beam lattice
+pub struct BallBuilder {
+    vindex: usize,
+    r: Option<f64>,
+    p: Option<usize>,
+    pid: Option<usize>,
+}
+
+impl BallBuilder {
+    /// Create a new ball at the specified vertex index
+    pub fn new(vindex: usize) -> Self {
+        Self {
+            vindex,
+            r: None,
+            p: None,
+            pid: None,
+        }
+    }
+
+    /// Set the radius of the ball
+    pub fn radius(mut self, radius: f64) -> Self {
+        self.r = Some(radius);
+        self
+    }
+
+    /// Set the property index for the ball
+    pub fn pindex(mut self, pindex: usize) -> Self {
+        self.p = Some(pindex);
+        self
+    }
+
+    /// Set the property ID for the ball
+    pub fn pid(mut self, pid: usize) -> Self {
+        self.pid = Some(pid);
+        self
+    }
+
+    fn build(self) -> Ball {
+        Ball {
+            vindex: self.vindex,
+            r: self.r,
+            p: self.p,
+            pid: self.pid,
+        }
+    }
+}
+
+/// Builder for beam sets in a beam lattice
+pub struct BeamSetBuilder {
+    name: Option<String>,
+    identifier: Option<String>,
+    beam_refs: Vec<usize>,
+    ball_refs: Vec<usize>,
+}
+
+impl BeamSetBuilder {
+    fn new() -> Self {
+        Self {
+            name: None,
+            identifier: None,
+            beam_refs: Vec::new(),
+            ball_refs: Vec::new(),
+        }
+    }
+
+    /// Set the name of the beam set
+    pub fn name(&mut self, name: &str) -> &mut Self {
+        self.name = Some(name.to_owned());
+        self
+    }
+
+    /// Set the identifier of the beam set
+    pub fn identifier(&mut self, id: &str) -> &mut Self {
+        self.identifier = Some(id.to_owned());
+        self
+    }
+
+    /// Add a reference to a beam by index
+    pub fn add_beam_ref(&mut self, index: usize) -> &mut Self {
+        self.beam_refs.push(index);
+        self
+    }
+
+    /// Add multiple beam references
+    pub fn add_beam_refs(&mut self, indices: &[usize]) -> &mut Self {
+        self.beam_refs.extend_from_slice(indices);
+        self
+    }
+
+    /// Add a reference to a ball by index
+    pub fn add_ball_ref(&mut self, index: usize) -> &mut Self {
+        self.ball_refs.push(index);
+        self
+    }
+
+    /// Add multiple ball references
+    pub fn add_ball_refs(&mut self, indices: &[usize]) -> &mut Self {
+        self.ball_refs.extend_from_slice(indices);
+        self
+    }
+
+    fn build(self) -> BeamSet {
+        BeamSet {
+            name: self.name,
+            identifier: self.identifier,
+            refs: self
+                .beam_refs
+                .into_iter()
+                .map(|index| BeamRef { index })
+                .collect(),
+            ballref: self
+                .ball_refs
+                .into_iter()
+                .map(|index| BallRef { index })
+                .collect(),
+        }
+    }
+}
+
+/// Builder for constructing beam lattice structures
+pub struct BeamLatticeBuilder {
+    minlength: Option<f64>,
+    radius: Option<f64>,
+    ballmode: Option<BallMode>,
+    ballradius: Option<f64>,
+    clippingmode: Option<ClippingMode>,
+    clippingmesh: Option<usize>,
+    representationmesh: Option<usize>,
+    pid: Option<usize>,
+    pindex: Option<usize>,
+    cap: Option<CapMode>,
+    beams: Vec<Beam>,
+    balls: Vec<Ball>,
+    beamsets: Vec<BeamSet>,
+}
+
+impl BeamLatticeBuilder {
+    fn new() -> Self {
+        Self {
+            minlength: None,
+            radius: None,
+            ballmode: None,
+            ballradius: None,
+            clippingmode: None,
+            clippingmesh: None,
+            representationmesh: None,
+            pid: None,
+            pindex: None,
+            cap: None,
+            beams: Vec::new(),
+            balls: Vec::new(),
+            beamsets: Vec::new(),
+        }
+    }
+
+    /// Set the minimum length for beams
+    pub fn minlength(&mut self, minlength: f64) -> &mut Self {
+        self.minlength = Some(minlength);
+        self
+    }
+
+    /// Set the default radius for beams
+    pub fn radius(&mut self, radius: f64) -> &mut Self {
+        self.radius = Some(radius);
+        self
+    }
+
+    /// Set the ball mode
+    pub fn ballmode(&mut self, mode: BallMode) -> &mut Self {
+        self.ballmode = Some(mode);
+        self
+    }
+
+    /// Set the default ball radius
+    pub fn ballradius(&mut self, radius: f64) -> &mut Self {
+        self.ballradius = Some(radius);
+        self
+    }
+
+    /// Set the clipping mode
+    pub fn clippingmode(&mut self, mode: ClippingMode) -> &mut Self {
+        self.clippingmode = Some(mode);
+        self
+    }
+
+    /// Set the clipping mesh reference
+    pub fn clippingmesh(&mut self, object_id: ObjectId) -> &mut Self {
+        self.clippingmesh = Some(object_id.0);
+        self
+    }
+
+    /// Set the representation mesh reference
+    pub fn representationmesh(&mut self, object_id: ObjectId) -> &mut Self {
+        self.representationmesh = Some(object_id.0);
+        self
+    }
+
+    /// Set the property ID
+    pub fn pid(&mut self, pid: usize) -> &mut Self {
+        self.pid = Some(pid);
+        self
+    }
+
+    /// Set the property index
+    pub fn pindex(&mut self, pindex: usize) -> &mut Self {
+        self.pindex = Some(pindex);
+        self
+    }
+
+    /// Set the default cap mode
+    pub fn cap(&mut self, cap: CapMode) -> &mut Self {
+        self.cap = Some(cap);
+        self
+    }
+
+    /// Add a simple beam with vertex indices
+    pub fn add_beam(&mut self, v1: usize, v2: usize) -> &mut Self {
+        let beam = BeamBuilder::new(v1, v2).build();
+        self.beams.push(beam);
+        self
+    }
+
+    /// Add a beam with advanced configuration using a builder closure
+    pub fn add_beam_advanced<F>(&mut self, v1: usize, v2: usize, f: F) -> &mut Self
+    where
+        F: FnOnce(BeamBuilder) -> BeamBuilder,
+    {
+        let builder = BeamBuilder::new(v1, v2);
+        let beam = f(builder).build();
+        self.beams.push(beam);
+        self
+    }
+
+    /// Add multiple beams from vertex pairs
+    pub fn add_beams(&mut self, vertex_pairs: &[(usize, usize)]) -> &mut Self {
+        for &(v1, v2) in vertex_pairs {
+            self.add_beam(v1, v2);
+        }
+        self
+    }
+
+    /// Add a simple ball at a vertex index
+    pub fn add_ball(&mut self, vindex: usize) -> &mut Self {
+        let ball = BallBuilder::new(vindex).build();
+        self.balls.push(ball);
+        self
+    }
+
+    /// Add a ball with advanced configuration using a builder closure
+    pub fn add_ball_advanced<F>(&mut self, vindex: usize, f: F) -> &mut Self
+    where
+        F: FnOnce(BallBuilder) -> BallBuilder,
+    {
+        let builder = BallBuilder::new(vindex);
+        let ball = f(builder).build();
+        self.balls.push(ball);
+        self
+    }
+
+    /// Add multiple balls from vertex indices
+    pub fn add_balls(&mut self, vindices: &[usize]) -> &mut Self {
+        for &vindex in vindices {
+            self.add_ball(vindex);
+        }
+        self
+    }
+
+    /// Add a beam set using a builder closure
+    pub fn add_beamset<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut BeamSetBuilder),
+    {
+        let mut builder = BeamSetBuilder::new();
+        f(&mut builder);
+        self.beamsets.push(builder.build());
+        self
+    }
+
+    fn build(self) -> BeamLattice {
+        let beams = Beams { beam: self.beams };
+
+        let balls = if self.balls.is_empty() {
+            None
+        } else {
+            Some(Balls { ball: self.balls })
+        };
+
+        let beamsets = if self.beamsets.is_empty() {
+            None
+        } else {
+            Some(BeamSets {
+                beamset: self.beamsets,
+            })
+        };
+
+        BeamLattice {
+            minlength: self.minlength.unwrap_or(0.0001),
+            radius: self.radius.unwrap_or(0.0001),
+            ballmode: self.ballmode,
+            ballradius: self.ballradius,
+            clippingmode: self.clippingmode,
+            clippingmesh: self.clippingmesh,
+            representationmesh: self.representationmesh,
+            pid: self.pid,
+            pindex: self.pindex,
+            cap: self.cap,
+            beams,
+            balls,
+            beamsets,
+        }
     }
 }
 
@@ -1512,5 +1931,361 @@ mod smoke_tests {
         assert_eq!(id.0, 42);
         let usize_id: usize = id.into();
         assert_eq!(usize_id, 42);
+    }
+
+    // ========== BeamBuilder Tests ==========
+
+    #[test]
+    fn test_beam_builder_basic() {
+        let beam = BeamBuilder::new(0, 1).build();
+
+        assert_eq!(beam.v1, 0);
+        assert_eq!(beam.v2, 1);
+        assert_eq!(beam.r1, None);
+        assert_eq!(beam.r2, None);
+        assert_eq!(beam.p1, None);
+        assert_eq!(beam.p2, None);
+        assert_eq!(beam.pid, None);
+        assert_eq!(beam.cap1, None);
+        assert_eq!(beam.cap2, None);
+    }
+
+    #[test]
+    fn test_beam_builder_with_all_options() {
+        let beam = BeamBuilder::new(0, 1)
+            .radius_1(1.5)
+            .radius_2(2.0)
+            .pindex_1(10)
+            .pindex_2(20)
+            .pid(5)
+            .cap_1(CapMode::Hemisphere)
+            .cap_2(CapMode::Butt)
+            .build();
+
+        assert_eq!(beam.v1, 0);
+        assert_eq!(beam.v2, 1);
+        assert_eq!(beam.r1, Some(1.5));
+        assert_eq!(beam.r2, Some(2.0));
+        assert_eq!(beam.p1, Some(10));
+        assert_eq!(beam.p2, Some(20));
+        assert_eq!(beam.pid, Some(5));
+        assert_eq!(beam.cap1, Some(CapMode::Hemisphere));
+        assert_eq!(beam.cap2, Some(CapMode::Butt));
+    }
+
+    // ========== BallBuilder Tests ==========
+
+    #[test]
+    fn test_ball_builder_basic() {
+        let ball = BallBuilder::new(5).build();
+
+        assert_eq!(ball.vindex, 5);
+        assert_eq!(ball.r, None);
+        assert_eq!(ball.p, None);
+        assert_eq!(ball.pid, None);
+    }
+
+    #[test]
+    fn test_ball_builder_with_options() {
+        let ball = BallBuilder::new(5)
+            .radius(0.75)
+            .pindex(15)
+            .pid(3)
+            .build();
+
+        assert_eq!(ball.vindex, 5);
+        assert_eq!(ball.r, Some(0.75));
+        assert_eq!(ball.p, Some(15));
+        assert_eq!(ball.pid, Some(3));
+    }
+
+    // ========== BeamSetBuilder Tests ==========
+
+    #[test]
+    fn test_beamset_builder() {
+        let mut builder = BeamSetBuilder::new();
+        builder
+            .name("Test Set")
+            .identifier("test-set-001")
+            .add_beam_refs(&[0, 1, 2, 3])
+            .add_ball_ref(0)
+            .add_ball_ref(1);
+
+        let beamset = builder.build();
+
+        assert_eq!(beamset.name, Some("Test Set".to_owned()));
+        assert_eq!(beamset.identifier, Some("test-set-001".to_owned()));
+        assert_eq!(beamset.refs.len(), 4);
+        assert_eq!(beamset.refs[0].index, 0);
+        assert_eq!(beamset.refs[3].index, 3);
+        assert_eq!(beamset.ballref.len(), 2);
+        assert_eq!(beamset.ballref[0].index, 0);
+        assert_eq!(beamset.ballref[1].index, 1);
+    }
+
+    // ========== BeamLatticeBuilder Tests ==========
+
+    #[test]
+    fn test_beam_lattice_builder_minimal() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder.add_beam(0, 1);
+
+        let beamlattice = builder.build();
+
+        // Should use default values
+        assert_eq!(beamlattice.minlength, 0.0001);
+        assert_eq!(beamlattice.radius, 0.0001);
+        assert_eq!(beamlattice.beams.beam.len(), 1);
+        assert_eq!(beamlattice.beams.beam[0].v1, 0);
+        assert_eq!(beamlattice.beams.beam[0].v2, 1);
+        assert_eq!(beamlattice.balls, None);
+        assert_eq!(beamlattice.beamsets, None);
+    }
+
+    #[test]
+    fn test_beam_lattice_default_values() {
+        let mut builder = BeamLatticeBuilder::new();
+        // Don't set minlength or radius
+        builder.add_beam(0, 1);
+
+        let beamlattice = builder.build();
+
+        assert_eq!(beamlattice.minlength, 0.0001);
+        assert_eq!(beamlattice.radius, 0.0001);
+    }
+
+    #[test]
+    fn test_beam_lattice_builder_with_custom_values() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .minlength(0.001)
+            .radius(1.0)
+            .add_beam(0, 1)
+            .add_beam(1, 2);
+
+        let beamlattice = builder.build();
+
+        assert_eq!(beamlattice.minlength, 0.001);
+        assert_eq!(beamlattice.radius, 1.0);
+        assert_eq!(beamlattice.beams.beam.len(), 2);
+    }
+
+    #[test]
+    fn test_beam_lattice_builder_with_balls() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .minlength(0.001)
+            .radius(1.0)
+            .ballmode(BallMode::Mixed)
+            .ballradius(0.5)
+            .add_beam(0, 1)
+            .add_ball(0)
+            .add_ball_advanced(1, |b| b.radius(0.75));
+
+        let beamlattice = builder.build();
+
+        assert_eq!(beamlattice.ballmode, Some(BallMode::Mixed));
+        assert_eq!(beamlattice.ballradius, Some(0.5));
+        assert!(beamlattice.balls.is_some());
+
+        let balls = beamlattice.balls.as_ref().unwrap();
+        assert_eq!(balls.ball.len(), 2);
+        assert_eq!(balls.ball[0].vindex, 0);
+        assert_eq!(balls.ball[0].r, None); // Uses default
+        assert_eq!(balls.ball[1].vindex, 1);
+        assert_eq!(balls.ball[1].r, Some(0.75)); // Custom radius
+    }
+
+    #[test]
+    fn test_beam_lattice_builder_with_all_features() {
+        let clip_mesh_id = ObjectId(10);
+        let repr_mesh_id = ObjectId(20);
+
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .minlength(0.002)
+            .radius(2.0)
+            .ballmode(BallMode::All)
+            .ballradius(1.0)
+            .clippingmode(ClippingMode::Inside)
+            .clippingmesh(clip_mesh_id)
+            .representationmesh(repr_mesh_id)
+            .pid(5)
+            .pindex(10)
+            .cap(CapMode::Sphere)
+            .add_beam(0, 1);
+
+        let beamlattice = builder.build();
+
+        assert_eq!(beamlattice.minlength, 0.002);
+        assert_eq!(beamlattice.radius, 2.0);
+        assert_eq!(beamlattice.ballmode, Some(BallMode::All));
+        assert_eq!(beamlattice.ballradius, Some(1.0));
+        assert_eq!(beamlattice.clippingmode, Some(ClippingMode::Inside));
+        assert_eq!(beamlattice.clippingmesh, Some(10));
+        assert_eq!(beamlattice.representationmesh, Some(20));
+        assert_eq!(beamlattice.pid, Some(5));
+        assert_eq!(beamlattice.pindex, Some(10));
+        assert_eq!(beamlattice.cap, Some(CapMode::Sphere));
+    }
+
+    #[test]
+    fn test_beam_lattice_add_beams_bulk() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .radius(1.0)
+            .add_beams(&[(0, 1), (1, 2), (2, 3), (3, 0)]);
+
+        let beamlattice = builder.build();
+
+        assert_eq!(beamlattice.beams.beam.len(), 4);
+        assert_eq!(beamlattice.beams.beam[0].v1, 0);
+        assert_eq!(beamlattice.beams.beam[0].v2, 1);
+        assert_eq!(beamlattice.beams.beam[3].v1, 3);
+        assert_eq!(beamlattice.beams.beam[3].v2, 0);
+    }
+
+    #[test]
+    fn test_beam_lattice_add_balls_bulk() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .radius(1.0)
+            .ballmode(BallMode::Mixed)
+            .ballradius(0.5)
+            .add_beam(0, 1)
+            .add_balls(&[0, 1, 2, 3]);
+
+        let beamlattice = builder.build();
+
+        assert!(beamlattice.balls.is_some());
+        let balls = beamlattice.balls.as_ref().unwrap();
+        assert_eq!(balls.ball.len(), 4);
+        assert_eq!(balls.ball[0].vindex, 0);
+        assert_eq!(balls.ball[3].vindex, 3);
+    }
+
+    #[test]
+    fn test_beam_lattice_with_multiple_beamsets() {
+        let mut builder = BeamLatticeBuilder::new();
+        builder
+            .radius(1.0)
+            .add_beams(&[(0, 1), (1, 2), (2, 3), (3, 0)])
+            .add_beamset(|bs| {
+                bs.name("Bottom")
+                    .identifier("bottom-001")
+                    .add_beam_refs(&[0, 1]);
+            })
+            .add_beamset(|bs| {
+                bs.name("Top")
+                    .identifier("top-001")
+                    .add_beam_refs(&[2, 3]);
+            });
+
+        let beamlattice = builder.build();
+
+        assert!(beamlattice.beamsets.is_some());
+        let beamsets = beamlattice.beamsets.as_ref().unwrap();
+        assert_eq!(beamsets.beamset.len(), 2);
+        assert_eq!(beamsets.beamset[0].name, Some("Bottom".to_owned()));
+        assert_eq!(beamsets.beamset[0].refs.len(), 2);
+        assert_eq!(beamsets.beamset[1].name, Some("Top".to_owned()));
+        assert_eq!(beamsets.beamset[1].refs.len(), 2);
+    }
+
+    // ========== Integration Tests ==========
+
+    #[test]
+    fn test_mesh_with_beam_lattice() {
+        let mut mesh_builder = MeshBuilder::new();
+        mesh_builder
+            .add_vertices(&[[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0]])
+            .add_beam_lattice(|bl| {
+                bl.minlength(0.001).radius(1.0).add_beam(0, 1).add_beam(1, 2);
+            });
+
+        let mesh = mesh_builder.build_mesh().unwrap();
+
+        assert_eq!(mesh.vertices.vertex.len(), 3);
+        assert!(mesh.beamlattice.is_some());
+
+        let bl = mesh.beamlattice.as_ref().unwrap();
+        assert_eq!(bl.minlength, 0.001);
+        assert_eq!(bl.radius, 1.0);
+        assert_eq!(bl.beams.beam.len(), 2);
+    }
+
+    #[test]
+    fn test_model_with_beam_lattice() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.name("Lattice");
+                obj.add_vertices(&[
+                    [0.0, 0.0, 0.0],
+                    [10.0, 0.0, 0.0],
+                    [10.0, 10.0, 0.0],
+                    [0.0, 10.0, 0.0],
+                ])
+                .add_beam_lattice(|bl| {
+                    bl.minlength(0.001)
+                        .radius(1.0)
+                        .cap(CapMode::Sphere)
+                        .add_beams(&[(0, 1), (1, 2), (2, 3), (3, 0)]);
+                });
+                Ok(())
+            })
+            .unwrap();
+
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj_id).unwrap();
+
+        let model = builder.build().unwrap();
+
+        assert_eq!(model.resources.object.len(), 1);
+        let obj = &model.resources.object[0];
+        assert!(obj.mesh.is_some());
+
+        let mesh = obj.mesh.as_ref().unwrap();
+        assert!(mesh.beamlattice.is_some());
+
+        let bl = mesh.beamlattice.as_ref().unwrap();
+        assert_eq!(bl.minlength, 0.001);
+        assert_eq!(bl.radius, 1.0);
+        assert_eq!(bl.cap, Some(CapMode::Sphere));
+        assert_eq!(bl.beams.beam.len(), 4);
+    }
+
+    #[test]
+    fn test_model_with_beam_lattice_and_balls() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.name("Lattice with Balls");
+                obj.add_vertices(&[[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0]])
+                    .add_beam_lattice(|bl| {
+                        bl.minlength(0.001)
+                            .radius(1.0)
+                            .ballmode(BallMode::Mixed)
+                            .ballradius(0.5)
+                            .add_beams(&[(0, 1), (1, 2)])
+                            .add_balls(&[0, 2]);
+                    });
+                Ok(())
+            })
+            .unwrap();
+
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj_id).unwrap();
+
+        let model = builder.build().unwrap();
+        let mesh = model.resources.object[0].mesh.as_ref().unwrap();
+        let bl = mesh.beamlattice.as_ref().unwrap();
+
+        assert_eq!(bl.ballmode, Some(BallMode::Mixed));
+        assert_eq!(bl.ballradius, Some(0.5));
+        assert!(bl.balls.is_some());
+        assert_eq!(bl.balls.as_ref().unwrap().ball.len(), 2);
     }
 }
