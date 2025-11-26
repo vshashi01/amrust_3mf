@@ -9,4 +9,3 @@ pub mod transform;
 pub mod triangle_set;
 
 pub mod beamlattice;
-

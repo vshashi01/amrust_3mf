@@ -259,7 +259,7 @@ impl ModelBuilder {
 
     /// Add a build item referencing an object by ID
     pub fn add_build_item(&mut self, object_id: ObjectId) -> Result<&mut Self, ModelError> {
-        self.add_build_item_advanced(object_id, |f| {})
+        self.add_build_item_advanced(object_id, |_f| {})
     }
 
     /// Add a build item referencing an object by ID
@@ -395,6 +395,50 @@ fn get_extensions_definition(extensions: &[XmlNamespace]) -> Option<String> {
         }
 
         Some(extension_string)
+    }
+}
+
+/// Builder for TriangleSets
+pub struct TriangleSetsBuilder {
+    sets: Vec<crate::core::triangle_set::TriangleSet>,
+}
+
+impl TriangleSetsBuilder {
+    fn new() -> Self {
+        Self { sets: Vec::new() }
+    }
+
+    pub fn add_set(
+        &mut self,
+        name: &str,
+        identifier: &str,
+        refs: &[usize],
+        ranges: &[(usize, usize)],
+    ) -> &mut Self {
+        use crate::core::triangle_set::{TriangleRef, TriangleRefRange, TriangleSet};
+
+        let triangle_ref = refs.iter().map(|&index| TriangleRef { index }).collect();
+        let triangle_refrange = ranges
+            .iter()
+            .map(|&(start, end)| TriangleRefRange {
+                startindex: start,
+                endindex: end,
+            })
+            .collect();
+
+        self.sets.push(TriangleSet {
+            name: name.to_owned(),
+            identifier: identifier.to_owned(),
+            triangle_ref,
+            triangle_refrange,
+        });
+        self
+    }
+
+    fn build(self) -> crate::core::triangle_set::TriangleSets {
+        crate::core::triangle_set::TriangleSets {
+            trianglesets: self.sets,
+        }
     }
 }
 
@@ -666,6 +710,7 @@ impl MeshObjectBuilder {
 pub struct MeshBuilder {
     vertices: Vec<Vertex>,
     triangles: Vec<Triangle>,
+    triangle_sets: Option<TriangleSetsBuilder>,
 }
 
 impl MeshBuilder {
@@ -673,6 +718,7 @@ impl MeshBuilder {
         Self {
             vertices: Vec::new(),
             triangles: Vec::new(),
+            triangle_sets: None,
         }
     }
 
@@ -749,7 +795,24 @@ impl MeshBuilder {
         self
     }
 
+    /// Configure triangle sets for the mesh
+    pub fn add_triangle_sets<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut TriangleSetsBuilder),
+    {
+        if let Some(ref mut builder) = self.triangle_sets {
+            f(builder);
+        } else {
+            let mut builder = TriangleSetsBuilder::new();
+            f(&mut builder);
+            self.triangle_sets = Some(builder);
+        }
+
+        self
+    }
+
     fn build_mesh(self) -> Result<Mesh, MeshObjectError> {
+        let trianglesets = self.triangle_sets.map(|b| b.build());
         Ok(Mesh {
             vertices: Vertices {
                 vertex: self.vertices,
@@ -757,7 +820,7 @@ impl MeshBuilder {
             triangles: Triangles {
                 triangle: self.triangles,
             },
-            trianglesets: None,
+            trianglesets,
             beamlattice: None,
         })
     }
@@ -931,7 +994,7 @@ impl ComponentBuilder {
 
 #[cfg(test)]
 mod smoke_tests {
-    use crate::core::object::ObjectType;
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
@@ -1036,7 +1099,7 @@ mod smoke_tests {
     fn test_error_cases_for_build_in_model() {
         // Test BuildItemNotSet: root model without build
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
-        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        builder.add_mesh_object(|_obj| Ok(())).unwrap();
         assert!(matches!(builder.build(), Err(ModelError::BuildItemNotSet)));
 
         // Test BuildOnlyAllowedInRootModel: non-root model with build
@@ -1117,7 +1180,7 @@ mod smoke_tests {
     fn test_production_ext_required_for_build_item_path() {
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
         builder.add_build(None).unwrap();
-        let obj_id = builder.add_mesh_object(|obj| Ok(())).unwrap();
+        let obj_id = builder.add_mesh_object(|_obj| Ok(())).unwrap();
         let result = builder.add_build_item_advanced(obj_id, |i| {
             i.path("some-path");
         });
@@ -1183,7 +1246,7 @@ mod smoke_tests {
     #[test]
     fn test_build_item_advanced_tests() {
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
-        builder.make_production_extension_required();
+        let _ = builder.make_production_extension_required();
         let obj_id = builder
             .add_mesh_object(|obj| {
                 obj.name("test").uuid("obj-uuid");
@@ -1294,7 +1357,7 @@ mod smoke_tests {
                 Ok(())
             })
             .unwrap();
-        let obj2_id = builder
+        let _obj2_id = builder
             .add_components_object(|obj| {
                 obj.add_component(obj1_id);
                 Ok(())
@@ -1378,13 +1441,13 @@ mod smoke_tests {
 
         // Root requires build
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
-        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        builder.add_mesh_object(|_obj| Ok(())).unwrap();
         assert!(matches!(builder.build(), Err(ModelError::BuildItemNotSet)));
 
         // make_root(false) allows no build
         let mut builder = ModelBuilder::new(Unit::Millimeter, true);
         builder.make_root(false);
-        builder.add_mesh_object(|obj| Ok(())).unwrap();
+        builder.add_mesh_object(|_obj| Ok(())).unwrap();
         let model = builder.build().unwrap();
         assert!(model.build.item.is_empty());
     }
@@ -1404,6 +1467,43 @@ mod smoke_tests {
         assert_eq!(model.metadata[1].value, None);
         assert_eq!(model.metadata[2].name, "key3");
         assert_eq!(model.metadata[2].value, Some("value3".to_string()));
+    }
+
+    #[test]
+    fn test_triangle_sets_builder() {
+        let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+        let obj_id = builder
+            .add_mesh_object(|obj| {
+                obj.add_vertices(&[[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
+                obj.add_triangles(&[[0, 1, 2]]);
+                obj.add_triangle_sets(|ts| {
+                    ts.add_set("Set1", "id1", &[0], &[(1, 5)]);
+                    ts.add_set("Set2", "id2", &[], &[(10, 20), (30, 40)]);
+                });
+                Ok(())
+            })
+            .unwrap();
+        builder.add_build(None).unwrap();
+        builder.add_build_item(obj_id).unwrap();
+        let model = builder.build().unwrap();
+        let mesh = model.resources.object[0].mesh.as_ref().unwrap();
+        assert!(mesh.trianglesets.is_some());
+        let sets = &mesh.trianglesets.as_ref().unwrap().trianglesets;
+        assert_eq!(sets.len(), 2);
+        assert_eq!(sets[0].name, "Set1");
+        assert_eq!(sets[0].identifier, "id1");
+        assert_eq!(sets[0].triangle_ref.len(), 1);
+        assert_eq!(sets[0].triangle_ref[0].index, 0);
+        assert_eq!(sets[0].triangle_refrange.len(), 1);
+        assert_eq!(sets[0].triangle_refrange[0].startindex, 1);
+        assert_eq!(sets[0].triangle_refrange[0].endindex, 5);
+        assert_eq!(sets[1].name, "Set2");
+        assert_eq!(sets[1].identifier, "id2");
+        assert_eq!(sets[1].triangle_ref.len(), 0);
+        assert_eq!(sets[1].triangle_refrange.len(), 2);
+
+        //check if Triangle set is in recommended extensions
+        assert_eq!(model.recommendedextensions, Some("t ".to_owned()))
     }
 
     #[test]
