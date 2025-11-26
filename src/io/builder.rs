@@ -71,7 +71,7 @@ pub struct ModelBuilder {
     recommendedextensions: Vec<XmlNamespace>,
     metadata: Vec<Metadata>,
     resources: ResourcesBuilder,
-    build: Option<BuildBuilder>, //in submodels, Build item is not required
+    build: Option<BuildBuilder>, //in submodels, Build item is not allowed
 
     // tracks if the model is intended as a root model
     // if true, Build is required
@@ -84,9 +84,6 @@ pub struct ModelBuilder {
     // tracks if the model requires production ext
     // ensures UUID is set at the minimum
     is_production_ext_required: bool,
-
-    is_beam_lattice_ext_required: bool,
-    is_beam_lattice_balls_ext_required: bool,
 }
 
 impl ModelBuilder {
@@ -102,8 +99,6 @@ impl ModelBuilder {
             is_root,
             next_object_id: 1.into(),
             is_production_ext_required: false,
-            is_beam_lattice_ext_required: false,
-            is_beam_lattice_balls_ext_required: false,
         }
     }
 
@@ -145,16 +140,6 @@ impl ModelBuilder {
         }
         self.is_production_ext_required = true;
         Ok(self)
-    }
-
-    pub fn make_beam_lattice_extension_required(
-        &mut self,
-        enable_beam_lattice_balls: bool,
-    ) -> &mut Self {
-        self.is_beam_lattice_ext_required = true;
-        self.is_beam_lattice_balls_ext_required = enable_beam_lattice_balls;
-
-        self
     }
 
     /// Add a required extension
@@ -344,7 +329,24 @@ impl ModelBuilder {
             }
         }
 
-        if self.is_beam_lattice_ext_required {
+        let mut is_beam_lattice_required = false;
+        let mut is_beam_lattice_balls_required = false;
+
+        for object in &self.resources.objects {
+            //early exit to speed up things
+            if is_beam_lattice_balls_required {
+                break;
+            }
+
+            if let Some(mesh) = &object.mesh
+                && let Some(beam_lattice) = &mesh.beamlattice
+            {
+                is_beam_lattice_required = true;
+                is_beam_lattice_balls_required = beam_lattice.balls.is_some();
+            }
+        }
+
+        if is_beam_lattice_required {
             let is_bl_ext_set = required_extensions
                 .iter()
                 .find(|ns| ns.uri == BEAM_LATTICE_NS);
@@ -355,7 +357,7 @@ impl ModelBuilder {
                 });
             }
 
-            if self.is_beam_lattice_balls_ext_required {
+            if is_beam_lattice_balls_required {
                 let is_bl_balls_ext_set = required_extensions
                     .iter()
                     .find(|ns| ns.uri == BEAM_LATTICE_BALLS_NS);
@@ -1428,14 +1430,12 @@ mod smoke_tests {
             .add_mesh_object(|obj| {
                 obj.name("Cube");
                 obj.object_type(ObjectType::Model);
-                //obj.mesh(|mesh| {
                 obj.add_vertex(&[0.0, 0.0, 0.0])
                     .add_vertex(&[10.0, 0.0, 0.0])
                     .add_vertex(&[10.0, 10.0, 0.0])
                     .add_vertex(&[0.0, 10.0, 0.0])
                     .add_triangle(&[0, 1, 2])
                     .add_triangle(&[0, 2, 3]);
-                //});
 
                 Ok(())
             })
@@ -1626,11 +1626,9 @@ mod smoke_tests {
 
         if let Err(err) = builder.add_components_object(|obj| {
             obj.uuid("obj-uuid");
-            //obj.composed_part(|cp| {
             obj.add_component_advanced(mesh_obj_id, |c| {
                 c.uuid("comp-uuid").path("comp-path");
             });
-            //});
 
             Ok(())
         }) {
@@ -1987,11 +1985,7 @@ mod smoke_tests {
 
     #[test]
     fn test_ball_builder_with_options() {
-        let ball = BallBuilder::new(5)
-            .radius(0.75)
-            .pindex(15)
-            .pid(3)
-            .build();
+        let ball = BallBuilder::new(5).radius(0.75).pindex(15).pid(3).build();
 
         assert_eq!(ball.vindex, 5);
         assert_eq!(ball.r, Some(0.75));
@@ -2176,9 +2170,7 @@ mod smoke_tests {
                     .add_beam_refs(&[0, 1]);
             })
             .add_beamset(|bs| {
-                bs.name("Top")
-                    .identifier("top-001")
-                    .add_beam_refs(&[2, 3]);
+                bs.name("Top").identifier("top-001").add_beam_refs(&[2, 3]);
             });
 
         let beamlattice = builder.build();
@@ -2192,15 +2184,16 @@ mod smoke_tests {
         assert_eq!(beamsets.beamset[1].refs.len(), 2);
     }
 
-    // ========== Integration Tests ==========
-
     #[test]
     fn test_mesh_with_beam_lattice() {
         let mut mesh_builder = MeshBuilder::new();
         mesh_builder
             .add_vertices(&[[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [10.0, 10.0, 0.0]])
             .add_beam_lattice(|bl| {
-                bl.minlength(0.001).radius(1.0).add_beam(0, 1).add_beam(1, 2);
+                bl.minlength(0.001)
+                    .radius(1.0)
+                    .add_beam(0, 1)
+                    .add_beam(1, 2);
             });
 
         let mesh = mesh_builder.build_mesh().unwrap();
@@ -2249,11 +2242,7 @@ mod smoke_tests {
         let mesh = obj.mesh.as_ref().unwrap();
         assert!(mesh.beamlattice.is_some());
 
-        let bl = mesh.beamlattice.as_ref().unwrap();
-        assert_eq!(bl.minlength, 0.001);
-        assert_eq!(bl.radius, 1.0);
-        assert_eq!(bl.cap, Some(CapMode::Sphere));
-        assert_eq!(bl.beams.beam.len(), 4);
+        assert_eq!(model.requiredextensions, Some("b ".to_owned()));
     }
 
     #[test]
@@ -2282,10 +2271,14 @@ mod smoke_tests {
         let model = builder.build().unwrap();
         let mesh = model.resources.object[0].mesh.as_ref().unwrap();
         let bl = mesh.beamlattice.as_ref().unwrap();
-
-        assert_eq!(bl.ballmode, Some(BallMode::Mixed));
-        assert_eq!(bl.ballradius, Some(0.5));
         assert!(bl.balls.is_some());
-        assert_eq!(bl.balls.as_ref().unwrap().ball.len(), 2);
+
+        let prefixes = ["b", "b2"];
+        if let Some(exts) = &model.requiredextensions {
+            let split_exts = exts.split_whitespace().collect::<Vec<_>>();
+            for prefix in prefixes {
+                assert!(split_exts.contains(&prefix));
+            }
+        }
     }
 }

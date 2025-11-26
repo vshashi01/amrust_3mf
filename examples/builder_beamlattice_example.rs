@@ -10,10 +10,6 @@ fn main() {
     // Create a model with beam lattice extension enabled
     let mut builder = ModelBuilder::new(Unit::Millimeter, true);
 
-    // IMPORTANT: Manually enable beam lattice extension
-    // User must call this before adding beam lattices
-    builder.make_beam_lattice_extension_required(true); // Enable balls support
-
     // Set model properties
     builder
         .unit(Unit::Millimeter)
