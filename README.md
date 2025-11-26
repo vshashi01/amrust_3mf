@@ -30,48 +30,6 @@ amrust_3mf provides:
 - **Extension Support**: All 3MF extensions (Production, Beam Lattice, etc.) are always available
 - **Custom Parts**: Support for known parts (thumbnails) and unknown parts (custom XML data)
 
-## Quick Start
-
-### Reading 3MF Files
-
-```rust
-use amrust_3mf::io::ThreemfPackage;
-use std::fs::File;
-
-// Read a 3MF file
-let file = File::open("model.3mf")?;
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
-
-// Access the root model
-let root_model = &package.root;
-println!("Build items: {}", root_model.build.item.len());
-```
-
-### Creating 3MF Models with Builders
-
-```rust
-use amrust_3mf::io::ModelBuilder;
-use amrust_3mf::core::model::Unit;
-use amrust_3mf::core::object::ObjectType;
-
-// Create a model using the fluent builder API
-let mut builder = ModelBuilder::new();
-builder.unit(Unit::Millimeter);
-
-let cube_id = builder.add_object(|obj| {
-    obj.name("Cube")
-        .object_type(ObjectType::Model)
-        .mesh(|mesh| {
-            mesh.add_vertex([0.0, 0.0, 0.0])
-                .add_vertex([10.0, 0.0, 0.0])
-                .add_triangle([0, 1, 2]);
-        });
-});
-
-builder.add_build_item(cube_id);
-let model = builder.build();
-```
-
 ## Performance Options
 
 Choose the right loading strategy for your use case:
@@ -85,7 +43,6 @@ Key types and files:
 - Core model types in [src/core/](src/core/) — `model`, `object`, `resources`, `mesh`, `transform`, etc.
 - [`io::ThreemfPackage`](src/io/threemf_package.rs) — eager loading entry point
 - [`io::ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) — lazy loading entry point
-- [`io::content_types::ContentTypes`](src/io/content_types.rs) and [`io::relationship::RelationshipType`](src/io/relationship.rs) — for OPC package content and relationship handling
 
 ## Cargo Features
 
