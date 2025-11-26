@@ -4,9 +4,7 @@ Library for reading and writing 3MF (3D Manufacturing Format) packages with both
 
 This crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
 
-![CI](https://github.com/vshashi01/amrust_3mf/actions/workflows/rust.yml/badge.svg)
-
-[![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/amrust_3mf)
+[![CI](https://github.com/vshashi01/amrust_3mf/actions/workflows/CI.yml/badge.svg)](https://github.com/vshashi01/amrust_3mf/actions/workflows/CI.yml) [![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/amrust_3mf)
 
 ## Supported 3MF Extensions and Maximum Supported Versions
 
@@ -27,29 +25,16 @@ amrust_3mf provides:
   - [`ThreemfPackage`](src/io/threemf_package.rs) - Eager loading for complete data access
   - [`ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) - Lazy loading for memory-constrained environments
 - **Flexible I/O**: Support for reading/writing 3MF packages with different performance characteristics
+  - Easy reading of data through query APIs.
+  - Easy creation of 3MF Model through builder APIs. See [`builder_example.rs`](examples/builder_example.rs) for the most basic starter guide. 
 - **Extension Support**: All 3MF extensions (Production, Beam Lattice, etc.) are always available
 - **Custom Parts**: Support for known parts (thumbnails) and unknown parts (custom XML data)
-
-## Quick Start
-
-```rust
-use amrust_3mf::io::ThreemfPackage;
-use std::fs::File;
-
-// Read a 3MF file
-let file = File::open("model.3mf")?;
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
-
-// Access the root model
-let root_model = &package.root;
-println!("Build items: {}", root_model.build.item.len());
-```
 
 ## Performance Options
 
 Choose the right loading strategy for your use case:
 
-- **Memory-Optimized**: Lower memory usage, good for large files
+- **Memory-Optimized**: Lower memory usage, good for large files. This is the default. 
 - **Speed-Optimized**: Faster parsing, higher memory usage
 - **Lazy Loading**: Defers loading until accessed, best for inspection-only use cases
 
@@ -58,7 +43,6 @@ Key types and files:
 - Core model types in [src/core/](src/core/) — `model`, `object`, `resources`, `mesh`, `transform`, etc.
 - [`io::ThreemfPackage`](src/io/threemf_package.rs) — eager loading entry point
 - [`io::ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) — lazy loading entry point
-- [`io::content_types::ContentTypes`](src/io/content_types.rs) and [`io::relationship::RelationshipType`](src/io/relationship.rs) — for OPC package content and relationship handling
 
 ## Cargo Features
 
@@ -98,11 +82,12 @@ amrust_3mf = { version = "0.1", features = ["io-speed-optimized-read"] }
 The [examples/](examples/) directory contains runnable examples for different use cases:
 
 - **`write.rs`** - Create and write 3MF packages
+- **`builder_example.rs`** - Using ModelBuilder for ergonomic model construction
 - **`unpack.rs`** - Lazy loading with `ThreemfPackageLazyReader`
-- **`memory-optimized-read.rs`** - Memory-efficient reading
-- **`speed-optimized-read.rs`** - High-performance reading
+- **`io_memory_optimized_read.rs`** - Memory-efficient reading
+- **`io_speed_optimized_read.rs`** - High-performance reading
 - **`string_extraction.rs`** - Access raw XML content
-- **`beamlattice-write.rs`** - Working with beam lattice extensions
+- **`beamlattice_write.rs`** - Working with beam lattice extensions
 
 Run examples with:
 ```bash
@@ -122,37 +107,10 @@ cargo run --example unpack --features io-lazy-read
 - `ThreemfPackage` - Eager loading - loads all data upfront
 - `ThreemfPackageLazyReader` - Lazy loading - loads metadata first, data on-demand
 
-### Usage Patterns
+## Reading and Writing easily through `io` crate 
+- `query` module enables easy retrieval of data from the 3MF Package or 3MF model. 
+- `builder` enables easy creation of 3MF Model. 
 
-#### Eager Loading (Complete Data Access)
-```rust
-use amrust_3mf::io::ThreemfPackage;
-use std::fs::File;
-
-let file = File::open("model.3mf")?;
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
-
-// Access all data immediately
-for object in &package.root.resources.object {
-    println!("Object: {}", object.name.as_deref().unwrap_or("Unnamed"));
-}
-```
-
-#### Lazy Loading (Memory Efficient)
-```rust
-use amrust_3mf::io::{ThreemfPackageLazyReader, CachePolicy};
-
-let file = File::open("model.3mf")?;
-let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-    file,
-    CachePolicy::NoCache
-)?;
-
-// Load models on-demand
-package.with_model("3D/model.model", |model| {
-    println!("Objects in model: {}", model.resources.object.len());
-})?;
-```
 
 ## Building & Testing
 

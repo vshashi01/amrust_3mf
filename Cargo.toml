@@ -78,5 +78,10 @@ name = "string_extraction"
 path = "examples/string_extraction.rs"
 required-features = ["io-lazy-read"]
 
+[[example]]
+name = "builder_example"
+path = "examples/builder_example.rs"
+required-features = ["io-write"]
+
 [package.metadata.cargo-all-features]
 max_combination_size = 3
