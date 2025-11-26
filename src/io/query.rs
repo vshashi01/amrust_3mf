@@ -4,6 +4,7 @@ use std::ops::Deref;
 
 use crate::{
     core::{
+        build::Item,
         component::Components,
         mesh::Mesh,
         model::Model,
@@ -198,6 +199,41 @@ pub struct ComponentRef {
     pub uuid: Option<String>,
 }
 
+/// A reference to a build item within a 3MF model, including its path if from a sub-model.
+pub struct ItemRef<'a> {
+    /// The item itself.
+    pub item: &'a Item,
+    /// The path to the model containing this item, if None then it is the root model.
+    pub origin_model_path: Option<&'a str>,
+}
+
+impl<'a> ItemRef<'a> {
+    /// Returns the objectid that this item references.
+    pub fn objectid(&self) -> usize {
+        self.item.objectid
+    }
+
+    /// Returns the transform applied to this item.
+    pub fn transform(&self) -> Option<&Transform> {
+        self.item.transform.as_ref()
+    }
+
+    /// Returns the part number of this item.
+    pub fn partnumber(&self) -> Option<&str> {
+        self.item.partnumber.as_deref()
+    }
+
+    /// Returns the path attribute (production extension) for cross-model references.
+    pub fn path(&self) -> Option<&str> {
+        self.item.path.as_deref()
+    }
+
+    /// Returns the UUID of this item (production extension).
+    pub fn uuid(&self) -> Option<&str> {
+        self.item.uuid.as_deref()
+    }
+}
+
 /// Returns an iterator over composed part objects in the package.
 pub fn get_composedpart_objects<'a>(
     package: &'a ThreemfPackage,
@@ -228,6 +264,45 @@ pub fn get_composedpart_objects_from_model_ref<'a>(
             object: o,
             path: model_ref.path,
         })
+}
+
+/// Returns an iterator over all build items in the package, including sub-models.
+pub fn get_items<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ItemRef<'a>> {
+    iter_models(package).flat_map(get_items_from_model_ref)
+}
+
+/// Returns an iterator over all build items in the model.
+pub fn get_items_from_model<'a>(model: &'a Model) -> impl Iterator<Item = ItemRef<'a>> {
+    get_items_from_model_ref(ModelRef { model, path: None })
+}
+
+/// Returns an iterator over all build items in the model reference.
+pub fn get_items_from_model_ref<'a>(model_ref: ModelRef<'a>) -> impl Iterator<Item = ItemRef<'a>> {
+    model_ref.model.build.item.iter().map(move |item| ItemRef {
+        item,
+        origin_model_path: model_ref.path,
+    })
+}
+
+/// Returns an iterator over build items that reference a specific object ID.
+/// Note: Multiple items can reference the same object ID.
+pub fn get_items_by_objectid<'a>(
+    package: &'a ThreemfPackage,
+    objectid: usize,
+) -> impl Iterator<Item = ItemRef<'a>> {
+    get_items(package).filter(move |item_ref| item_ref.item.objectid == objectid)
+}
+
+/// Finds a build item by its UUID (production extension).
+/// Returns None if not found. UUIDs should be unique across the package.
+pub fn get_item_by_uuid<'a>(package: &'a ThreemfPackage, uuid: &str) -> Option<ItemRef<'a>> {
+    get_items(package).find(|item_ref| {
+        if let Some(item_uuid) = &item_ref.item.uuid {
+            item_uuid == uuid
+        } else {
+            false
+        }
+    })
 }
 
 /// A reference to a model within a package, including its path.
@@ -386,6 +461,63 @@ mod smoke_tests {
             assert!(comp.objectid > 0);
             // Optionally check if path is set for sub-model references
         }
+    }
+
+    #[test]
+    fn test_get_items_from_package() {
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
+        let file = std::fs::File::open(path).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+
+        let items = get_items(&package).collect::<Vec<_>>();
+        // Root model has 1 item, check if sub-models have items too
+        assert!(!items.is_empty());
+    }
+
+    #[test]
+    fn test_get_items_by_objectid() {
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
+        let file = std::fs::File::open(path).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+
+        // Get the first item's objectid
+        let items = get_items(&package).collect::<Vec<_>>();
+        assert!(!items.is_empty());
+        let first_objectid = items[0].objectid();
+
+        // Search for items with that objectid
+        let items_with_id = get_items_by_objectid(&package, first_objectid).collect::<Vec<_>>();
+        assert!(!items_with_id.is_empty());
+        for item in items_with_id {
+            assert_eq!(item.objectid(), first_objectid);
+        }
+    }
+
+    #[test]
+    fn test_item_ref_origin_model_path() {
+        let path =
+            PathBuf::from("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf")
+                .canonicalize()
+                .unwrap();
+        let file = std::fs::File::open(path).unwrap();
+        let package =
+            ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+
+        let items = get_items(&package).collect::<Vec<_>>();
+        // At least one item should have origin_model_path = None (from root)
+        let root_items = items
+            .iter()
+            .filter(|i| i.origin_model_path.is_none())
+            .count();
+        assert!(root_items > 0);
     }
 }
 
@@ -591,5 +723,57 @@ mod tests {
         };
         assert_eq!(model_ref.path, Some("sub/model.model"));
         assert_eq!(model_ref.model as *const _, &model as *const _);
+    }
+
+    #[test]
+    fn test_get_items_from_model() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let items = get_items_from_model(&model).collect::<Vec<_>>();
+        assert_eq!(items.len(), 4);
+        assert_eq!(items[0].objectid(), 1);
+        assert!(items[0].origin_model_path.is_none());
+    }
+
+    #[test]
+    fn test_get_items_from_model_ref() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+        let model_ref = ModelRef {
+            model: &model,
+            path: Some("sub/model.model"),
+        };
+
+        let items = get_items_from_model_ref(model_ref).collect::<Vec<_>>();
+        assert_eq!(items.len(), 4);
+        assert_eq!(items[0].origin_model_path, Some("sub/model.model"));
+    }
+
+    #[test]
+    fn test_item_ref_methods() {
+        let path = PathBuf::from("tests/data/lfs/mesh-composedpart-beamlattice.model")
+            .canonicalize()
+            .unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        let model = from_str::<Model>(&text).unwrap();
+
+        let items = get_items_from_model(&model).collect::<Vec<_>>();
+        assert_eq!(items.len(), 4);
+        let item_ref = &items[0];
+        assert_eq!(item_ref.objectid(), 1);
+        assert!(item_ref.transform().is_some());
+        assert_eq!(item_ref.partnumber(), Some("Pyramid"));
+        assert!(item_ref.path().is_none());
+        assert_eq!(
+            item_ref.uuid(),
+            Some("4e44739e-3ba0-4639-b8ad-1eb80b1cb5a5")
+        );
     }
 }
