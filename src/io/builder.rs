@@ -1,3 +1,86 @@
+//! Builder API for constructing 3MF models programmatically.
+//!
+//! This module provides a builder based API to make 3MF Models.
+//! The builder pattern makes it easy to construct complex 3D models with proper validation
+//! and automatic handling of IDs, extensions, and relationships.
+//!
+//! # Overview
+//!
+//! The builder API is organized around several key builders:
+//!
+//! - [`ModelBuilder`] - Main entry point for creating 3MF models (root or sub-models)
+//! - [`MeshObjectBuilder`] - Creates objects with triangle mesh geometry
+//! - [`ComponentsObjectBuilder`] - Creates assembly objects that reference other objects
+//! - [`BeamLatticeBuilder`] - Adds beam lattice structures to meshes
+//! - [`BuildBuilder`] - Configures the build section (what gets printed)
+//! - [`TriangleSetsBuilder`] - Organizes triangles into named groups
+//!
+//! # Basic Usage
+//!
+//! ```rust,ignore
+//! use amrust_3mf::io::builder::{ModelBuilder, Unit};
+//!
+//! // Create a root model
+//! let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+//! builder.add_metadata("Application", Some("MyApp"));
+//!
+//! // Add a build section
+//! builder.add_build(None)?;
+//!
+//! // Add a mesh object
+//! let cube_id = builder.add_mesh_object(|obj| {
+//!     obj.name("Cube");
+//!     obj.add_vertices(&[
+//!         [0.0, 0.0, 0.0],
+//!         [10.0, 0.0, 0.0],
+//!         [10.0, 10.0, 0.0],
+//!         [0.0, 10.0, 0.0],
+//!     ]);
+//!     obj.add_triangles(&[
+//!         [0, 1, 2],
+//!         [0, 2, 3],
+//!     ]);
+//!     Ok(())
+//! })?;
+//!
+//! // Add to build plate
+//! builder.add_build_item(cube_id)?;
+//!
+//! // Build the final model
+//! let model = builder.build()?;
+//! ```
+//!
+//! # Root vs Sub-Models
+//!
+//! 3MF models can be either root models or sub-models:
+//!
+//! - **Root models** (`is_root = true`): Must have a `Build` section that specifies which
+//!   objects should be printed. This is the main model file in a 3MF package.
+//! - **Sub-models** (`is_root = false`): Cannot have a `Build` section. These are referenced
+//!   by other models and stored in separate files within the 3MF package.
+//!
+//! # Production Extension
+//!
+//! The 3MF Production extension adds UUIDs for tracking objects through the manufacturing
+//! process. When enabled via [`ModelBuilder::make_production_extension_required()`], the
+//! builder enforces that all objects, components, build items, and builds have UUIDs set.
+//!
+//! # Automatic Extension Management
+//!
+//! The builder automatically detects and adds required 3MF extensions based on features used:
+//!
+//! - Beam lattice extension when beams are added
+//! - Beam lattice balls extension when balls are used
+//! - Production extension when enabled
+//! - Triangle sets as recommended extension
+//!
+//! # Type Safety
+//!
+//! The builder uses [`ObjectId`] as a type-safe wrapper around object IDs to prevent
+//! accidental misuse of raw integer IDs. Object IDs are automatically assigned and managed
+//! by the [`ModelBuilder`]. If you prefer to opt out of them, you can use the [`from_builder`] methods
+//! to create and add custom objects based on specific object builders.
+
 use thiserror::Error;
 
 use crate::{
@@ -28,43 +111,177 @@ pub use crate::core::beamlattice::{BallMode, CapMode, ClippingMode};
 pub use crate::core::model::Unit;
 pub use crate::core::object::ObjectType;
 
+/// Errors that can occur when building a [`Model`].
+///
+/// These errors are returned from [`ModelBuilder::build()`] and related methods
+/// when validation fails or invalid state is detected.
 #[derive(Debug, Error, Clone)]
 pub enum ModelError {
+    /// Root model requires a Build section but none was added.
+    ///
+    /// Root models must have at least one build item. Call [`ModelBuilder::add_build()`]
+    /// before calling [`ModelBuilder::build()`].
     #[error("Build is not set for the Model. Root Model and adding Build Items requires a Build!")]
     BuildItemNotSet,
 
+    /// Attempted to add a Build section to a non-root model.
+    ///
+    /// Sub-models cannot have Build sections. Either create a root model
+    /// (`is_root = true`) or don't call [`ModelBuilder::add_build()`].
     #[error("Build is not allowed in non-root Model")]
     BuildOnlyAllowedInRootModel,
 
+    /// Error occurred while building the Build section.
     #[error("Something wrong when adding Build")]
     BuildError(#[from] BuildError),
 
+    /// Error occurred while building a build item.
     #[error("Something wrong when adding Items")]
     ItemError(#[from] ItemError),
 }
 
+/// Errors related to the 3MF Production extension.
+///
+/// When the Production extension is enabled via [`ModelBuilder::make_production_extension_required()`],
+/// all objects, components, build items, and builds must have UUIDs. Additionally, the `path`
+/// attribute is only allowed when the Production extension is enabled.
 #[derive(Debug, Error, Clone, Copy, PartialEq)]
 pub enum ProductionExtensionError {
+    /// Object is missing a UUID when Production extension is required.
+    ///
+    /// Call [`MeshObjectBuilder::uuid()`] or [`ComponentsObjectBuilder::uuid()`] to set it.
     #[error("Object Uuid is not set with Production extension enabled!")]
     ObjectUuidNotSet,
 
+    /// Component is missing a UUID when Production extension is required.
+    ///
+    /// Call [`ComponentBuilder::uuid()`] when configuring the component.
     #[error("Component Uuid is not set with Production extension enabled!")]
     ComponentUuidNotSet,
 
+    /// Build item is missing a UUID when Production extension is required.
+    ///
+    /// Use [`ModelBuilder::add_build_item_advanced()`] with [`ItemBuilder::uuid()`].
     #[error("Item Uuid is not set with Production extension enabled!")]
     ItemUuidNotSet,
 
+    /// Build is missing a UUID when Production extension is required.
+    ///
+    /// Pass a UUID when calling [`ModelBuilder::add_build()`].
     #[error("Build Uuid is not set with Production extension enabled!")]
     BuildUuidNotSet,
 
+    /// Component has a path set but Production extension is not enabled.
+    ///
+    /// Call [`ModelBuilder::make_production_extension_required()`] before setting paths.
     #[error("Component Path is set without Production extension enabled!")]
     PathUsedOnComponent,
 
+    /// Build item has a path set but Production extension is not enabled.
+    ///
+    /// Call [`ModelBuilder::make_production_extension_required()`] before setting paths.
     #[error("Item Path is set without Production extension enabled!")]
     PathUsedOnItem,
 }
 
-/// Builder for constructing 3MF Model structs with a fluent API
+/// Builder for constructing 3MF [`Model`] structs with a fluent API.
+///
+/// `ModelBuilder` is the main entry point for programmatically creating 3MF models.
+/// It manages object IDs, validates relationships, and automatically handles 3MF
+/// extensions based on features used.
+///
+/// # Root vs Sub-Models
+///
+/// Models can be either root models or sub-models:
+///
+/// - **Root models** (`is_root = true`): Must contain a Build section. This is the main
+///   model file in a 3MF package (typically `/3D/3dmodel.model`).
+/// - **Sub-models** (`is_root = false`): Cannot have a Build section. These are auxiliary
+///   models referenced by the root model or other sub-models.
+///
+/// # Examples
+///
+/// ## Creating a simple root model with a mesh object
+///
+/// ```rust,ignore
+/// use amrust_3mf::io::builder::{ModelBuilder, Unit, ObjectType};
+///
+/// let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+///
+/// // Add metadata
+/// builder.add_metadata("Application", Some("MyApp"));
+///
+/// // Create build section
+/// builder.add_build(None)?;
+///
+/// // Add a cube mesh object
+/// let cube_id = builder.add_mesh_object(|obj| {
+///     obj.name("Cube")
+///        .object_type(ObjectType::Model);
+///
+///     // Add vertices
+///     obj.add_vertices(&[
+///         [0.0, 0.0, 0.0],
+///         [10.0, 0.0, 0.0],
+///         [10.0, 10.0, 0.0],
+///         [0.0, 10.0, 0.0],
+///     ]);
+///
+///     // Add triangles
+///     obj.add_triangles(&[[0, 1, 2], [0, 2, 3]]);
+///
+///     Ok(())
+/// })?;
+///
+/// // Add object to build plate
+/// builder.add_build_item(cube_id)?;
+///
+/// // Build the final model
+/// let model = builder.build()?;
+/// ```
+///
+/// ## Creating a sub-model
+///
+/// ```rust,ignore
+/// // Sub-models cannot have a build section
+/// let mut builder = ModelBuilder::new(Unit::Millimeter, false);
+///
+/// let obj_id = builder.add_mesh_object(|obj| {
+///     obj.name("SubModelPart");
+///     obj.add_vertex(&[0.0, 0.0, 0.0]);
+///     obj.add_vertex(&[1.0, 0.0, 0.0]);
+///     obj.add_vertex(&[0.0, 1.0, 0.0]);
+///     obj.add_triangle(&[0, 1, 2]);
+///     Ok(())
+/// })?;
+///
+/// let model = builder.build()?;
+/// ```
+///
+/// ## Using the Production extension
+///
+/// ```rust,ignore
+/// let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+///
+/// // Enable Production extension - requires UUIDs on all objects and items
+/// builder.make_production_extension_required()?;
+///
+/// builder.add_build(Some("build-uuid-12345".to_string()))?;
+///
+/// let obj_id = builder.add_mesh_object(|obj| {
+///     obj.name("TrackedPart")
+///        .uuid("object-uuid-67890");  // UUID required!
+///     obj.add_vertex(&[0.0, 0.0, 0.0]);
+///     obj.add_triangle(&[0, 1, 2]);
+///     Ok(())
+/// })?;
+///
+/// builder.add_build_item_advanced(obj_id, |item| {
+///     item.uuid("item-uuid-abcdef");  // UUID required!
+/// })?;
+///
+/// let model = builder.build()?;
+/// ```
 pub struct ModelBuilder {
     unit: Option<Unit>,
     requiredextensions: Vec<XmlNamespace>,
@@ -87,7 +304,24 @@ pub struct ModelBuilder {
 }
 
 impl ModelBuilder {
-    /// Create a new ModelBuilder with default values
+    /// Create a new `ModelBuilder` with default values.
+    ///
+    /// # Parameters
+    ///
+    /// - `unit`: The unit of measurement for the model (e.g., [`Unit::Millimeter`])
+    /// - `is_root`: Whether this is a root model (`true`) or sub-model (`false`)
+    ///
+    /// Root models must have a Build section, while sub-models cannot have one.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Create a root model in millimeters
+    /// let builder = ModelBuilder::new(Unit::Millimeter, true);
+    ///
+    /// // Create a sub-model in inches
+    /// let sub_builder = ModelBuilder::new(Unit::Inch, false);
+    /// ```
     pub fn new(unit: Unit, is_root: bool) -> Self {
         Self {
             unit: Some(unit),
@@ -102,17 +336,57 @@ impl ModelBuilder {
         }
     }
 
-    /// Set the unit for the model
+    /// Set the unit of measurement for the model.
+    ///
+    /// This can be called multiple times; the last value set will be used.
     pub fn unit(&mut self, unit: Unit) -> &mut Self {
         self.unit = Some(unit);
         self
     }
 
+    /// Change whether this model is a root model or sub-model.
+    ///
+    /// - `true`: Root model (must have Build section)
+    /// - `false`: Sub-model (cannot have Build section)
     pub fn make_root(&mut self, is_root: bool) -> &mut Self {
         self.is_root = is_root;
         self
     }
 
+    /// Enable the 3MF Production extension and enforce UUID requirements.
+    ///
+    /// When the Production extension is enabled:
+    /// - All objects must have UUIDs set via [`MeshObjectBuilder::uuid()`] or [`ComponentsObjectBuilder::uuid()`]
+    /// - All components must have UUIDs set via [`ComponentBuilder::uuid()`]
+    /// - The build must have a UUID passed to [`ModelBuilder::add_build()`]
+    /// - All build items must have UUIDs set via [`ItemBuilder::uuid()`]
+    /// - The `path` attribute becomes available on components and items
+    ///
+    /// This method validates that all existing objects, components, and build items
+    /// already have UUIDs set. If any are missing, it returns an error.
+    ///
+    /// The Production extension namespace is automatically added to required extensions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProductionExtensionError`] if any existing objects, components, builds,
+    /// or build items are missing required UUIDs.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// let mut builder = ModelBuilder::new(Unit::Millimeter, true);
+    ///
+    /// // Enable production extension first
+    /// builder.make_production_extension_required()?;
+    ///
+    /// // Now all objects and items require UUIDs
+    /// let obj_id = builder.add_mesh_object(|obj| {
+    ///     obj.uuid("unique-object-id");  // Required!
+    ///     obj.name("Part");
+    ///     Ok(())
+    /// })?;
+    /// ```
     pub fn make_production_extension_required(
         &mut self,
     ) -> Result<&mut Self, ProductionExtensionError> {
@@ -142,19 +416,33 @@ impl ModelBuilder {
         Ok(self)
     }
 
-    /// Add a required extension
+    /// Add a required 3MF extension to the model.
+    ///
+    /// Required extensions must be understood by readers to process the file.
+    /// Some extensions are automatically added based on features used (e.g., beam lattice).
     pub fn add_required_extension(&mut self, extension: XmlNamespace) -> &mut Self {
         self.requiredextensions.push(extension);
         self
     }
 
-    /// Set recommended extensions
+    /// Add a recommended 3MF extension to the model.
+    ///
+    /// Recommended extensions can be ignored by readers if not supported.
+    /// Some extensions are automatically added based on features used (e.g., triangle sets).
     pub fn add_recommended_extension(&mut self, extension: XmlNamespace) -> &mut Self {
         self.recommendedextensions.push(extension);
         self
     }
 
-    /// Add metadata to the model
+    /// Add metadata key-value pair to the model.
+    ///
+    /// Metadata provides information about the model such as application name,
+    /// author, creation date, etc.
+    ///
+    /// # Parameters
+    ///
+    /// - `name`: The metadata key
+    /// - `value`: The metadata value (or `None` for an empty value)
     pub fn add_metadata(&mut self, name: &str, value: Option<&str>) -> &mut Self {
         self.metadata.push(Metadata {
             name: name.to_owned(),
@@ -164,7 +452,37 @@ impl ModelBuilder {
         self
     }
 
-    /// Add an object using a builder function, returns the assigned ObjectId
+    /// Add a mesh object to the model using a builder closure.
+    ///
+    /// The object is automatically assigned a unique [`ObjectId`] which is returned.
+    /// Use this ID to reference the object in build items or components.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A closure that configures the [`MeshObjectBuilder`]
+    ///
+    /// # Returns
+    ///
+    /// The auto-assigned [`ObjectId`] for the created object.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// let cube_id = builder.add_mesh_object(|obj| {
+    ///     obj.name("Cube")
+    ///        .object_type(ObjectType::Model);
+    ///
+    ///     // Add geometry
+    ///     obj.add_vertices(&[
+    ///         [0.0, 0.0, 0.0],
+    ///         [10.0, 0.0, 0.0],
+    ///         [0.0, 10.0, 0.0],
+    ///     ]);
+    ///     obj.add_triangles(&[[0, 1, 2]]);
+    ///
+    ///     Ok(())
+    /// })?;
+    /// ```
     pub fn add_mesh_object<F>(&mut self, f: F) -> Result<ObjectId, MeshObjectError>
     where
         F: FnOnce(&mut MeshObjectBuilder) -> Result<(), MeshObjectError>,
@@ -177,6 +495,10 @@ impl ModelBuilder {
         self.add_mesh_object_from_builder(obj_builder)
     }
 
+    /// Add a mesh object from a pre-configured [`MeshObjectBuilder`].
+    ///
+    /// This is an advanced method for cases where you need to construct the builder
+    /// separately. Most users should use [`add_mesh_object()`](ModelBuilder::add_mesh_object) instead.
     pub fn add_mesh_object_from_builder(
         &mut self,
         builder: MeshObjectBuilder,
@@ -194,7 +516,47 @@ impl ModelBuilder {
         Ok(id)
     }
 
-    /// Add an object using a builder function, returns the assigned ObjectId
+    /// Add a components (assembly) object to the model using a builder closure.
+    ///
+    /// Components objects reference other objects to create assemblies or composed parts.
+    /// Each component can have its own transform and references an existing object by ID.
+    ///
+    /// The object is automatically assigned a unique [`ObjectId`] which is returned.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A closure that configures the [`ComponentsObjectBuilder`]
+    ///
+    /// # Returns
+    ///
+    /// The auto-assigned [`ObjectId`] for the created object.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // First create a mesh object
+    /// let part_id = builder.add_mesh_object(|obj| {
+    ///     obj.name("Part");
+    ///     obj.add_vertex(&[0.0, 0.0, 0.0]);
+    ///     obj.add_triangle(&[0, 1, 2]);
+    ///     Ok(())
+    /// })?;
+    ///
+    /// // Create an assembly that references the part multiple times
+    /// let assembly_id = builder.add_components_object(|obj| {
+    ///     obj.name("Assembly");
+    ///
+    ///     // Add first instance
+    ///     obj.add_component(part_id);
+    ///
+    ///     // Add second instance with transform
+    ///     obj.add_component_advanced(part_id, |comp| {
+    ///         comp.transform(Transform([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0]));
+    ///     });
+    ///
+    ///     Ok(())
+    /// })?;
+    /// ```
     pub fn add_components_object<F>(&mut self, f: F) -> Result<ObjectId, ComponentsObjectError>
     where
         F: FnOnce(&mut ComponentsObjectBuilder) -> Result<(), ComponentsObjectError>,
@@ -215,6 +577,10 @@ impl ModelBuilder {
         self.add_composed_part_object_from_builder(obj_builder)
     }
 
+    /// Add a components object from a pre-configured [`ComponentsObjectBuilder`].
+    ///
+    /// This is an advanced method for cases where you need to construct the builder
+    /// separately. Most users should use [`add_components_object()`](ModelBuilder::add_components_object) instead.
     pub fn add_composed_part_object_from_builder(
         &mut self,
         builder: ComponentsObjectBuilder,
@@ -228,6 +594,34 @@ impl ModelBuilder {
         Ok(id)
     }
 
+    /// Add a Build section to the model.
+    ///
+    /// The Build section specifies which objects should be manufactured (printed).
+    /// Only root models can have a Build section.
+    ///
+    /// After calling this method, use [`add_build_item()`](ModelBuilder::add_build_item) or
+    /// [`add_build_item_advanced()`](ModelBuilder::add_build_item_advanced) to add objects
+    /// to the build plate.
+    ///
+    /// # Parameters
+    ///
+    /// - `uuid`: Optional UUID for the build (required if Production extension is enabled)
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModelError::BuildOnlyAllowedInRootModel`] if called on a sub-model.
+    /// Returns [`BuildError::BuildUuidNotSet`] if Production extension is enabled but no UUID is provided.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Simple build without UUID
+    /// builder.add_build(None)?;
+    ///
+    /// // With Production extension
+    /// builder.make_production_extension_required()?;
+    /// builder.add_build(Some("build-12345".to_string()))?;
+    /// ```
     pub fn add_build(&mut self, uuid: Option<String>) -> Result<&mut Self, ModelError> {
         if !self.is_root {
             return Err(ModelError::BuildOnlyAllowedInRootModel);
@@ -244,12 +638,53 @@ impl ModelBuilder {
         Ok(self)
     }
 
-    /// Add a build item referencing an object by ID
+    /// Add a simple build item referencing an object by ID.
+    ///
+    /// The object will be added to the build plate with default settings (no transform,
+    /// no partnumber, no UUID unless required by Production extension).
+    ///
+    /// # Parameters
+    ///
+    /// - `object_id`: The ID of the object to add to the build plate
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModelError::BuildItemNotSet`] if [`add_build()`](ModelBuilder::add_build) hasn't been called yet.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// builder.add_build(None)?;
+    /// let obj_id = builder.add_mesh_object(|obj| { /* ... */ Ok(()) })?;
+    /// builder.add_build_item(obj_id)?;
+    /// ```
     pub fn add_build_item(&mut self, object_id: ObjectId) -> Result<&mut Self, ModelError> {
         self.add_build_item_advanced(object_id, |_f| {})
     }
 
-    /// Add a build item referencing an object by ID
+    /// Add a build item with advanced configuration.
+    ///
+    /// This method allows you to configure transforms, partnumber, UUID, and path
+    /// for the build item using a closure.
+    ///
+    /// # Parameters
+    ///
+    /// - `object_id`: The ID of the object to add to the build plate
+    /// - `f`: A closure that configures the [`ItemBuilder`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModelError::BuildItemNotSet`] if [`add_build()`](ModelBuilder::add_build) hasn't been called yet.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// builder.add_build_item_advanced(obj_id, |item| {
+    ///     item.transform(Transform([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0]));
+    ///     item.partnumber("PART-001");
+    ///     item.uuid("item-uuid");  // Required if Production extension enabled
+    /// })?;
+    /// ```
     pub fn add_build_item_advanced<F>(
         &mut self,
         object_id: ObjectId,
@@ -268,7 +703,22 @@ impl ModelBuilder {
         }
     }
 
-    /// Build the final Model
+    /// Build the final [`Model`].
+    ///
+    /// This consumes the builder and performs final validation:
+    /// - Root models must have a Build section
+    /// - Sub-models must not have a Build section
+    /// - All required extensions are added automatically
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ModelError`] if validation fails.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// let model = builder.build()?;
+    /// ```
     pub fn build(self) -> Result<Model, ModelError> {
         let required_extensions = self.process_required_extensions();
 
@@ -402,50 +852,6 @@ fn get_extensions_definition(extensions: &[XmlNamespace]) -> Option<String> {
     }
 }
 
-/// Builder for TriangleSets
-pub struct TriangleSetsBuilder {
-    sets: Vec<crate::core::triangle_set::TriangleSet>,
-}
-
-impl TriangleSetsBuilder {
-    fn new() -> Self {
-        Self { sets: Vec::new() }
-    }
-
-    pub fn add_set(
-        &mut self,
-        name: &str,
-        identifier: &str,
-        refs: &[usize],
-        ranges: &[(usize, usize)],
-    ) -> &mut Self {
-        use crate::core::triangle_set::{TriangleRef, TriangleRefRange, TriangleSet};
-
-        let triangle_ref = refs.iter().map(|&index| TriangleRef { index }).collect();
-        let triangle_refrange = ranges
-            .iter()
-            .map(|&(start, end)| TriangleRefRange {
-                startindex: start,
-                endindex: end,
-            })
-            .collect();
-
-        self.sets.push(TriangleSet {
-            name: name.to_owned(),
-            identifier: identifier.to_owned(),
-            triangle_ref,
-            triangle_refrange,
-        });
-        self
-    }
-
-    fn build(self) -> crate::core::triangle_set::TriangleSets {
-        crate::core::triangle_set::TriangleSets {
-            trianglesets: self.sets,
-        }
-    }
-}
-
 /// Builder for Resources
 pub struct ResourcesBuilder {
     objects: Vec<Object>,
@@ -466,13 +872,21 @@ impl ResourcesBuilder {
     }
 }
 
+/// Errors that can occur when building the Build section.
 #[derive(Debug, Error, Clone, Copy)]
 pub enum BuildError {
+    /// Build is missing a UUID when Production extension is required.
+    ///
+    /// Pass a UUID when calling [`ModelBuilder::add_build()`].
     #[error("Production extension is enabled but Uuid for the Build is not set")]
     BuildUuidNotSet,
 }
 
-/// Builder for Build section
+/// Builder for the Build section of a 3MF model.
+///
+/// The Build section specifies which objects should be manufactured. It is only
+/// used in root models (not sub-models). This builder is primarily used internally
+/// by [`ModelBuilder`].
 pub struct BuildBuilder {
     items: Vec<Item>,
     uuid: Option<String>,
@@ -527,16 +941,29 @@ impl BuildBuilder {
     }
 }
 
+/// Errors that can occur when building a build item.
 #[derive(Debug, Error, Clone, Copy, PartialEq)]
 pub enum ItemError {
+    /// Build item has a path set but Production extension is not enabled.
+    ///
+    /// Call [`ModelBuilder::make_production_extension_required()`] before setting paths.
     #[error("Item path is set without the Production extension enabled!")]
     ItemPathSetWithoutProductionExtension,
 
+    /// Build item is missing a UUID when Production extension is required.
+    ///
+    /// Use [`ModelBuilder::add_build_item_advanced()`] with [`ItemBuilder::uuid()`].
     #[error("Production extension is enabled but Uuid is not set!")]
     ItemUuidNotSet,
 }
 
-/// Builder to setup a Build item
+/// Builder for configuring a build item.
+///
+/// Build items specify which objects should be manufactured and how they should
+/// be positioned on the build plate. Each item references an object and can have
+/// a transform, partnumber, UUID, and path.
+///
+/// This builder is used via [`ModelBuilder::add_build_item_advanced()`].
 pub struct ItemBuilder {
     objectid: ObjectId,
     transform: Option<Transform>,
@@ -556,21 +983,55 @@ impl ItemBuilder {
         }
     }
 
+    /// Set the transformation matrix for this build item.
+    ///
+    /// The transform is a 4x3 affine transformation matrix stored as a 12-element array
+    /// in row-major order.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Identity transform (no transformation)
+    /// comp.transform(Transform([
+    ///     1.0, 0.0, 0.0,
+    ///     0.0, 1.0, 0.0,
+    ///     0.0, 0.0, 1.0,
+    ///     0.0, 0.0, 0.0
+    /// ]));
+    ///
+    /// // Translate 10mm in X direction
+    /// comp.transform(Transform([
+    ///     1.0, 0.0, 0.0,
+    ///     0.0, 1.0, 0.0,
+    ///     0.0, 0.0, 1.0,
+    ///     10.0, 0.0, 0.0
+    /// ]));
+    /// ```
     pub fn transform(&mut self, transform: Transform) -> &mut Self {
         self.transform = Some(transform);
         self
     }
 
+    /// Set the part number for this build item.
+    ///
+    /// Part numbers can be used to identify specific manufacturing runs or variants.
     pub fn partnumber(&mut self, partnumber: &str) -> &mut Self {
         self.partnumber = Some(partnumber.to_owned());
         self
     }
 
+    /// Set the UUID for this build item.
+    ///
+    /// Required when Production extension is enabled.
     pub fn uuid(&mut self, uuid: &str) -> &mut Self {
         self.uuid = Some(uuid.to_owned());
         self
     }
 
+    /// Set the path for this build item.
+    ///
+    /// Only allowed when Production extension is enabled. The path specifies
+    /// an alternative model file where the referenced object can be found.
     pub fn path(&mut self, path: &str) -> &mut Self {
         self.path = Some(path.to_owned());
         self
@@ -664,12 +1125,46 @@ impl<T> DerefMut for ObjectBuilder<T> {
     }
 }
 
+/// Errors that can occur when building a mesh object.
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum MeshObjectError {
+    /// Object is missing a UUID when Production extension is required.
+    ///
+    /// Call [`MeshObjectBuilder::uuid()`] to set the UUID.
     #[error("Production extension is enabled but Uuid is not set!")]
     ObjectUuidNotSet,
 }
 
+/// Builder for creating mesh objects with triangle geometry.
+///
+/// `MeshObjectBuilder` combines object metadata (name, type, UUID, etc.) with
+/// mesh geometry. Access mesh-building methods directly via [`Deref`] to [`MeshBuilder`].
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// let cube_id = builder.add_mesh_object(|obj| {
+///     // Object properties
+///     obj.name("Cube")
+///        .object_type(ObjectType::Model)
+///        .part_number("CUBE-001");
+///
+///     // Mesh geometry (via Deref to MeshBuilder)
+///     obj.add_vertices(&[
+///         [0.0, 0.0, 0.0],
+///         [10.0, 0.0, 0.0],
+///         [10.0, 10.0, 0.0],
+///         [0.0, 10.0, 0.0],
+///     ]);
+///
+///     obj.add_triangles(&[
+///         [0, 1, 2],
+///         [0, 2, 3],
+///     ]);
+///
+///     Ok(())
+/// })?;
+/// ```
 pub type MeshObjectBuilder = ObjectBuilder<MeshBuilder>;
 
 impl MeshObjectBuilder {
@@ -710,7 +1205,27 @@ impl MeshObjectBuilder {
     }
 }
 
-/// Builder for Mesh
+/// Builder for constructing triangle mesh geometry.
+///
+/// `MeshBuilder` allows you to define 3D geometry by adding vertices and triangles.
+/// It also supports optional features like triangle sets and beam lattices.
+///
+/// Vertices are referenced by their 0-based index in the order they were added.
+/// Triangles reference vertices by index.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// obj.add_vertices(&[
+///     [0.0, 0.0, 0.0],   // vertex 0
+///     [10.0, 0.0, 0.0],  // vertex 1
+///     [10.0, 10.0, 0.0], // vertex 2
+/// ]);
+///
+/// obj.add_triangles(&[
+///     [0, 1, 2],  // Triangle using vertices 0, 1, 2
+/// ]);
+/// ```
 pub struct MeshBuilder {
     vertices: Vec<Vertex>,
     triangles: Vec<Triangle>,
@@ -728,7 +1243,21 @@ impl MeshBuilder {
         }
     }
 
-    /// Add a vertex
+    /// Add a single vertex at the specified coordinates.
+    ///
+    /// Returns the builder for method chaining.
+    ///
+    /// # Parameters
+    ///
+    /// - `coords`: 3D coordinates as `[x, y, z]`
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_vertex(&[0.0, 0.0, 0.0])
+    ///    .add_vertex(&[10.0, 0.0, 0.0])
+    ///    .add_vertex(&[0.0, 10.0, 0.0]);
+    /// ```
     pub fn add_vertex(&mut self, coords: &[f64; 3]) -> &mut Self {
         self.vertices.push(Vertex {
             x: coords[0],
@@ -738,7 +1267,19 @@ impl MeshBuilder {
         self
     }
 
-    /// Add a collection of vertices in [[f64;3]] slice
+    /// Add multiple vertices from a slice of coordinate arrays.
+    ///
+    /// Each element should be a 3D coordinate `[x, y, z]`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_vertices(&[
+    ///     [0.0, 0.0, 0.0],
+    ///     [10.0, 0.0, 0.0],
+    ///     [10.0, 10.0, 0.0],
+    /// ]);
+    /// ```
     pub fn add_vertices(&mut self, vertices: &[[f64; 3]]) -> &mut Self {
         for vertex in vertices {
             self.add_vertex(vertex);
@@ -747,7 +1288,20 @@ impl MeshBuilder {
         self
     }
 
-    /// Add a collection of vertices in a flattened 1D slice
+    /// Add vertices from a flattened coordinate array.
+    ///
+    /// The slice should contain coordinate values in sequence: `[x0, y0, z0, x1, y1, z1, ...]`.
+    /// The length must be a multiple of 3.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_vertices_flat(&[
+    ///     0.0, 0.0, 0.0,     // vertex 0
+    ///     10.0, 0.0, 0.0,    // vertex 1
+    ///     10.0, 10.0, 0.0,   // vertex 2
+    /// ]);
+    /// ```
     pub fn add_vertices_flat(&mut self, vertices: &[f64]) -> &mut Self {
         for vertex in vertices.chunks_exact(3) {
             self.vertices.push(Vertex {
@@ -760,7 +1314,23 @@ impl MeshBuilder {
         self
     }
 
-    /// Add a triangle from [usize;3] slice
+    /// Add a single triangle referencing three vertices by index.
+    ///
+    /// Vertices are referenced by their 0-based index in the order they were added.
+    /// Indices must reference existing vertices.
+    ///
+    /// # Parameters
+    ///
+    /// - `indices`: Triangle vertex indices as `[v1, v2, v3]`
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_vertex(&[0.0, 0.0, 0.0]);    // index 0
+    /// obj.add_vertex(&[10.0, 0.0, 0.0]);   // index 1
+    /// obj.add_vertex(&[0.0, 10.0, 0.0]);   // index 2
+    /// obj.add_triangle(&[0, 1, 2]);
+    /// ```
     pub fn add_triangle(&mut self, indices: &[usize; 3]) -> &mut Self {
         self.triangles.push(Triangle {
             v1: indices[0],
@@ -774,7 +1344,19 @@ impl MeshBuilder {
         self
     }
 
-    /// Add a collection of triangles from a [[usize;3]] slice
+    /// Add multiple triangles from a slice of index arrays.
+    ///
+    /// Each element should be a triangle with three vertex indices.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_triangles(&[
+    ///     [0, 1, 2],
+    ///     [0, 2, 3],
+    ///     [0, 3, 4],
+    /// ]);
+    /// ```
     pub fn add_triangles(&mut self, triangles: &[[usize; 3]]) -> &mut Self {
         for triangle in triangles {
             self.add_triangle(triangle);
@@ -783,8 +1365,19 @@ impl MeshBuilder {
         self
     }
 
-    /// Add a collection of triangles from a flattened [[usize]] slice where every subsequent 3 indices
-    /// are considered triangle vertex references.
+    /// Add triangles from a flattened index array.
+    ///
+    /// The slice should contain vertex indices in sequence: `[v1, v2, v3, v1, v2, v3, ...]`.
+    /// The length must be a multiple of 3.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_triangles_flat(&[
+    ///     0, 1, 2,  // triangle 0
+    ///     0, 2, 3,  // triangle 1
+    /// ]);
+    /// ```
     pub fn add_triangles_flat(&mut self, triangles: &[usize]) -> &mut Self {
         for triangle in triangles.chunks_exact(3) {
             self.triangles.push(Triangle {
@@ -801,7 +1394,23 @@ impl MeshBuilder {
         self
     }
 
-    /// Configure triangle sets for the mesh
+    /// Add triangle sets to organize triangles into named groups.
+    ///
+    /// Triangle sets allow you to group triangles by name and identifier for
+    /// organizational purposes. See [`TriangleSetsBuilder`] for details.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A closure that configures the [`TriangleSetsBuilder`]
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_triangle_sets(|sets| {
+    ///     sets.add_set("TopFace", "top-id", &[0, 1], &[]);
+    ///     sets.add_set("BottomFace", "bottom-id", &[2, 3], &[]);
+    /// });
+    /// ```
     pub fn add_triangle_sets<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut TriangleSetsBuilder),
@@ -817,7 +1426,24 @@ impl MeshBuilder {
         self
     }
 
-    /// Configure beam lattice for the mesh
+    /// Add a beam lattice structure to the mesh.
+    ///
+    /// Beam lattices define strut-like structures connecting vertices. See
+    /// [`BeamLatticeBuilder`] for details.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A closure that configures the [`BeamLatticeBuilder`]
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_beam_lattice(|lattice| {
+    ///     lattice.radius(0.5)
+    ///            .add_beam(0, 1)
+    ///            .add_beam(1, 2);
+    /// });
+    /// ```
     pub fn add_beam_lattice<F>(&mut self, f: F) -> &mut Self
     where
         F: FnOnce(&mut BeamLatticeBuilder),
@@ -845,6 +1471,627 @@ impl MeshBuilder {
             trianglesets,
             beamlattice,
         })
+    }
+}
+
+/// Errors that can occur when building a components (assembly) object.
+#[derive(Debug, Error, Clone)]
+pub enum ComponentsObjectError {
+    /// Component is missing a UUID when Production extension is required.
+    ///
+    /// Call [`ComponentBuilder::uuid()`] when configuring components.
+    #[error("production extension is enabled but uuid is not set")]
+    ComponentUuidNotSet,
+
+    /// Component has a path set but Production extension is not enabled.
+    ///
+    /// Call [`ModelBuilder::make_production_extension_required()`] before setting paths.
+    #[error("Path is set for a Component without enabling the Production extension")]
+    PathSetWithoutProductionExtension,
+
+    /// Component references an object ID that doesn't exist.
+    ///
+    /// Ensure the referenced object has been added to the model before creating
+    /// components that reference it.
+    #[error("One or more Component References unknown objects")]
+    ObjectReferenceNotFoundForComponent,
+
+    /// Object is missing a UUID when Production extension is required.
+    ///
+    /// Call [`ComponentsObjectBuilder::uuid()`] to set the UUID.
+    #[error("Production extension is enabled but Uuid is not set")]
+    ObjectUuidNotSet,
+}
+
+/// Builder for creating assembly objects that reference other objects.
+///
+/// `ComponentsObjectBuilder` creates objects that don't have their own geometry,
+/// but instead reference other objects (mesh objects or other assemblies) as components.
+/// Each component can have its own transform.
+///
+/// This is useful for:
+/// - Creating assemblies of multiple parts
+/// - Building hierarchical model structures
+///
+/// Access component-building methods directly via [`Deref`] to [`ComponentsBuilder`].
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// // First create a mesh object to reference
+/// let bolt_id = builder.add_mesh_object(|obj| {
+///     obj.name("Bolt");
+///     // ... add geometry
+///     Ok(())
+/// })?;
+///
+/// // Create an assembly referencing the bolt multiple times
+/// let assembly_id = builder.add_components_object(|obj| {
+///     obj.name("BoltAssembly");
+///
+///     // Add first bolt
+///     obj.add_component(bolt_id);
+///
+///     // Add second bolt with transform
+///     obj.add_component_advanced(bolt_id, |comp| {
+///         comp.transform(Transform([
+///             1.0, 0.0, 0.0,
+///             0.0, 1.0, 0.0,
+///             0.0, 0.0, 1.0,
+///             10.0, 0.0, 0.0  // Translated 10mm in X
+///         ]));
+///     });
+///
+///     Ok(())
+/// })?;
+/// ```
+pub type ComponentsObjectBuilder = ObjectBuilder<ComponentsBuilder>;
+
+impl ComponentsObjectBuilder {
+    fn new(
+        object_id: ObjectId,
+        all_existing_object_ids: &[ObjectId],
+        is_production_ext_required: bool,
+    ) -> Self {
+        Self {
+            entity: ComponentsBuilder::new(all_existing_object_ids),
+            object_id,
+            objecttype: Some(ObjectType::Model),
+            thumbnail: None,
+            partnumber: None,
+            name: None,
+            pid: None,
+            pindex: None,
+            uuid: None,
+            is_production_ext_required,
+        }
+    }
+
+    fn build(self) -> Result<Object, ComponentsObjectError> {
+        let components = self
+            .entity
+            .build_components(self.is_production_ext_required)?;
+
+        if self.is_production_ext_required && self.uuid.is_none() {
+            return Err(ComponentsObjectError::ObjectUuidNotSet);
+        }
+
+        Ok(Object {
+            id: self.object_id.0,
+            objecttype: self.objecttype,
+            thumbnail: self.thumbnail,
+            partnumber: self.partnumber,
+            name: self.name,
+            pid: self.pid,
+            pindex: self.pindex,
+            uuid: self.uuid,
+            mesh: None,
+            components: Some(components),
+        })
+    }
+}
+
+/// Builder for managing components in an assembly object.
+///
+/// Components are references to other objects with optional transforms, UUIDs, and paths.
+/// The builder validates that referenced objects exist in the model.
+pub struct ComponentsBuilder {
+    components: Vec<Component>,
+
+    all_existing_object_ids: Vec<ObjectId>,
+}
+
+impl ComponentsBuilder {
+    fn new(all_existing_object_ids: &[ObjectId]) -> Self {
+        ComponentsBuilder {
+            components: vec![],
+            all_existing_object_ids: all_existing_object_ids.to_vec(),
+        }
+    }
+
+    /// Add a simple component referencing an object by ID.
+    ///
+    /// The component will use the identity transform and have no UUID or path
+    /// (unless required by Production extension).
+    ///
+    /// # Parameters
+    ///
+    /// - `object_id`: The ID of the object to reference
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_component(part_id);
+    /// ```
+    pub fn add_component(&mut self, object_id: ObjectId) -> &mut Self {
+        self.add_component_advanced(object_id, |_| {});
+        self
+    }
+
+    /// Add a component with advanced configuration.
+    ///
+    /// This method allows you to configure transforms, UUID, and path for the
+    /// component using a closure.
+    ///
+    /// # Parameters
+    ///
+    /// - `object_id`: The ID of the object to reference
+    /// - `f`: A closure that configures the [`ComponentBuilder`]
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// obj.add_component_advanced(part_id, |comp| {
+    ///     comp.transform(Transform([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0]));
+    ///     comp.uuid("component-uuid");
+    ///     comp.path("/path/to/model.model");
+    /// });
+    /// ```
+    pub fn add_component_advanced<F>(&mut self, object_id: ObjectId, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut ComponentBuilder),
+    {
+        let mut builder = ComponentBuilder::new(object_id);
+        f(&mut builder);
+
+        let component = builder.build();
+        self.components.push(component);
+
+        self
+    }
+
+    fn build_components(
+        self,
+        is_production_ext_required: bool,
+    ) -> Result<Components, ComponentsObjectError> {
+        if is_production_ext_required {
+            let all_uuid_set = self.components.iter().all(|c| c.uuid.is_some());
+            if !all_uuid_set {
+                return Err(ComponentsObjectError::ComponentUuidNotSet);
+            }
+        } else {
+            let all_path_is_not_set = self.components.iter().all(|c| c.path.is_none());
+            if !all_path_is_not_set {
+                return Err(ComponentsObjectError::PathSetWithoutProductionExtension);
+            }
+        }
+
+        let all_object_exists = self
+            .components
+            .iter()
+            .all(|c| self.all_existing_object_ids.contains(&ObjectId(c.objectid)));
+
+        if !all_object_exists {
+            return Err(ComponentsObjectError::ObjectReferenceNotFoundForComponent);
+        }
+
+        Ok(Components {
+            component: self.components,
+        })
+    }
+}
+
+/// Builder for configuring an individual component within an assembly.
+///
+/// Components reference existing objects and can have their own transform,
+/// UUID, and path attributes.
+pub struct ComponentBuilder {
+    objectid: usize,
+    transform: Option<Transform>,
+    path: Option<String>,
+    uuid: Option<String>,
+}
+
+impl ComponentBuilder {
+    pub fn new(object_id: ObjectId) -> Self {
+        Self {
+            objectid: object_id.0,
+            transform: None,
+            path: None,
+            uuid: None,
+        }
+    }
+
+    pub fn transform(&mut self, transform: Transform) -> &mut Self {
+        self.transform = Some(transform);
+        self
+    }
+
+    /// Set the UUID for this component.
+    ///
+    /// Required when Production extension is enabled.
+    pub fn uuid(&mut self, uuid: &str) -> &mut Self {
+        self.uuid = Some(uuid.to_owned());
+        self
+    }
+
+    /// Set the path for this component.
+    ///
+    /// Only allowed when Production extension is enabled. The path specifies
+    /// an alternative model file where the referenced object can be found.
+    pub fn path(&mut self, path: &str) -> &mut Self {
+        self.path = Some(path.to_owned());
+        self
+    }
+
+    fn build(self) -> Component {
+        Component {
+            objectid: self.objectid,
+            transform: self.transform,
+            path: self.path,
+            uuid: self.uuid,
+        }
+    }
+}
+
+/// Builder for organizing triangles into named sets.
+///
+/// Triangle sets allow you to group triangles within a mesh for organizational purposes,
+/// such as identifying different faces or regions. Each set has a name and identifier,
+/// and references triangles either individually or as ranges.
+///
+/// Triangle sets are added as a recommended extension (not required).
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// obj.add_triangle_sets(|sets| {
+///     // Add a set referencing specific triangle indices
+///     sets.add_set("TopFace", "top-id", &[0, 1, 2], &[]);
+///
+///     // Add a set using a range of triangles
+///     sets.add_set("SideFaces", "side-id", &[], &[(3, 10)]);
+///
+///     // Mix individual refs and ranges
+///     sets.add_set("Mixed", "mixed-id", &[11, 12], &[(20, 30), (40, 50)]);
+/// });
+/// ```
+pub struct TriangleSetsBuilder {
+    sets: Vec<crate::core::triangle_set::TriangleSet>,
+}
+
+impl TriangleSetsBuilder {
+    fn new() -> Self {
+        Self { sets: Vec::new() }
+    }
+
+    /// Add a triangle set with a name, identifier, and triangle references.
+    ///
+    /// Triangles can be referenced either individually (via `refs`) or as ranges
+    /// (via `ranges`). Both methods can be used together.
+    ///
+    /// # Parameters
+    ///
+    /// - `name`: Human-readable name for the set
+    /// - `identifier`: Unique identifier for the set
+    /// - `refs`: Slice of individual triangle indices to include
+    /// - `ranges`: Slice of triangle index ranges (inclusive start, inclusive end)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Reference triangles 0, 1, and 2 individually
+    /// sets.add_set("Group1", "g1", &[0, 1, 2], &[]);
+    ///
+    /// // Reference triangles 10-20 (inclusive)
+    /// sets.add_set("Group2", "g2", &[], &[(10, 20)]);
+    ///
+    /// // Mix both approaches
+    /// sets.add_set("Group3", "g3", &[5, 6], &[(10, 15), (20, 25)]);
+    /// ```
+    pub fn add_set(
+        &mut self,
+        name: &str,
+        identifier: &str,
+        refs: &[usize],
+        ranges: &[(usize, usize)],
+    ) -> &mut Self {
+        use crate::core::triangle_set::{TriangleRef, TriangleRefRange, TriangleSet};
+
+        let triangle_ref = refs.iter().map(|&index| TriangleRef { index }).collect();
+        let triangle_refrange = ranges
+            .iter()
+            .map(|&(start, end)| TriangleRefRange {
+                startindex: start,
+                endindex: end,
+            })
+            .collect();
+
+        self.sets.push(TriangleSet {
+            name: name.to_owned(),
+            identifier: identifier.to_owned(),
+            triangle_ref,
+            triangle_refrange,
+        });
+        self
+    }
+
+    fn build(self) -> crate::core::triangle_set::TriangleSets {
+        crate::core::triangle_set::TriangleSets {
+            trianglesets: self.sets,
+        }
+    }
+}
+
+/// Builder for constructing beam lattice structures.
+///
+/// Beam lattices define strut-like structures connecting vertices in a mesh.
+/// They are part of the 3MF Beam Lattice extension and are useful for representing
+/// lightweight lattice structures, supports, or truss designs.
+///
+/// The builder allows you to:
+/// - Define beams connecting pairs of vertices
+/// - Add balls (spherical nodes) at vertices
+/// - Organize beams and balls into named sets
+/// - Configure default properties like radius, ball mode, clipping, etc.
+///
+/// The Beam Lattice extension namespace is automatically added when beams are present.
+pub struct BeamLatticeBuilder {
+    minlength: Option<f64>,
+    radius: Option<f64>,
+    ballmode: Option<BallMode>,
+    ballradius: Option<f64>,
+    clippingmode: Option<ClippingMode>,
+    clippingmesh: Option<usize>,
+    representationmesh: Option<usize>,
+    pid: Option<usize>,
+    pindex: Option<usize>,
+    cap: Option<CapMode>,
+    beams: Vec<Beam>,
+    balls: Vec<Ball>,
+    beamsets: Vec<BeamSet>,
+}
+
+impl BeamLatticeBuilder {
+    fn new() -> Self {
+        Self {
+            minlength: None,
+            radius: None,
+            ballmode: None,
+            ballradius: None,
+            clippingmode: None,
+            clippingmesh: None,
+            representationmesh: None,
+            pid: None,
+            pindex: None,
+            cap: None,
+            beams: Vec::new(),
+            balls: Vec::new(),
+            beamsets: Vec::new(),
+        }
+    }
+
+    /// Set the minimum length for beams (default: 0.0001).
+    ///
+    /// Beams shorter than this length may be ignored during processing.
+    pub fn minlength(&mut self, minlength: f64) -> &mut Self {
+        self.minlength = Some(minlength);
+        self
+    }
+
+    /// Set the default radius for all beams (default: 0.0001).
+    ///
+    /// Individual beams can override this with their own radius values.
+    pub fn radius(&mut self, radius: f64) -> &mut Self {
+        self.radius = Some(radius);
+        self
+    }
+
+    /// Set how balls (nodes) are rendered at beam connections.
+    ///
+    /// See [`BallMode`] for available options.
+    pub fn ballmode(&mut self, mode: BallMode) -> &mut Self {
+        self.ballmode = Some(mode);
+        self
+    }
+
+    /// Set the default radius for all balls.
+    ///
+    /// Individual balls can override this with their own radius values.
+    pub fn ballradius(&mut self, radius: f64) -> &mut Self {
+        self.ballradius = Some(radius);
+        self
+    }
+
+    /// Set how the lattice is clipped by the clipping mesh.
+    ///
+    /// See [`ClippingMode`] for available options.
+    pub fn clippingmode(&mut self, mode: ClippingMode) -> &mut Self {
+        self.clippingmode = Some(mode);
+        self
+    }
+
+    /// Set the mesh object used for clipping the lattice.
+    ///
+    /// The lattice will be clipped to the bounds of this mesh based on the clipping mode.
+    pub fn clippingmesh(&mut self, object_id: ObjectId) -> &mut Self {
+        self.clippingmesh = Some(object_id.0);
+        self
+    }
+
+    /// Set an alternative mesh for visualization.
+    ///
+    /// This mesh can be used as a simplified representation of the lattice.
+    pub fn representationmesh(&mut self, object_id: ObjectId) -> &mut Self {
+        self.representationmesh = Some(object_id.0);
+        self
+    }
+
+    /// Set the property ID for the lattice.
+    pub fn pid(&mut self, pid: usize) -> &mut Self {
+        self.pid = Some(pid);
+        self
+    }
+
+    /// Set the property index for the lattice.
+    pub fn pindex(&mut self, pindex: usize) -> &mut Self {
+        self.pindex = Some(pindex);
+        self
+    }
+
+    /// Set the default cap mode for beam ends.
+    ///
+    /// Individual beams can override this. See [`CapMode`] for available options.
+    pub fn cap(&mut self, cap: CapMode) -> &mut Self {
+        self.cap = Some(cap);
+        self
+    }
+
+    /// Add a simple beam connecting two vertices.
+    ///
+    /// The beam will use default properties (radius, cap mode, etc.).
+    ///
+    /// # Parameters
+    ///
+    /// - `v1`: Index of the first vertex
+    /// - `v2`: Index of the second vertex
+    pub fn add_beam(&mut self, v1: usize, v2: usize) -> &mut Self {
+        let beam = BeamBuilder::new(v1, v2).build();
+        self.beams.push(beam);
+        self
+    }
+
+    /// Add a beam with custom configuration.
+    ///
+    /// Use this method to configure individual beam properties like radius, cap modes, etc.
+    ///
+    /// # Parameters
+    ///
+    /// - `v1`: Index of the first vertex
+    /// - `v2`: Index of the second vertex
+    /// - `f`: A closure that configures the [`BeamBuilder`]
+    pub fn add_beam_advanced<F>(&mut self, v1: usize, v2: usize, f: F) -> &mut Self
+    where
+        F: FnOnce(BeamBuilder) -> BeamBuilder,
+    {
+        let builder = BeamBuilder::new(v1, v2);
+        let beam = f(builder).build();
+        self.beams.push(beam);
+        self
+    }
+
+    /// Add multiple simple beams from vertex pairs.
+    ///
+    /// # Parameters
+    ///
+    /// - `vertex_pairs`: Slice of `(v1, v2)` vertex index pairs
+    pub fn add_beams(&mut self, vertex_pairs: &[(usize, usize)]) -> &mut Self {
+        for &(v1, v2) in vertex_pairs {
+            self.add_beam(v1, v2);
+        }
+        self
+    }
+
+    /// Add a simple ball (spherical node) at a vertex.
+    ///
+    /// The ball will use default properties (radius, etc.).
+    ///
+    /// # Parameters
+    ///
+    /// - `vindex`: Index of the vertex where the ball is located
+    pub fn add_ball(&mut self, vindex: usize) -> &mut Self {
+        let ball = BallBuilder::new(vindex).build();
+        self.balls.push(ball);
+        self
+    }
+
+    /// Add a ball with custom configuration.
+    ///
+    /// Use this method to configure individual ball properties like radius.
+    ///
+    /// # Parameters
+    ///
+    /// - `vindex`: Index of the vertex where the ball is located
+    /// - `f`: A closure that configures the [`BallBuilder`]
+    pub fn add_ball_advanced<F>(&mut self, vindex: usize, f: F) -> &mut Self
+    where
+        F: FnOnce(BallBuilder) -> BallBuilder,
+    {
+        let builder = BallBuilder::new(vindex);
+        let ball = f(builder).build();
+        self.balls.push(ball);
+        self
+    }
+
+    /// Add multiple simple balls from vertex indices.
+    ///
+    /// # Parameters
+    ///
+    /// - `vindices`: Slice of vertex indices where balls should be placed
+    pub fn add_balls(&mut self, vindices: &[usize]) -> &mut Self {
+        for &vindex in vindices {
+            self.add_ball(vindex);
+        }
+        self
+    }
+
+    /// Add a beam set to organize beams and balls into named groups.
+    ///
+    /// # Parameters
+    ///
+    /// - `f`: A closure that configures the [`BeamSetBuilder`]
+    pub fn add_beamset<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnOnce(&mut BeamSetBuilder),
+    {
+        let mut builder = BeamSetBuilder::new();
+        f(&mut builder);
+        self.beamsets.push(builder.build());
+        self
+    }
+
+    fn build(self) -> BeamLattice {
+        let beams = Beams { beam: self.beams };
+
+        let balls = if self.balls.is_empty() {
+            None
+        } else {
+            Some(Balls { ball: self.balls })
+        };
+
+        let beamsets = if self.beamsets.is_empty() {
+            None
+        } else {
+            Some(BeamSets {
+                beamset: self.beamsets,
+            })
+        };
+
+        BeamLattice {
+            minlength: self.minlength.unwrap_or(0.0001),
+            radius: self.radius.unwrap_or(0.0001),
+            ballmode: self.ballmode,
+            ballradius: self.ballradius,
+            clippingmode: self.clippingmode,
+            clippingmesh: self.clippingmesh,
+            representationmesh: self.representationmesh,
+            pid: self.pid,
+            pindex: self.pindex,
+            cap: self.cap,
+            beams,
+            balls,
+            beamsets,
+        }
     }
 }
 
@@ -1049,366 +2296,6 @@ impl BeamSetBuilder {
                 .into_iter()
                 .map(|index| BallRef { index })
                 .collect(),
-        }
-    }
-}
-
-/// Builder for constructing beam lattice structures
-pub struct BeamLatticeBuilder {
-    minlength: Option<f64>,
-    radius: Option<f64>,
-    ballmode: Option<BallMode>,
-    ballradius: Option<f64>,
-    clippingmode: Option<ClippingMode>,
-    clippingmesh: Option<usize>,
-    representationmesh: Option<usize>,
-    pid: Option<usize>,
-    pindex: Option<usize>,
-    cap: Option<CapMode>,
-    beams: Vec<Beam>,
-    balls: Vec<Ball>,
-    beamsets: Vec<BeamSet>,
-}
-
-impl BeamLatticeBuilder {
-    fn new() -> Self {
-        Self {
-            minlength: None,
-            radius: None,
-            ballmode: None,
-            ballradius: None,
-            clippingmode: None,
-            clippingmesh: None,
-            representationmesh: None,
-            pid: None,
-            pindex: None,
-            cap: None,
-            beams: Vec::new(),
-            balls: Vec::new(),
-            beamsets: Vec::new(),
-        }
-    }
-
-    /// Set the minimum length for beams
-    pub fn minlength(&mut self, minlength: f64) -> &mut Self {
-        self.minlength = Some(minlength);
-        self
-    }
-
-    /// Set the default radius for beams
-    pub fn radius(&mut self, radius: f64) -> &mut Self {
-        self.radius = Some(radius);
-        self
-    }
-
-    /// Set the ball mode
-    pub fn ballmode(&mut self, mode: BallMode) -> &mut Self {
-        self.ballmode = Some(mode);
-        self
-    }
-
-    /// Set the default ball radius
-    pub fn ballradius(&mut self, radius: f64) -> &mut Self {
-        self.ballradius = Some(radius);
-        self
-    }
-
-    /// Set the clipping mode
-    pub fn clippingmode(&mut self, mode: ClippingMode) -> &mut Self {
-        self.clippingmode = Some(mode);
-        self
-    }
-
-    /// Set the clipping mesh reference
-    pub fn clippingmesh(&mut self, object_id: ObjectId) -> &mut Self {
-        self.clippingmesh = Some(object_id.0);
-        self
-    }
-
-    /// Set the representation mesh reference
-    pub fn representationmesh(&mut self, object_id: ObjectId) -> &mut Self {
-        self.representationmesh = Some(object_id.0);
-        self
-    }
-
-    /// Set the property ID
-    pub fn pid(&mut self, pid: usize) -> &mut Self {
-        self.pid = Some(pid);
-        self
-    }
-
-    /// Set the property index
-    pub fn pindex(&mut self, pindex: usize) -> &mut Self {
-        self.pindex = Some(pindex);
-        self
-    }
-
-    /// Set the default cap mode
-    pub fn cap(&mut self, cap: CapMode) -> &mut Self {
-        self.cap = Some(cap);
-        self
-    }
-
-    /// Add a simple beam with vertex indices
-    pub fn add_beam(&mut self, v1: usize, v2: usize) -> &mut Self {
-        let beam = BeamBuilder::new(v1, v2).build();
-        self.beams.push(beam);
-        self
-    }
-
-    /// Add a beam with advanced configuration using a builder closure
-    pub fn add_beam_advanced<F>(&mut self, v1: usize, v2: usize, f: F) -> &mut Self
-    where
-        F: FnOnce(BeamBuilder) -> BeamBuilder,
-    {
-        let builder = BeamBuilder::new(v1, v2);
-        let beam = f(builder).build();
-        self.beams.push(beam);
-        self
-    }
-
-    /// Add multiple beams from vertex pairs
-    pub fn add_beams(&mut self, vertex_pairs: &[(usize, usize)]) -> &mut Self {
-        for &(v1, v2) in vertex_pairs {
-            self.add_beam(v1, v2);
-        }
-        self
-    }
-
-    /// Add a simple ball at a vertex index
-    pub fn add_ball(&mut self, vindex: usize) -> &mut Self {
-        let ball = BallBuilder::new(vindex).build();
-        self.balls.push(ball);
-        self
-    }
-
-    /// Add a ball with advanced configuration using a builder closure
-    pub fn add_ball_advanced<F>(&mut self, vindex: usize, f: F) -> &mut Self
-    where
-        F: FnOnce(BallBuilder) -> BallBuilder,
-    {
-        let builder = BallBuilder::new(vindex);
-        let ball = f(builder).build();
-        self.balls.push(ball);
-        self
-    }
-
-    /// Add multiple balls from vertex indices
-    pub fn add_balls(&mut self, vindices: &[usize]) -> &mut Self {
-        for &vindex in vindices {
-            self.add_ball(vindex);
-        }
-        self
-    }
-
-    /// Add a beam set using a builder closure
-    pub fn add_beamset<F>(&mut self, f: F) -> &mut Self
-    where
-        F: FnOnce(&mut BeamSetBuilder),
-    {
-        let mut builder = BeamSetBuilder::new();
-        f(&mut builder);
-        self.beamsets.push(builder.build());
-        self
-    }
-
-    fn build(self) -> BeamLattice {
-        let beams = Beams { beam: self.beams };
-
-        let balls = if self.balls.is_empty() {
-            None
-        } else {
-            Some(Balls { ball: self.balls })
-        };
-
-        let beamsets = if self.beamsets.is_empty() {
-            None
-        } else {
-            Some(BeamSets {
-                beamset: self.beamsets,
-            })
-        };
-
-        BeamLattice {
-            minlength: self.minlength.unwrap_or(0.0001),
-            radius: self.radius.unwrap_or(0.0001),
-            ballmode: self.ballmode,
-            ballradius: self.ballradius,
-            clippingmode: self.clippingmode,
-            clippingmesh: self.clippingmesh,
-            representationmesh: self.representationmesh,
-            pid: self.pid,
-            pindex: self.pindex,
-            cap: self.cap,
-            beams,
-            balls,
-            beamsets,
-        }
-    }
-}
-
-#[derive(Debug, Error, Clone)]
-pub enum ComponentsObjectError {
-    #[error("production extension is enabled but uuid is not set")]
-    ComponentUuidNotSet,
-
-    #[error("Path is set for a Component without enabling the Production extension")]
-    PathSetWithoutProductionExtension,
-
-    #[error("One or more Component References unknown objects")]
-    ObjectReferenceNotFoundForComponent,
-
-    #[error("Production extension is enabled but Uuid is not set")]
-    ObjectUuidNotSet,
-}
-
-pub type ComponentsObjectBuilder = ObjectBuilder<ComponentsBuilder>;
-
-impl ComponentsObjectBuilder {
-    fn new(
-        object_id: ObjectId,
-        all_existing_object_ids: &[ObjectId],
-        is_production_ext_required: bool,
-    ) -> Self {
-        Self {
-            entity: ComponentsBuilder::new(all_existing_object_ids),
-            object_id,
-            objecttype: Some(ObjectType::Model),
-            thumbnail: None,
-            partnumber: None,
-            name: None,
-            pid: None,
-            pindex: None,
-            uuid: None,
-            is_production_ext_required,
-        }
-    }
-
-    fn build(self) -> Result<Object, ComponentsObjectError> {
-        let components = self
-            .entity
-            .build_components(self.is_production_ext_required)?;
-
-        if self.is_production_ext_required && self.uuid.is_none() {
-            return Err(ComponentsObjectError::ObjectUuidNotSet);
-        }
-
-        Ok(Object {
-            id: self.object_id.0,
-            objecttype: self.objecttype,
-            thumbnail: self.thumbnail,
-            partnumber: self.partnumber,
-            name: self.name,
-            pid: self.pid,
-            pindex: self.pindex,
-            uuid: self.uuid,
-            mesh: None,
-            components: Some(components),
-        })
-    }
-}
-
-pub struct ComponentsBuilder {
-    components: Vec<Component>,
-
-    all_existing_object_ids: Vec<ObjectId>,
-}
-
-impl ComponentsBuilder {
-    fn new(all_existing_object_ids: &[ObjectId]) -> Self {
-        ComponentsBuilder {
-            components: vec![],
-            all_existing_object_ids: all_existing_object_ids.to_vec(),
-        }
-    }
-
-    pub fn add_component(&mut self, object_id: ObjectId) -> &mut Self {
-        self.add_component_advanced(object_id, |_| {});
-        self
-    }
-
-    pub fn add_component_advanced<F>(&mut self, object_id: ObjectId, f: F) -> &mut Self
-    where
-        F: FnOnce(&mut ComponentBuilder),
-    {
-        let mut builder = ComponentBuilder::new(object_id);
-        f(&mut builder);
-
-        let component = builder.build();
-        self.components.push(component);
-
-        self
-    }
-
-    fn build_components(
-        self,
-        is_production_ext_required: bool,
-    ) -> Result<Components, ComponentsObjectError> {
-        if is_production_ext_required {
-            let all_uuid_set = self.components.iter().all(|c| c.uuid.is_some());
-            if !all_uuid_set {
-                return Err(ComponentsObjectError::ComponentUuidNotSet);
-            }
-        } else {
-            let all_path_is_not_set = self.components.iter().all(|c| c.path.is_none());
-            if !all_path_is_not_set {
-                return Err(ComponentsObjectError::PathSetWithoutProductionExtension);
-            }
-        }
-
-        let all_object_exists = self
-            .components
-            .iter()
-            .all(|c| self.all_existing_object_ids.contains(&ObjectId(c.objectid)));
-
-        if !all_object_exists {
-            return Err(ComponentsObjectError::ObjectReferenceNotFoundForComponent);
-        }
-
-        Ok(Components {
-            component: self.components,
-        })
-    }
-}
-
-pub struct ComponentBuilder {
-    objectid: usize,
-    transform: Option<Transform>,
-    path: Option<String>,
-    uuid: Option<String>,
-}
-
-impl ComponentBuilder {
-    pub fn new(object_id: ObjectId) -> Self {
-        Self {
-            objectid: object_id.0,
-            transform: None,
-            path: None,
-            uuid: None,
-        }
-    }
-
-    pub fn transform(&mut self, transform: Transform) -> &mut Self {
-        self.transform = Some(transform);
-        self
-    }
-
-    pub fn uuid(&mut self, uuid: &str) -> &mut Self {
-        self.uuid = Some(uuid.to_owned());
-        self
-    }
-
-    pub fn path(&mut self, path: &str) -> &mut Self {
-        self.path = Some(path.to_owned());
-        self
-    }
-
-    fn build(self) -> Component {
-        Component {
-            objectid: self.objectid,
-            transform: self.transform,
-            path: self.path,
-            uuid: self.uuid,
         }
     }
 }
