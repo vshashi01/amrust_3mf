@@ -12,18 +12,27 @@ use crate::{
     threemf_namespaces::{CORE_NS, PROD_NS},
 };
 
+/// Represents a 3D object in a 3MF model, either a mesh or a component assembly.
+///
+/// Objects are the primary building blocks of 3MF models. They can contain triangle mesh
+/// geometry directly or reference other objects through components with transforms.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug)]
 #[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename="object"))]
 pub struct Object {
+    /// A unique identifier for this object
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub id: usize,
 
+    /// Optionally defines the intend of this object. If not defined, the
+    /// consumer of the file is safe to assume the object is meant to be a [`ObjectType::Model`]
+    ///
+    /// See [`ObjectType`] for more details.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "type")
@@ -31,36 +40,47 @@ pub struct Object {
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "type"))]
     pub objecttype: Option<ObjectType>,
 
+    /// Optional path to the thumbnail in the 3MF Package for this object.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub thumbnail: Option<String>,
 
+    /// Optional string defining the part number for this object.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub partnumber: Option<String>,
 
+    /// Optional string defining the name for this object.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub name: Option<String>,
 
+    /// Reference to the property group element with the
+    /// matching id attribute value (e.g. Basematerials).
+    /// It is REQUIRED if pindex is specified.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub pid: Option<usize>,
 
+    /// References a zero-based index into the properties
+    /// group specified by pid. This property is used to build the object.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub pindex: Option<usize>,
 
+    /// Optional UUID as a string.
+    ///
+    /// The UUID is required when using the Production extension.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
@@ -68,8 +88,14 @@ pub struct Object {
     #[cfg_attr(feature = "speed-optimized-read", serde(rename = "UUID"))]
     pub uuid: Option<String>,
 
+    /// The Mesh contained in this object. See [`Mesh`]
+    ///
+    /// This field is mutually exclusive with [`Object::components`]
     pub mesh: Option<Mesh>,
 
+    /// The Components contained in this object.
+    ///
+    /// This field is mutually exclusive with [`Object::mesh`]
     pub components: Option<Components>,
 }
 
@@ -78,16 +104,26 @@ pub struct Object {
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+/// Specifies the type of a 3MF object, indicating its role in the build process.
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(scalar, rename_all = "lowercase")
 )]
 pub enum ObjectType {
+    /// The Object is intended as a production model.
     #[default]
     Model,
+
+    /// The Object is intended as Non-Solid Support structure
     Support,
+
+    /// The Object is intended as a Solid Support Structure
     SolidSupport,
+
+    /// The Object is intended as an Open Surface, usually not water-tight mesh
     Surface,
+
+    /// Other auxiliary uses
     Other,
 }
 

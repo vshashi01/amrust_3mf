@@ -111,7 +111,7 @@ impl ThreemfPackage {
 
 #[cfg(feature = "io-write")]
 impl ThreemfPackage {
-    /// Writes the 3mf package to a [writer].
+    /// Writes the 3mf package to a [`io::Write`].
     /// Expects a well formed [ThreemfPackage] object to write the package.
     /// A well formed packaged requires atleast 1 root model and 1 relationship file along with the content types.
     pub fn write<W: Write + Seek>(&self, threemf_archive: W) -> Result<(), Error> {

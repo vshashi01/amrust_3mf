@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 /// Content types for the Open Packaging Conventions (OPC).
 /// Contains a collection of [DefaultContentTypes].
-/// [DefaultContentTypes] contains the [DefaultContetnTypeEnum] specifying the content type.
+/// [DefaultContentTypes] contains the [DefaultContentTypeEnum] specifying the content type.
 /// [DefaultContentTypes] contains the file extension that is used for the specified content type.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Types"))]
@@ -28,7 +28,7 @@ pub struct ContentTypes {
     pub defaults: Vec<DefaultContentTypes>,
 }
 
-/// Predefined content types supported by [threemf::io] currently.
+/// Predefined content types supported by this library currently.
 /// If a content type is not found, it will fail the 3mf file parsing.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]

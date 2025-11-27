@@ -14,6 +14,10 @@ use crate::{
     },
 };
 
+/// Represents a 3MF model, the root element containing resources and build configuration.
+///
+/// A model defines the 3D objects, materials, and build instructions for a 3MF package.
+/// It serves as the primary container for all 3MF data structures.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "model"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]

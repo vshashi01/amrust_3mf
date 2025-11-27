@@ -13,6 +13,10 @@ use serde::Deserialize;
 use crate::threemf_namespaces::CORE_NS;
 
 //ToDo: Add additional optional fields on Metadata
+/// Key-value metadata associated with a 3MF model or object.
+///
+/// Metadata provides additional information about the model, such as author,
+/// description, or custom properties.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -39,6 +43,7 @@ pub struct Metadata {
     pub value: Option<String>,
 }
 
+/// Group of metadata entries.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]

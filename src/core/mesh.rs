@@ -7,34 +7,25 @@ use instant_xml::FromXml;
 #[cfg(feature = "speed-optimized-read")]
 use serde::Deserialize;
 
-use crate::core::triangle_set::TriangleSets;
-use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
-
 use crate::core::beamlattice::BeamLattice;
-
+use crate::core::triangle_set::TriangleSets;
 use crate::threemf_namespaces::BEAM_LATTICE_NS;
+use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 
 /// A triangle mesh
 ///
-/// This is a very basic types that lacks any amenities for constructing it or
-/// for iterating over its data.
-///
-/// This is by design. Providing a generally usable and feature-rich triangle
-/// mesh type is out of scope for this library. It is expected that users of
-/// this library will use their own mesh type anyway, and the simplicity of
-/// `TriangleMesh` provides an easy target for conversion from such a type.
+/// It is expected that users of this library will use their own mesh type,
+/// and the simplicity of [`Mesh`] provides an easy target for conversion to and from.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
-// #[cfg_attr(all(feature = "beam-lattice", any(feature = "write", feature = "memory-optimized-read")), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
 #[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
-// #[cfg_attr(all(not(feature = "beam-lattice"), any(feature = "write", feature = "memory-optimized-read")), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS), rename = "mesh"))]
 pub struct Mesh {
     /// The vertices of the mesh
     ///
     /// This defines the vertices that are part of the mesh, but not the mesh's
-    /// structure. See the `triangles` field.
+    /// structure. See the [`Mesh::triangles`] field.
     pub vertices: Vertices,
 
     /// The triangles that make up the mesh
@@ -43,14 +34,18 @@ pub struct Mesh {
     /// field.
     pub triangles: Triangles,
 
+    /// Optional TriangleSets that allows to create identifiable group of triangles
+    ///
+    /// See [`crate::core::triangle_set::TriangleSet`] for more details
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(CORE_TRIANGLESET_NS))
     )]
     pub trianglesets: Option<TriangleSets>,
 
-    /// The beam lattice that is part of this mesh
-    // #[cfg(feature = "beam-lattice")]
+    /// Optional Beam Lattice geometry that is part of this mesh
+    ///
+    /// See [`crate::core::beamlattice::BeamLattice`] for more details
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
@@ -59,6 +54,9 @@ pub struct Mesh {
     pub beamlattice: Option<BeamLattice>,
 }
 
+/// Collection of Vertex
+///
+/// See [`Vertex`] for more details
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -72,7 +70,9 @@ pub struct Vertices {
     pub vertex: Vec<Vertex>,
 }
 
-/// A vertex in a triangle mesh
+/// A vertex in a mesh
+///
+/// A vertex is defined as a Point coordinate in 3D coordinate system.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -82,18 +82,21 @@ pub struct Vertices {
     xml(ns(CORE_NS), rename = "vertex")
 )]
 pub struct Vertex {
+    /// X position
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub x: f64,
 
+    /// Y position
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub y: f64,
 
+    /// Z position
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -101,7 +104,9 @@ pub struct Vertex {
     pub z: f64,
 }
 
-/// A list of triangles, as a struct mainly to comply with easier serde xml
+/// Collection of Triangle
+///
+/// See [`Triangle`] for more details.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -115,10 +120,12 @@ pub struct Triangles {
     pub triangle: Vec<Triangle>,
 }
 
-/// A triangle in a triangle mesh
+/// A triangle in Mesh
 ///
-/// The triangle consists of indices that refer to the vertices of the mesh. See
-/// [`TriangleMesh`].
+/// The triangle consists of indices that refer to the vertices of the mesh.
+/// Each vertex of the triangle are defined as an index into [`Vertices`]
+/// additional indices into other resources can be specified
+/// for each vertex of the triangle as well.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -128,42 +135,49 @@ pub struct Triangles {
     xml(ns(CORE_NS), rename = "triangle")
 )]
 pub struct Triangle {
+    /// Vertex 1
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub v1: usize,
 
+    /// Vertex 2
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub v2: usize,
 
+    /// Vertex 3
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub v3: usize,
 
+    /// Overrides the object level pindex for Vertex 1 of this [`Triangle`]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub p1: Option<usize>,
 
+    /// Overrides the object level pindex for Vertex 2 of this [`Triangle`]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub p2: Option<usize>,
 
+    /// Overrides the object level pindex for Vertex 3 of this [`Triangle`]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
     pub p3: Option<usize>,
 
+    /// Overrides the object level pid for this [`Triangle`]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)

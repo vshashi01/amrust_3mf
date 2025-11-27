@@ -12,6 +12,10 @@ use crate::{
     threemf_namespaces::{CORE_NS, PROD_NS},
 };
 
+/// Contains the build configuration for a 3MF model, listing items to be printed.
+///
+/// The build section specifies which objects from the resources should be included
+/// in the final 3D print, along with their transforms and metadata.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -29,10 +33,11 @@ pub struct Build {
     pub item: Vec<Item>,
 }
 
+/// Represents a single item in the build configuration, referencing an object with transform.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Default, PartialEq, Debug, Clone)]
 #[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "item"))]
 pub struct Item {
     #[cfg_attr(
