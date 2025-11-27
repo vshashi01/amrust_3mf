@@ -5,7 +5,7 @@
 //!
 //! Run with:
 //! ```bash
-//! cargo run --example query_example --features io-memory-optimized-read
+//! cargo run --example query_example --no-default-features --features io-write
 //! ```
 
 use amrust_3mf::io::{ThreemfPackage, query::*};

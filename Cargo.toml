@@ -83,5 +83,16 @@ name = "builder_example"
 path = "examples/builder_example.rs"
 required-features = ["io-write"]
 
+[[example]]
+name = "builder_beamlattice_example"
+path = "examples/builder_beamlattice_example.rs"
+required-features = ["io-write"]
+
+[[example]]
+name = "query_example"
+path = "examples/query_example.rs"
+required-features = ["io-memory-optimized-read"]
+
+
 [package.metadata.cargo-all-features]
 max_combination_size = 3
