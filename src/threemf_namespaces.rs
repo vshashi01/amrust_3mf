@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////////////////////////
-///  namespaces related to the Core specification
+///  Namespaces & Prefixes related to the Core specification and its extensions
 pub const CORE_NS: &str = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02";
 
 pub const CORE_TRIANGLESET_NS: &str =
@@ -8,12 +8,12 @@ pub const CORE_TRIANGLESET_PREFIX: &str = "t";
 /////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// namspaces related to the Production extension
+/// Namespaces & Prefixes related to the Production extension
 pub const PROD_NS: &str = "http://schemas.microsoft.com/3dmanufacturing/production/2015/06";
 pub const PROD_PREFIX: &str = "p";
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// namespaces related to the Beam Lattice extension
+/// Namespaces & Prefixes related to the Beam Lattice extension
 pub const BEAM_LATTICE_NS: &str =
     "http://schemas.microsoft.com/3dmanufacturing/beamlattice/2017/02";
 pub const BEAM_LATTICE_PREFIX: &str = "b";
@@ -22,16 +22,24 @@ pub const BEAM_LATTICE_BALLS_NS: &str =
     "http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07";
 pub const BEAM_LATTICE_BALLS_PREFIX: &str = "b2";
 
-/// Enum representing the different XML namespaces used in 3MF
+/// Enum representing the different 3MF specifications supported by this library
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ThreemfNamespace {
+    /// Core 3MF
     Core,
+
+    /// Production extension specification
     Prod,
+
+    /// Beam Lattice extension
     BeamLattice,
+
+    /// Triangle Set extension (Part of the Core Spec)
     CoreTriangleSet,
 }
 
 impl ThreemfNamespace {
+    /// Returns the namespace Uri
     pub fn uri(&self) -> &'static str {
         match self {
             Self::Core => CORE_NS,
@@ -41,6 +49,9 @@ impl ThreemfNamespace {
         }
     }
 
+    /// Returns the default prefix used by this library for this namespace
+    /// Note: This is not reflective of prefix that maybe used by other
+    /// producers.
     pub fn prefix(&self) -> Option<&'static str> {
         match self {
             Self::Core => None, // default namespace
@@ -50,6 +61,7 @@ impl ThreemfNamespace {
         }
     }
 
+    /// Utility to return XML Namespace definition as String
     pub fn xmlns_declaration(&self) -> String {
         match self.prefix() {
             Some(prefix) => format!(r#" xmlns:{}="{}""#, prefix, self.uri()),

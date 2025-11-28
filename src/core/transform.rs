@@ -22,6 +22,10 @@ const MATRIX_SIZE: usize = 12;
 // | m30 m31 m32 1.0 |
 //
 // the first 3 columns are represented as [m00, m01, m02, m10, m11, m12, m20, m21, m22, m30, m31, m32]
+/// 4x3 transformation matrix for positioning and orienting 3D objects.
+///
+/// Represents a 3D affine transformation as a 12-element array in row-major order.
+/// The matrix transforms points from object space to world space.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, PartialEq, Clone)]

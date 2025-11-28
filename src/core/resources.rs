@@ -9,6 +9,7 @@ use serde::Deserialize;
 
 use crate::{core::object::Object, threemf_namespaces::CORE_NS};
 
+/// A collection of Objects and other properties that are referenced by other elements.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -18,9 +19,11 @@ use crate::{core::object::Object, threemf_namespaces::CORE_NS};
     xml(ns(CORE_NS), rename = "resources")
 )]
 pub struct Resources {
+    /// Collection of Object. See [`crate::core::object::Object`]
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub object: Vec<Object>,
 
+    /// Collection of Materials.
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub basematerials: Vec<BaseMaterials>,
 }

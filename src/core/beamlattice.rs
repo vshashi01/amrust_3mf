@@ -88,6 +88,8 @@ pub struct BeamLattice {
     pub pindex: Option<usize>,
 
     /// Default capping mode for beam ends
+    ///
+    /// See [`CapMode`] for more details.
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
@@ -95,17 +97,17 @@ pub struct BeamLattice {
     )]
     pub cap: Option<CapMode>,
 
-    /// Container for beams
+    /// Beams in this beam lattice.
     pub beams: Beams,
 
-    /// Optional container for balls
+    /// Optional balls in this beam lattice.
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_BALLS_NS))
     )]
     pub balls: Option<Balls>,
 
-    /// Optional container for beam sets
+    /// Optional beam sets in this beam lattice.
     pub beamsets: Option<BeamSets>,
 }
 
@@ -123,8 +125,11 @@ pub enum BallMode {
     /// No balls are created at beam vertices
     #[default]
     None,
-    /// Balls are created at vertices with a corresponding ball element. Other vertices do not get a ball.
+
+    /// Balls are created at vertices with a corresponding ball element specified in [`Ball`].
+    /// Other vertices do not get a ball.
     Mixed,
+
     /// Balls are created at every vertex that maps to the end of a beam
     All,
 }
@@ -154,9 +159,11 @@ pub enum ClippingMode {
     /// The lattice is not clipped at any mesh boundary
     #[default]
     None,
+
     /// The lattice is clipped by the volume described by the referenced clippingmesh.
     /// All geometry inside the volume (according to the positive fill rule) is retained.
     Inside,
+
     /// The lattice is clipped by the volume described by the referenced clippingmesh.
     /// All geometry outside the volume (according to the positive fill rule) is retained.
     Outside,
@@ -186,9 +193,11 @@ impl From<String> for ClippingMode {
 pub enum CapMode {
     /// The beam end will be closed at its end nodes by a half sphere
     Hemisphere,
+
     /// The beam end will be closed at its end nodes by a sphere
     #[default]
     Sphere,
+
     /// The beam end will be closed with a flat end and therefore have a cylindrical or conical shape
     Butt,
 }
@@ -219,6 +228,10 @@ pub struct Beams {
 }
 
 /// A single beam of the beamlattice
+///
+/// A beam is the core geometry within beam lattice. It has 2 vertices that defines
+/// the end of the beam usually called beam nodes. Each beam nodes can have its own
+/// thickness.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -292,7 +305,7 @@ pub struct Beam {
     pub cap2: Option<CapMode>,
 }
 
-/// A container for ball elements
+/// A Collection of Ball elements. See [`Ball`] for more details.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]

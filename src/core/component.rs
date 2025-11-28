@@ -12,6 +12,10 @@ use crate::{
     threemf_namespaces::{CORE_NS, PROD_NS},
 };
 
+/// Container for component references that make up a components object.
+///
+/// Components allow building complex objects by referencing other objects
+/// with transforms, enabling hierarchical model construction.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
@@ -24,6 +28,10 @@ pub struct Components {
     pub component: Vec<Component>,
 }
 
+/// Reference to an object with an applied transform.
+///
+/// Components enable reusing objects in different positions, orientations,
+/// and scales within a components object.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
