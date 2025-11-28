@@ -8,13 +8,18 @@ This crate provides a compact core model representation and I/O helpers for read
 
 ## Supported 3MF Extensions and Maximum Supported Versions
 
-| 3MF Specifications | Type      | Optional | Current supported version |
-| ------------------ | --------- | :------: | ------------------------: |
-| 3MF Core Spec      | Core      |    No    |                     1.3.0 |
-| Production         | Extension |    No    |                     1.1.2 |
-| Beam Lattice       | Extension |    No    |                     1.2.0 |
+| 3MF Specifications | Type      | Read<sub>1</sub> | Write<sub>2</sub> | Current supported version |
+| ------------------ | --------- | :--------------: | :---------------: | ------------------------: |
+| 3MF Core Spec      | Core      |       MUST       |       MUST        |                     1.3.0 |
+| Triangle Set       | Extension |       MUST       |     OPTIONAL      |           Core Spec 1.3.0 |
+| Production         | Extension |       MUST       |     OPTIONAL      |                     1.1.2 |
+| Beam Lattice       | Extension |       MUST       |     OPTIONAL      |                     1.2.0 |
 
 **Note: This library is still in active development, expect frequent API changes!!**
+
+**Note<sub>1</sub>: Reading these data are currently MUST, which means if the data exists in the 3MF Model the library will automatically read it**
+
+**Note<sub>2</sub>: Write these data are currently optional however they are available by default in the mapping of the Rust types and are not conditionally compiled.**
 
 ## Overview
 
@@ -26,7 +31,7 @@ amrust_3mf provides:
   - [`ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) - Lazy loading for memory-constrained environments
 - **Flexible I/O**: Support for reading/writing 3MF packages with different performance characteristics
   - Easy reading of data through query APIs.
-  - Easy creation of 3MF Model through builder APIs. See [`builder_example.rs`](examples/builder_example.rs) for the most basic starter guide. 
+  - Easy creation of 3MF Model through builder APIs. See [`builder_example.rs`](examples/builder_example.rs) for the most basic starter guide.
 - **Extension Support**: All 3MF extensions (Production, Beam Lattice, etc.) are always available
 - **Custom Parts**: Support for known parts (thumbnails) and unknown parts (custom XML data)
 
@@ -34,7 +39,7 @@ amrust_3mf provides:
 
 Choose the right loading strategy for your use case:
 
-- **Memory-Optimized**: Lower memory usage, good for large files. This is the default. 
+- **Memory-Optimized**: Lower memory usage, good for large files. This is the default.
 - **Speed-Optimized**: Faster parsing, higher memory usage
 - **Lazy Loading**: Defers loading until accessed, best for inspection-only use cases
 
@@ -49,20 +54,24 @@ Key types and files:
 This crate uses optional Cargo features to control functionality. Enable only what you need.
 
 ### Core Serialization Features
+
 - `write` — Enable writing 3MF data (adds `ToXml` derive to all 3MF types using `instant_xml`)
 - `memory-optimized-read` — Enable memory-efficient reading (adds `FromXml` derive to all 3MF types using `instant_xml`)
 - `speed-optimized-read` — Enable fast reading (adds `serde::Deserialize` derive to all 3MF types using `serde_roxmltree`)
 
 ### Package I/O Features
+
 - `io-write` — Package writing with ZIP creation (requires `write`)
 - `io-memory-optimized-read` — Package reading with memory optimization (requires `memory-optimized-read`)
 - `io-speed-optimized-read` — Package reading with speed optimization (requires `speed-optimized-read`)
 - `io-lazy-read` — Lazy loading functionality (requires `io-memory-optimized-read`)
 
 ### Default Features
+
 `io-write`, `io-memory-optimized-read`, `io-lazy-read`, `write`, `memory-optimized-read`
 
 ### Feature Combinations
+
 ```toml
 # Basic reading
 amrust_3mf = "0.1"
@@ -90,6 +99,7 @@ The [examples/](examples/) directory contains runnable examples for different us
 - **`beamlattice_write.rs`** - Working with beam lattice extensions
 
 Run examples with:
+
 ```bash
 cargo run --example write --features io-write
 cargo run --example unpack --features io-lazy-read
@@ -98,27 +108,31 @@ cargo run --example unpack --features io-lazy-read
 ## API Overview
 
 ### Core Data Structures
+
 - `Model` - Root 3MF model with resources and build configuration
 - `Object` - 3D objects (meshes or component assemblies)
 - `Mesh` - Triangle mesh geometry with vertices and triangles
 - `Component` - Object references with transforms
 
 ### Package I/O
+
 - `ThreemfPackage` - Eager loading - loads all data upfront
 - `ThreemfPackageLazyReader` - Lazy loading - loads metadata first, data on-demand
 
-## Reading and Writing easily through `io` crate 
-- `query` module enables easy retrieval of data from the 3MF Package or 3MF model. 
-- `builder` enables easy creation of 3MF Model. 
+## Reading and Writing easily through `io` crate
 
+- `query` module enables easy retrieval of data from the 3MF Package or 3MF model.
+- `builder` enables easy creation of 3MF Model.
 
 ## Building & Testing
 
 ### Requirements
+
 - Rust 1.89.0 or later (2024 edition)
 - Cargo package manager
 
 ### Build Commands
+
 ```bash
 # Build with all features
 cargo build --all-features
@@ -129,6 +143,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 ### Testing
+
 ```bash
 # Install cargo-all-features and run tests for multiple feature combinations at once
 cargo all-features test
