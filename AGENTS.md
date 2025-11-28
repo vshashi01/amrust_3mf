@@ -20,6 +20,7 @@
 - **Naming**: Snake_case for files/functions, PascalCase for types/enums, SCREAMING_SNAKE_CASE for constants
 - **Tests**: Integration tests in `tests/` with feature gates; use `pretty_assertions` for test assertions; no doc tests are added
 - **Documentation**: Add doc comments (`///`) for public APIs; reference file paths as `[Type](src/path/file.rs)`
+- **Changelog**: Maintain Changelog.md following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format; update for each release with categorized changes (Added, Changed, Fixed, etc.)
 - **Clippy**: Code must pass `clippy --all-targets --all-features -- -D warnings` (warnings are errors in CI)
 
 ## Project Structure
