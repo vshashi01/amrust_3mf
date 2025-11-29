@@ -9,6 +9,7 @@
 //! ```
 
 use threemf2::io::{ThreemfPackage, query::*};
+
 use std::{fs::File, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
