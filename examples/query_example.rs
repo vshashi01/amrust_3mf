@@ -8,7 +8,8 @@
 //! cargo run --example query_example --no-default-features --features io-write
 //! ```
 
-use amrust_3mf::io::{ThreemfPackage, query::*};
+use threemf2::io::{ThreemfPackage, query::*};
+
 use std::{fs::File, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

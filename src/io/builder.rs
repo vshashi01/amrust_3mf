@@ -18,7 +18,7 @@
 //! # Basic Usage
 //!
 //! ```rust,ignore
-//! use amrust_3mf::io::builder::{ModelBuilder, Unit};
+//! use threemf2::io::builder::{ModelBuilder, Unit};
 //!
 //! // Create a root model
 //! let mut builder = ModelBuilder::new(Unit::Millimeter, true);
@@ -204,7 +204,7 @@ pub enum ProductionExtensionError {
 /// ## Creating a simple root model with a mesh object
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::builder::{ModelBuilder, Unit, ObjectType};
+/// use threemf2::io::builder::{ModelBuilder, Unit, ObjectType};
 ///
 /// let mut builder = ModelBuilder::new(Unit::Millimeter, true);
 ///

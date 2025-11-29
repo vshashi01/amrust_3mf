@@ -1,10 +1,10 @@
-# amrust_3mf
+# threemf2
 
 Library for reading and writing 3MF (3D Manufacturing Format) packages with both eager and lazy loading support.
 
 This crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
 
-[![CI](https://github.com/vshashi01/amrust_3mf/actions/workflows/CI.yml/badge.svg)](https://github.com/vshashi01/amrust_3mf/actions/workflows/CI.yml) [![codecov](https://codecov.io/gh/vshashi01/amrust_3mf/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/amrust_3mf)
+[![CI](https://github.com/vshashi01/threemf2/actions/workflows/CI.yml/badge.svg)](https://github.com/vshashi01/threemf2/actions/workflows/CI.yml) [![codecov](https://codecov.io/gh/vshashi01/threemf2/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/threemf2)
 
 ## Supported 3MF Extensions and Maximum Supported Versions
 
@@ -23,7 +23,7 @@ This crate provides a compact core model representation and I/O helpers for read
 
 ## Overview
 
-amrust_3mf provides:
+threemf2 provides:
 
 - **Core Data Structures**: Complete 3MF model representation ([`Model`](src/core/model.rs), [`Object`](src/core/object.rs), [`Mesh`](src/core/mesh.rs), etc.)
 - **Multiple Loading Strategies**:
@@ -74,16 +74,16 @@ This crate uses optional Cargo features to control functionality. Enable only wh
 
 ```toml
 # Basic reading
-amrust_3mf = "0.1"
+threemf2 = "0.1"
 
 # Full I/O with lazy loading (default)
-amrust_3mf = { version = "0.1", features = ["io-lazy-read"] }
+threemf2 = { version = "0.1", features = ["io-lazy-read"] }
 
 # Memory-constrained environments
-amrust_3mf = { version = "0.1", features = ["io-lazy-read"], default-features = false }
+threemf2 = { version = "0.1", features = ["io-lazy-read"], default-features = false }
 
 # High-performance reading
-amrust_3mf = { version = "0.1", features = ["io-speed-optimized-read"] }
+threemf2 = { version = "0.1", features = ["io-speed-optimized-read"] }
 ```
 
 ## Examples

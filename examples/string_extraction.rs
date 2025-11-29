@@ -1,5 +1,5 @@
-use amrust_3mf::io::{CachePolicy, Error, ThreemfPackageLazyReader};
 use std::{fs::File, path::PathBuf};
+use threemf2::io::{CachePolicy, Error, ThreemfPackageLazyReader};
 
 /// This example demonstrates extracting raw XML strings from a 3MF package
 /// using the pull-based reader with string extraction methods.

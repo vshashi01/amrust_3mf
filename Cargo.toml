@@ -1,5 +1,5 @@
 [package]
-name = "amrust_3mf"
+name = "threemf2"
 version = "0.1.0"
 rust-version = "1.89"
 edition = "2024"

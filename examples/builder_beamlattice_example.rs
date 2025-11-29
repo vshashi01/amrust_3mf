@@ -1,4 +1,4 @@
-use amrust_3mf::io::{BallMode, CapMode, ModelBuilder, ObjectType, Unit};
+use threemf2::io::{BallMode, CapMode, ModelBuilder, ObjectType, Unit};
 
 /// This example demonstrates how to use the BeamLatticeBuilder with ModelBuilder
 /// to create 3MF models with beam lattice structures.

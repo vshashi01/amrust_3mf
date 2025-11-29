@@ -21,7 +21,7 @@
 //! ## Iterating All Objects
 //!
 //! ```rust,ignore
-//! use amrust_3mf::io::{ThreemfPackage, query::*};
+//! use threemf2::io::{ThreemfPackage, query::*};
 //!
 //! let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 //!
@@ -153,7 +153,7 @@
 //! # See Also
 //!
 //! - [`ThreemfPackage`] - The eager-loaded package type these queries work with
-//! - [`examples/query_example.rs`](https://github.com/vshashi01/amrust_3mf/blob/main/examples/query_example.rs) - Complete usage examples
+//! - [`examples/query_example.rs`](https://github.com/vshashi01/threemf2/blob/main/examples/query_example.rs) - Complete usage examples
 
 #![allow(clippy::needless_lifetimes)]
 
@@ -184,7 +184,7 @@ use crate::{
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -238,7 +238,7 @@ pub struct ObjectRef<'a> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -284,7 +284,7 @@ pub fn get_object_from_model<'a>(object_id: usize, model: &'a Model) -> Option<O
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -338,7 +338,7 @@ pub fn get_objects<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = Obje
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -409,7 +409,7 @@ pub struct GenericObjectRef<'a, T> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -511,7 +511,7 @@ impl<'a> Deref for MeshObjectRef<'a> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -567,7 +567,7 @@ pub fn get_mesh_objects<'a>(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -624,7 +624,7 @@ pub fn get_mesh_objects_from_model_ref<'a>(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -745,7 +745,7 @@ impl<'a> Deref for ComponentsObjectRef<'a> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -805,7 +805,7 @@ pub struct ComponentRef {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -948,7 +948,7 @@ impl<'a> ItemRef<'a> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1011,7 +1011,7 @@ pub fn get_components_objects<'a>(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1079,7 +1079,7 @@ pub fn get_components_objects_from_model_ref<'a>(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1130,7 +1130,7 @@ pub fn get_items<'a>(package: &'a ThreemfPackage) -> impl Iterator<Item = ItemRe
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1185,7 +1185,7 @@ pub fn get_items_from_model_ref<'a>(model_ref: ModelRef<'a>) -> impl Iterator<It
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1236,7 +1236,7 @@ pub fn get_items_by_objectid<'a>(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1292,7 +1292,7 @@ pub fn get_item_by_uuid<'a>(package: &'a ThreemfPackage, uuid: &str) -> Option<I
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///
@@ -1341,7 +1341,7 @@ pub struct ModelRef<'a> {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use amrust_3mf::io::{ThreemfPackage, query::*};
+/// use threemf2::io::{ThreemfPackage, query::*};
 ///
 /// let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true)?;
 ///

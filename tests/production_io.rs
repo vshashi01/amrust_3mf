@@ -12,10 +12,10 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn read_threemf_package_memory_optimized() {
-        use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_components_objects;
-        use amrust_3mf::io::query::get_mesh_objects;
-        use amrust_3mf::io::query::get_objects;
+        use threemf2::io::ThreemfPackage;
+        use threemf2::io::query::get_components_objects;
+        use threemf2::io::query::get_mesh_objects;
+        use threemf2::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
@@ -69,11 +69,11 @@ mod smoke_tests {
     #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     fn read_threemf_package_speed_optimized() {
-        use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_components_objects;
-        use amrust_3mf::io::query::get_mesh_objects;
-        // use amrust_3mf::io::query::get_object_ref_from_id;
-        use amrust_3mf::io::query::get_objects;
+        use threemf2::io::ThreemfPackage;
+        use threemf2::io::query::get_components_objects;
+        use threemf2::io::query::get_mesh_objects;
+        // use threemf2::io::query::get_object_ref_from_id;
+        use threemf2::io::query::get_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
@@ -127,7 +127,7 @@ mod smoke_tests {
     #[cfg(all(feature = "io-lazy-read", feature = "io-memory-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use threemf2::io::{CachePolicy, ThreemfPackageLazyReader};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
@@ -216,7 +216,7 @@ mod smoke_tests {
     #[cfg(all(feature = "io-lazy-read", feature = "io-speed-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_speed_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use threemf2::io::{CachePolicy, ThreemfPackageLazyReader};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-separate-model-files.3mf");
         let reader = File::open(path).unwrap();

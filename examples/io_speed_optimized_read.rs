@@ -1,4 +1,4 @@
-use amrust_3mf::io::ThreemfPackage;
+use threemf2::io::ThreemfPackage;
 
 use std::{fs::File, path::PathBuf};
 
