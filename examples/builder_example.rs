@@ -1,4 +1,4 @@
-use amrust_3mf::io::{ModelBuilder, ObjectType, ThreemfPackage, Unit};
+use threemf2::io::{ModelBuilder, ObjectType, ThreemfPackage, Unit};
 
 /// This example shows how to build 3MF Model using ModelBuilder.
 /// Use this to reduce the boilerplate needed to setup 3MF Models.

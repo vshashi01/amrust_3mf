@@ -7,7 +7,7 @@
 //!
 //!
 //! [3MF]: https://en.wikipedia.org/wiki/3D_Manufacturing_Format
-//! This library was originally taken from the [Threemf crate]: https://crates.io/crates/threemf, however my goals deviated from the goals
+//! This library was originally taken from the [Threemf crate]: <https://crates.io/crates/threemf>, however my goals deviated from the goals
 //! of the original package and its maintainers as such I decided to take this into my own packages.
 //! Thanks for the great work of the original maintainers.
 //!

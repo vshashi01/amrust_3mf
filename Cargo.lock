@@ -18,21 +18,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "amrust_3mf"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "instant-xml",
- "once_cell",
- "pretty_assertions",
- "serde",
- "serde-roxmltree",
- "serde_json",
- "thiserror",
- "zip",
-]
-
-[[package]]
 name = "anes"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -611,6 +596,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "threemf2"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "instant-xml",
+ "once_cell",
+ "pretty_assertions",
+ "serde",
+ "serde-roxmltree",
+ "serde_json",
+ "thiserror",
+ "zip",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-use amrust_3mf::{core::model::Model, io::CachePolicy, io::ThreemfPackageLazyReader};
+use threemf2::{core::model::Model, io::CachePolicy, io::ThreemfPackageLazyReader};
 
 use std::{fs::File, path::PathBuf};
 

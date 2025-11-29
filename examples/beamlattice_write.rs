@@ -1,4 +1,4 @@
-use amrust_3mf::{
+use threemf2::{
     core::{
         beamlattice::{Ball, BallMode, Balls, Beam, BeamLattice, Beams, CapMode},
         build::{Build, Item},
@@ -17,7 +17,7 @@ use amrust_3mf::{
 use std::{io::Cursor, vec};
 
 /// This example shows how to create and write a 3MF file with beam lattice structures.
-/// This demonstrates the Beam Lattice Extension support in amrust_3mf.
+/// This demonstrates the Beam Lattice Extension support in threemf2.
 ///
 /// Run with:
 /// `cargo run --example beamlattice_write --no-default-features --features io-write`

@@ -12,7 +12,7 @@ mod tests {
         let fixtures = test_utilities::get_test_fixtures();
 
         for fixture in fixtures {
-            use amrust_3mf::io::ThreemfPackage;
+            use threemf2::io::ThreemfPackage;
 
             if fixture.skip_test || fixture.large_test {
                 continue;
@@ -48,8 +48,8 @@ mod tests {
     #[cfg(feature = "io-lazy-read")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
-        use amrust_3mf::io::CachePolicy;
-        use amrust_3mf::io::ThreemfPackageLazyReader;
+        use threemf2::io::CachePolicy;
+        use threemf2::io::ThreemfPackageLazyReader;
 
         let fixtures = test_utilities::get_test_fixtures();
 

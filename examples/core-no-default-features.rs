@@ -1,4 +1,4 @@
-use amrust_3mf::core::{
+use threemf2::core::{
     build::{Build, Item},
     mesh::Mesh,
     mesh::Triangle,

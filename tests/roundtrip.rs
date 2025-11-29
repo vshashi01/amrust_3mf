@@ -9,7 +9,7 @@
 mod smoke_tests {
     use pretty_assertions::assert_eq;
 
-    use amrust_3mf::{
+    use threemf2::{
         core::{
             build::{Build, Item},
             mesh::{Mesh, Triangle, Triangles, Vertex, Vertices},
@@ -154,7 +154,7 @@ mod smoke_tests {
 
         #[cfg(feature = "io-lazy-read")]
         {
-            use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+            use threemf2::io::{CachePolicy, ThreemfPackageLazyReader};
 
             buf.set_position(0); // Reset cursor position
             let lazy_package =

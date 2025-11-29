@@ -12,8 +12,8 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn read_threemf_package_memory_optimized() {
-        use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_mesh_objects;
+        use threemf2::io::ThreemfPackage;
+        use threemf2::io::query::get_mesh_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
@@ -44,8 +44,8 @@ mod smoke_tests {
     #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     fn read_threemf_package_speed_optimized() {
-        use amrust_3mf::io::ThreemfPackage;
-        use amrust_3mf::io::query::get_mesh_objects;
+        use threemf2::io::ThreemfPackage;
+        use threemf2::io::query::get_mesh_objects;
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
@@ -77,7 +77,7 @@ mod smoke_tests {
     #[cfg(all(feature = "io-lazy-read", feature = "io-memory-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use threemf2::io::{CachePolicy, ThreemfPackageLazyReader};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
@@ -98,7 +98,7 @@ mod smoke_tests {
                 for model_path in package.model_paths() {
                     package
                         .with_model(model_path, |(model, ns)| {
-                            use amrust_3mf::io::query;
+                            use threemf2::io::query;
 
                             mesh_objects = query::get_mesh_objects_from_model(model).count();
 
@@ -125,7 +125,7 @@ mod smoke_tests {
     #[cfg(all(feature = "io-lazy-read", feature = "io-speed-optimized-read"))]
     #[test]
     fn read_threemf_package_lazy_speed_optimized() {
-        use amrust_3mf::io::{CachePolicy, ThreemfPackageLazyReader};
+        use threemf2::io::{CachePolicy, ThreemfPackageLazyReader};
 
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
@@ -146,7 +146,7 @@ mod smoke_tests {
                 for model_path in package.model_paths() {
                     package
                         .with_model(model_path, |(model, ns)| {
-                            use amrust_3mf::io::query;
+                            use threemf2::io::query;
 
                             mesh_objects = query::get_mesh_objects_from_model(model).count();
 
