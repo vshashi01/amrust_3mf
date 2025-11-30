@@ -5,7 +5,7 @@ use threemf2::core::model::Model;
 use std::path::PathBuf;
 
 pub fn read_instant_xml(c: &mut Criterion) {
-    let path = PathBuf::from("tests/data/lfs/3dmodel.model")
+    let path = PathBuf::from("../threemf2-tests/tests/data/lfs/3dmodel.model")
         .canonicalize()
         .unwrap();
     let text = std::fs::read_to_string(path).unwrap();
@@ -18,7 +18,7 @@ pub fn read_instant_xml(c: &mut Criterion) {
 }
 
 pub fn read_roxmltree(c: &mut Criterion) {
-    let path = PathBuf::from("tests/data/lfs/3dmodel.model")
+    let path = PathBuf::from("../threemf2-tests/tests/data/lfs/3dmodel.model")
         .canonicalize()
         .unwrap();
 
