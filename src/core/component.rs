@@ -19,7 +19,7 @@ use crate::{
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CORE_NS), rename = "components")
@@ -35,7 +35,7 @@ pub struct Components {
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "component"))]
 pub struct Component {
     #[cfg_attr(

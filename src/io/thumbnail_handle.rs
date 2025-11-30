@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ImageFormat {
     Png,
     Jpeg,
@@ -15,7 +15,7 @@ impl ImageFormat {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ThumbnailHandle {
     pub data: Vec<u8>,
     pub format: ImageFormat,

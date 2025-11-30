@@ -32,7 +32,7 @@ use std::io::{self, Read, Seek, Write};
 /// Represents a 3mf package, the nested folder structure of the parts
 /// in the 3mf package will be flattened into respective dictionaries with
 /// the key being the path of the part in the archive package.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThreemfPackage {
     /// The root model of the 3mf package.
     /// Expected to always exist and be a valid model with a [Build](crate::core::build::Build) object.
