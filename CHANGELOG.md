@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 36 commits contributed to the release.
+ - 37 commits contributed to the release.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 18 unique issues were worked on: [#10](https://github.com/vshashi01/threemf2/issues/10), [#11](https://github.com/vshashi01/threemf2/issues/11), [#12](https://github.com/vshashi01/threemf2/issues/12), [#13](https://github.com/vshashi01/threemf2/issues/13), [#14](https://github.com/vshashi01/threemf2/issues/14), [#15](https://github.com/vshashi01/threemf2/issues/15), [#16](https://github.com/vshashi01/threemf2/issues/16), [#17](https://github.com/vshashi01/threemf2/issues/17), [#18](https://github.com/vshashi01/threemf2/issues/18), [#19](https://github.com/vshashi01/threemf2/issues/19), [#20](https://github.com/vshashi01/threemf2/issues/20), [#21](https://github.com/vshashi01/threemf2/issues/21), [#3](https://github.com/vshashi01/threemf2/issues/3), [#4](https://github.com/vshashi01/threemf2/issues/4), [#5](https://github.com/vshashi01/threemf2/issues/5), [#6](https://github.com/vshashi01/threemf2/issues/6), [#7](https://github.com/vshashi01/threemf2/issues/7), [#9](https://github.com/vshashi01/threemf2/issues/9)
 
@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#9](https://github.com/vshashi01/threemf2/issues/9)**
     - Improvements to CI ([`d63b580`](https://github.com/vshashi01/threemf2/commit/d63b580388ba22c3dff001af15f7d95b1b6ce8ae))
  * **Uncategorized**
+    - Adjusting changelogs prior to release of threemf2 v0.1.0 ([`506faa1`](https://github.com/vshashi01/threemf2/commit/506faa1748c3e3b9c51a7cc33b15490babffa9b7))
     - Added first changelog update ([`880356b`](https://github.com/vshashi01/threemf2/commit/880356bb1d3549c8727d73e8ff9c1b74f2c8273f))
     - Updated docs ([`b01acba`](https://github.com/vshashi01/threemf2/commit/b01acba327d80bbeeae3cfcc1d5fa9da1483a639))
     - Update changelog and Agents desc ([`0596bba`](https://github.com/vshashi01/threemf2/commit/0596bba07fa14bbb43cf7bf82684314a4727a391))
