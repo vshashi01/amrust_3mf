@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.1 (2025-11-30)
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release.
+ - 8 commits contributed to the release.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#22](https://github.com/vshashi01/threemf2/issues/22)
 
@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#22](https://github.com/vshashi01/threemf2/issues/22)**
     - Reorganize to workspace ([`59062cd`](https://github.com/vshashi01/threemf2/commit/59062cd2d495d88416f63b379078420639dd235e))
  * **Uncategorized**
+    - Update readme ([`6e7e937`](https://github.com/vshashi01/threemf2/commit/6e7e9375c31af0d99458a8ea378b84398ffcf434))
     - Fixed Readme ([`1ed1e3c`](https://github.com/vshashi01/threemf2/commit/1ed1e3cfc7a59e2840353478443d868d71ccb1cb))
     - Adjusting changelogs prior to release of threemf2 v0.1.0 ([`e1457c4`](https://github.com/vshashi01/threemf2/commit/e1457c4f407df4b85e1910e7dc4be4fbdb904b4e))
     - Adjusting changelogs prior to release of threemf2 v0.1.0 ([`7690689`](https://github.com/vshashi01/threemf2/commit/76906891365ebf0cd632d2d2f8eb4e4b1fab77cc))
