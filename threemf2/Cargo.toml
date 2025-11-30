@@ -46,5 +46,52 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.140" }
 serde-roxmltree = { version = "0.10.0" }
 
+[[example]]
+name = "write"
+path = "examples/write.rs"
+required-features = ["io-write"]
+
+[[example]]
+name = "unpack"
+path = "examples/unpack.rs"
+required-features = ["io-lazy-read"]
+
+[[example]]
+name = "io_memory_optimized_read"
+path = "examples/io_memory_optimized_read.rs"
+required-features = ["io-memory-optimized-read"]
+
+
+[[example]]
+name = "io_speed_optimized_read"
+path = "examples/io_speed_optimized_read.rs"
+required-features = ["io-speed-optimized-read"]
+
+[[example]]
+name = "beamlattice_write"
+path = "examples/beamlattice_write.rs"
+required-features = ["io-write"]
+
+[[example]]
+name = "string_extraction"
+path = "examples/string_extraction.rs"
+required-features = ["io-lazy-read"]
+
+[[example]]
+name = "builder_example"
+path = "examples/builder_example.rs"
+required-features = ["io-write"]
+
+[[example]]
+name = "builder_beamlattice_example"
+path = "examples/builder_beamlattice_example.rs"
+required-features = ["io-write"]
+
+[[example]]
+name = "query_example"
+path = "examples/query_example.rs"
+required-features = ["io-memory-optimized-read"]
+
+
 [package.metadata.cargo-all-features]
 max_combination_size = 3

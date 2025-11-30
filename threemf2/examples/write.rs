@@ -15,7 +15,7 @@ use std::{io::Cursor, vec};
 /// This is an example showing the core 3MF Types available without any default features.
 /// With no default features only the core structs are available from this library.
 /// run with
-/// `cargo run --example write --features write io`
+/// `cargo run --example write --no-default-features --features io-write`
 ///
 fn main() {
     let model = Model {
