@@ -9,6 +9,9 @@ description = "3MF (3D Manufacturing Format) file format support"
 keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
 categories = ["encoding", "rendering::data-formats"]
 
+homepage = "https://github.com/vshashi01/threemf2"
+repository = "https://github.com/vshashi01/threemf2"
+
 [features]
 default = [
     "io-write",

@@ -107,14 +107,14 @@ cargo run --example unpack --features io-lazy-read
 
 ## Benchmarks
 
-The benchmarks users Criterion.rs has the benchmark harness on stable Rust channel. 
-To run the benchmarks, it shall be compiled and run with `--all-features` flag on compile and run. The files used for the benchmarks are also on `git lfs`, hence `git lfs` shall be enabled. 
+The benchmarks use Criterion.rs as the benchmark harness on stable Rust channel. 
+To run the benchmarks, it shall be compiled and run with `--all-features` flag. The files used for the benchmarks are also on `git lfs`, hence `git lfs` shall be enabled. 
 
--**reader** - Benchmarks the different serialization options instant-xml and serde-roxmltree on a unzipped 3MF model file.
+- **reader** - Benchmarks the different serialization options instant-xml and serde-roxmltree on an uncompressed 3MF model file.
 
--**threemf_reader** - Benchmarks the different reader methods on a full 3MF package. 
+- **threemf_reader** - Benchmarks the different reader methods on ThreemfPackage. 
 
--**threemf_write** - Benchmarks the writer method on a full 3MF package.
+- **threemf_write** - Benchmarks the writer method on a full 3MF package.
 
 ## API Overview
 
