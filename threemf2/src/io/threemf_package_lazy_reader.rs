@@ -438,7 +438,8 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn test_pull_based_root_model_lazy_load() {
-        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
         let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
@@ -461,7 +462,7 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn test_pull_based_with_sub_models() {
-        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
         let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
@@ -492,7 +493,7 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn test_pull_based_thumbnails() {
-        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
         let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
@@ -516,7 +517,8 @@ mod smoke_tests {
     #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     fn test_pull_based_speed_optimized() {
-        let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
         let package = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
@@ -535,7 +537,7 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn test_string_extraction() {
-        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
         let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(

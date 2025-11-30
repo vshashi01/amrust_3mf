@@ -586,7 +586,7 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     pub fn from_reader_root_model_with_memory_optimized_read_test() {
-        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
@@ -620,7 +620,7 @@ mod smoke_tests {
     #[cfg(feature = "io-speed-optimized-read")]
     #[test]
     pub fn from_reader_root_model_with_speed_optimized_read_test() {
-        let path = PathBuf::from("./tests/data/third-party/P_XPX_0702_02.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, true);
@@ -883,7 +883,8 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn i_root_namespaces_tracking_test() {
-        let path = PathBuf::from("./tests/data/third-party/mgx-core-prod-beamlattice-material.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/data/mgx-core-prod-beamlattice-material.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
@@ -900,8 +901,8 @@ mod smoke_tests {
     #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     fn i_submodel_namespaces_tracking_test() {
-        let path =
-            PathBuf::from("./tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);

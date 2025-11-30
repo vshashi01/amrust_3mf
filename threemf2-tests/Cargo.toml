@@ -1,0 +1,20 @@
+[package]
+name = "threemf2-tests"
+version = "0.1.0"
+rust-version = "1.89"
+edition = "2024"
+license = "MIT or Apache-2.0"
+
+[dependencies]
+threemf2 = { path = "../threemf2", features = [
+    "io-write",
+    "io-memory-optimized-read",
+    "io-speed-optimized-read",
+    "io-lazy-read",
+] }
+
+[dev-dependencies]
+pretty_assertions = { version = "1.4.1" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.140" }
+serde-roxmltree = { version = "0.10.0" }
