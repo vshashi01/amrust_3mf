@@ -626,6 +626,7 @@ dependencies = [
 name = "threemf2-tests"
 version = "0.1.0"
 dependencies = [
+ "instant-xml",
  "pretty_assertions",
  "serde",
  "serde-roxmltree",

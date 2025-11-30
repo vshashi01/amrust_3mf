@@ -564,7 +564,7 @@ impl From<Model> for ThreemfPackage {
 }
 
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::{

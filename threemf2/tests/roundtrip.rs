@@ -6,7 +6,7 @@
     feature = "io-write"
 ))]
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use threemf2::{

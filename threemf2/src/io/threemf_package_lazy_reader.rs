@@ -427,7 +427,7 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
 }
 
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use std::fs::File;

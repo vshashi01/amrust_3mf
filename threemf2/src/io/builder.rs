@@ -2301,7 +2301,7 @@ impl BeamSetBuilder {
 }
 
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;

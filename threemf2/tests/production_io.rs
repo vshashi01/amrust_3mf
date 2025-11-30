@@ -4,7 +4,7 @@
     feature = "io-lazy-read"
 ))]
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use pretty_assertions::assert_eq;
 
     use std::{fs::File, path::PathBuf};
