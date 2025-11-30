@@ -1,4 +1,3 @@
-#[cfg(any(feature = "io-memory-optimized-read", feature = "io-lazy-read"))]
 #[cfg(test)]
 mod tests {
     mod test_utilities;
@@ -6,7 +5,6 @@ mod tests {
     use std::fs::File;
     use std::path::PathBuf;
 
-    #[cfg(feature = "io-memory-optimized-read")]
     #[test]
     pub fn can_load_thirdparty_3mf_package() {
         let fixtures = test_utilities::get_test_fixtures();
@@ -45,7 +43,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "io-lazy-read")]
     #[test]
     pub fn unpack_thirdparty_3mf_package() {
         use threemf2::io::CachePolicy;

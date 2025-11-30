@@ -22,7 +22,7 @@ pub struct ThumbnailHandle {
 }
 
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use crate::io::thumbnail_handle::ImageFormat;
 
     #[test]

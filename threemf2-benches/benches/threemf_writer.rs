@@ -5,9 +5,10 @@ use threemf2::io::ThreemfPackage;
 use std::{io::Cursor, path::PathBuf};
 
 pub fn write_package(c: &mut Criterion) {
-    let path = PathBuf::from("tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
-        .canonicalize()
-        .unwrap();
+    let path =
+        PathBuf::from("../threemf2-tests/tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
+            .canonicalize()
+            .unwrap();
     let file = std::fs::File::open(path.clone()).unwrap();
     let package =
         ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();

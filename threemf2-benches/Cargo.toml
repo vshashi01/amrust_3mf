@@ -1,0 +1,30 @@
+[package]
+name = "threemf2-benches"
+version = "0.1.0"
+rust-version = "1.89"
+edition = "2024"
+license = "MIT or Apache-2.0"
+
+[dependencies]
+instant-xml = { version = "0.6.0" }
+serde-roxmltree = { version = "0.10.0" }
+threemf2 = { path = "../threemf2", features = [
+    "io-memory-optimized-read",
+    "io-speed-optimized-read",
+    "io-write",
+] }
+
+[dev-dependencies]
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[[bench]]
+name = "reader"
+harness = false
+
+[[bench]]
+name = "threemf_reader"
+harness = false
+
+[[bench]]
+name = "threemf_writer"
+harness = false

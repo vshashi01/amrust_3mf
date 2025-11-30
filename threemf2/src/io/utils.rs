@@ -65,7 +65,7 @@ pub fn parse_xmlns_attributes(tag_content: &str) -> Vec<XmlNamespace> {
 }
 
 #[cfg(test)]
-mod smoke_tests {
+mod tests {
     use super::*;
 
     #[test]

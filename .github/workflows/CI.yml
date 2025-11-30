@@ -29,10 +29,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --all-features --all-targets
-      - run: cargo test 'smoke_tests::' --all-features
-      - run: cargo test 'write_tests::' --all-features
-      - run: cargo test 'memory_optimized_read_tests::' --all-features
-      - run: cargo test 'speed_optimized_read_tests::' --all-features
+      - run: cd threemf2 && cargo test --all-features
 
   msrv:
     runs-on: ubuntu-latest

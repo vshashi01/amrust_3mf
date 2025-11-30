@@ -1,0 +1,49 @@
+[package]
+name = "threemf2"
+version = "0.1.0"
+rust-version = "1.89"
+edition = "2024"
+license = "MIT or Apache-2.0"
+
+description = "3MF (3D Manufacturing Format) file format support"
+keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]
+categories = ["encoding", "rendering::data-formats"]
+
+homepage = "https://github.com/vshashi01/threemf2"
+repository = "https://github.com/vshashi01/threemf2"
+
+[features]
+default = [
+    "io-write",
+    "io-memory-optimized-read",
+    "io-lazy-read",
+    "write",
+    "memory-optimized-read",
+]
+write = ["dep:instant-xml"]
+memory-optimized-read = ["dep:instant-xml"]
+speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
+io-write = ["dep:zip", "dep:thiserror", "write"]
+io-memory-optimized-read = ["dep:zip", "dep:thiserror", "memory-optimized-read"]
+io-speed-optimized-read = ["dep:zip", "dep:thiserror", "speed-optimized-read"]
+io-lazy-read = ["dep:once_cell", "io-memory-optimized-read"]
+
+[dependencies]
+instant-xml = { version = "0.6.0", optional = true }
+thiserror = { version = "2.0.3", optional = true }
+zip = { version = "6.0.0", default-features = false, features = [
+    "deflate",
+], optional = true }
+serde-roxmltree = { version = "0.10.0", optional = true }
+serde = { version = "1.0.228", optional = true, features = ["derive"] }
+once_cell = { version = "1.21.3", optional = true }
+
+
+[dev-dependencies]
+pretty_assertions = { version = "1.4.1" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.140" }
+serde-roxmltree = { version = "0.10.0" }
+
+[package.metadata.cargo-all-features]
+max_combination_size = 3

@@ -602,7 +602,6 @@ dependencies = [
 name = "threemf2"
 version = "0.1.0"
 dependencies = [
- "criterion",
  "instant-xml",
  "once_cell",
  "pretty_assertions",
@@ -611,6 +610,28 @@ dependencies = [
  "serde_json",
  "thiserror",
  "zip",
+]
+
+[[package]]
+name = "threemf2-benches"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "instant-xml",
+ "serde-roxmltree",
+ "threemf2",
+]
+
+[[package]]
+name = "threemf2-tests"
+version = "0.1.0"
+dependencies = [
+ "instant-xml",
+ "pretty_assertions",
+ "serde",
+ "serde-roxmltree",
+ "serde_json",
+ "threemf2",
 ]
 
 [[package]]

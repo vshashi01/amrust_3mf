@@ -5,9 +5,10 @@ use threemf2::io::ThreemfPackage;
 use std::path::PathBuf;
 
 pub fn read_memory_optimized(c: &mut Criterion) {
-    let path = PathBuf::from("tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
-        .canonicalize()
-        .unwrap();
+    let path =
+        PathBuf::from("../threemf2-tests/tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
+            .canonicalize()
+            .unwrap();
     let mut c = c.benchmark_group("read_group");
     c.sample_size(10);
     c.measurement_time(std::time::Duration::from_secs(70));
@@ -20,9 +21,10 @@ pub fn read_memory_optimized(c: &mut Criterion) {
 }
 
 pub fn read_speed_optimized(c: &mut Criterion) {
-    let path = PathBuf::from("tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
-        .canonicalize()
-        .unwrap();
+    let path =
+        PathBuf::from("../threemf2-tests/tests/data/third-party/lfs/mgx-iron_giant_single.3mf")
+            .canonicalize()
+            .unwrap();
     let mut c = c.benchmark_group("read_group");
     c.sample_size(10);
     c.measurement_time(std::time::Duration::from_secs(40));
