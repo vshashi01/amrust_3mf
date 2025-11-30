@@ -2,7 +2,7 @@
 
 Library for reading and writing 3MF (3D Manufacturing Format) packages with both eager and lazy loading support.
 
-This crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
+This repository uses a Cargo workspace with `threemf2` (main crate), `threemf2-benches` (benchmarks), and `threemf2-tests` (integration tests with large data). The `threemf2` crate provides a compact core model representation and I/O helpers for reading/writing 3MF packages with multiple loading strategies optimized for different use cases.
 
 [![CI](https://github.com/vshashi01/threemf2/actions/workflows/CI.yml/badge.svg)](https://github.com/vshashi01/threemf2/actions/workflows/CI.yml) [![codecov](https://codecov.io/gh/vshashi01/threemf2/graph/badge.svg?token=O1EHCUZLT4)](https://codecov.io/gh/vshashi01/threemf2)
 
@@ -25,13 +25,13 @@ This crate provides a compact core model representation and I/O helpers for read
 
 threemf2 provides:
 
-- **Core Data Structures**: Complete 3MF model representation ([`Model`](src/core/model.rs), [`Object`](src/core/object.rs), [`Mesh`](src/core/mesh.rs), etc.)
+- **Core Data Structures**: Complete 3MF model representation ([`Model`](threemf2/src/core/model.rs), [`Object`](threemf2/src/core/object.rs), [`Mesh`](threemf2/src/core/mesh.rs), etc.)
 - **Multiple Loading Strategies**:
-  - [`ThreemfPackage`](src/io/threemf_package.rs) - Eager loading for complete data access
-  - [`ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) - Lazy loading for memory-constrained environments
+  - [`ThreemfPackage`](threemf2/src/io/threemf_package.rs) - Eager loading for complete data access
+  - [`ThreemfPackageLazyReader`](threemf2/src/io/threemf_package_lazy_reader.rs) - Lazy loading for memory-constrained environments
 - **Flexible I/O**: Support for reading/writing 3MF packages with different performance characteristics
   - Easy reading of data through query APIs.
-  - Easy creation of 3MF Model through builder APIs. See [`builder_example.rs`](examples/builder_example.rs) for the most basic starter guide.
+  - Easy creation of 3MF Model through builder APIs. See [`builder_example.rs`](threemf2/examples/builder_example.rs) for the most basic starter guide.
 - **Extension Support**: All 3MF extensions (Production, Beam Lattice, etc.) are always available
 - **Custom Parts**: Support for known parts (thumbnails) and unknown parts (custom XML data)
 
@@ -45,9 +45,9 @@ Choose the right loading strategy for your use case:
 
 Key types and files:
 
-- Core model types in [src/core/](src/core/) — `model`, `object`, `resources`, `mesh`, `transform`, etc.
-- [`io::ThreemfPackage`](src/io/threemf_package.rs) — eager loading entry point
-- [`io::ThreemfPackageLazyReader`](src/io/threemf_package_lazy_reader.rs) — lazy loading entry point
+- Core model types in [threemf2/src/core/](threemf2/src/core/) — `model`, `object`, `resources`, `mesh`, `transform`, etc.
+- [`io::ThreemfPackage`](threemf2/src/io/threemf_package.rs) — eager loading entry point
+- [`io::ThreemfPackageLazyReader`](threemf2/src/io/threemf_package_lazy_reader.rs) — lazy loading entry point
 
 ## Cargo Features
 
@@ -88,7 +88,7 @@ threemf2 = { version = "0.1", features = ["io-speed-optimized-read"] }
 
 ## Examples
 
-The [examples/](examples/) directory contains runnable examples for different use cases:
+The [threemf2/examples/](threemf2/examples/) directory contains runnable examples for different use cases:
 
 - **`write.rs`** - Create and write 3MF packages
 - **`builder_example.rs`** - Using ModelBuilder for ergonomic model construction
@@ -107,12 +107,12 @@ cargo run --example unpack --features io-lazy-read
 
 ## Benchmarks
 
-The benchmarks use Criterion.rs as the benchmark harness on stable Rust channel. 
-To run the benchmarks, it shall be compiled and run with `--all-features` flag. The files used for the benchmarks are also on `git lfs`, hence `git lfs` shall be enabled. 
+The benchmarks use Criterion.rs as the benchmark harness on stable Rust channel.
+Benchmarks are located in the `threemf2-benches` crate. To run them, use `cargo bench --package threemf2-benches`. The files used for the benchmarks are on Git LFS, so ensure `git lfs` is enabled.
 
 - **reader** - Benchmarks the different serialization options instant-xml and serde-roxmltree on an uncompressed 3MF model file.
 
-- **threemf_reader** - Benchmarks the different reader methods on ThreemfPackage. 
+- **threemf_reader** - Benchmarks the different reader methods on ThreemfPackage.
 
 - **threemf_write** - Benchmarks the writer method on a full 3MF package.
 
@@ -156,11 +156,18 @@ cargo clippy --all-targets --all-features -- -D warnings
 ### Testing
 
 ```bash
+# Run all tests in the workspace (includes threemf2, threemf2-tests)
+cargo test
+
+# Run tests for specific crates
+cargo test --package threemf2  # Core tests (CI-focused)
+cargo test --package threemf2-tests  # Integration tests with large data (requires Git LFS)
+
 # Install cargo-all-features and run tests for multiple feature combinations at once
 cargo all-features test
 
 # Run benchmarks
-cargo bench --features "io-memory-optimized-read,io-speed-optimized-read"
+cargo bench --package threemf2-benches
 ```
 
 ## License
