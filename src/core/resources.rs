@@ -13,7 +13,7 @@ use crate::{core::object::Object, threemf_namespaces::CORE_NS};
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, PartialEq, Debug)]
+#[derive(Default, PartialEq, Debug, Clone)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CORE_NS), rename = "resources")
@@ -31,7 +31,7 @@ pub struct Resources {
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, PartialEq, Eq, Debug)]
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CORE_NS), rename = "base")
@@ -53,7 +53,7 @@ pub struct Base {
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CORE_NS), rename = "basematerials")

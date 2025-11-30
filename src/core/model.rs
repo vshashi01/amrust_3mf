@@ -22,7 +22,7 @@ use crate::{
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "model"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "model"))]
 pub struct Model {
     #[cfg_attr(feature = "speed-optimized-read", serde(default))]
@@ -57,7 +57,7 @@ pub struct Model {
 #[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(scalar, rename_all = "lowercase")

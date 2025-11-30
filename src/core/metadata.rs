@@ -20,7 +20,7 @@ use crate::threemf_namespaces::CORE_NS;
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CORE_NS), rename = "metadata")
@@ -59,7 +59,7 @@ pub struct MetadataGroup {
 
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "preserve"))]
 pub struct Preserve(bool);
 

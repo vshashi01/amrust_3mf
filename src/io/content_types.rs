@@ -18,7 +18,7 @@ use serde::Deserialize;
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Types"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CONTENT_TYPES_NS), rename = "Types")
@@ -32,7 +32,7 @@ pub struct ContentTypes {
 /// If a content type is not found, it will fail the 3mf file parsing.
 #[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DefaultContentTypeEnum {
     /// Represents a relationship content.
     Relationship,
@@ -126,7 +126,7 @@ impl From<String> for DefaultContentTypeEnum {
 #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Default"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(ns(CONTENT_TYPES_NS), rename = "Default")
