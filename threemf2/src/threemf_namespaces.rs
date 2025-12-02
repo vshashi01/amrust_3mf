@@ -1,26 +1,36 @@
 /////////////////////////////////////////////////////////////////////////////////////
-///  Namespaces & Prefixes related to the Core specification and its extensions
+///  Namespace of the Core 3MF specification
 pub const CORE_NS: &str = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02";
-
+/// Namespace of Triangle Set extension
 pub const CORE_TRIANGLESET_NS: &str =
     "http://schemas.microsoft.com/3dmanufacturing/trianglesets/2021/07";
+/// Prefix of Triangle Set extension
 pub const CORE_TRIANGLESET_PREFIX: &str = "t";
 /////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// Namespaces & Prefixes related to the Production extension
+/// Namespace of 3MF Production extension
 pub const PROD_NS: &str = "http://schemas.microsoft.com/3dmanufacturing/production/2015/06";
+/// Prefix of 3MF Production extension
 pub const PROD_PREFIX: &str = "p";
 
 ////////////////////////////////////////////////////////////////////////////////////
-/// Namespaces & Prefixes related to the Beam Lattice extension
+/// Namespace of 3MF Beam Lattice extension
 pub const BEAM_LATTICE_NS: &str =
     "http://schemas.microsoft.com/3dmanufacturing/beamlattice/2017/02";
+/// Prefix of 3MF Beam Lattice extension
 pub const BEAM_LATTICE_PREFIX: &str = "b";
-
+/// Namespace of 3MF Beam Lattice Balls extension
 pub const BEAM_LATTICE_BALLS_NS: &str =
     "http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07";
+/// Prefix of 3MF Beam lattice Balls extension
 pub const BEAM_LATTICE_BALLS_PREFIX: &str = "b2";
+
+////////////////////////////////////////////////////////////////////////////////////
+/// Namespace of 3MF Boolean Operations extension
+pub const BOOLEAN_NS: &str = "http://schemas.3mf.io/3dmanufacturing/booleanoperations/2023/07";
+/// Prefix of 3MF Boolean Operations extension
+pub const BOOLEAN_PREFIX: &str = "bo";
 
 /// Enum representing the different 3MF specifications supported by this library
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +46,9 @@ pub enum ThreemfNamespace {
 
     /// Triangle Set extension (Part of the Core Spec)
     CoreTriangleSet,
+
+    /// Boolean Operations extension
+    Boolean,
 }
 
 impl ThreemfNamespace {
@@ -46,6 +59,7 @@ impl ThreemfNamespace {
             Self::Prod => PROD_NS,
             Self::BeamLattice => BEAM_LATTICE_NS,
             Self::CoreTriangleSet => CORE_TRIANGLESET_NS,
+            Self::Boolean => BOOLEAN_NS,
         }
     }
 
@@ -58,6 +72,7 @@ impl ThreemfNamespace {
             Self::Prod => Some(PROD_PREFIX),
             Self::BeamLattice => Some(BEAM_LATTICE_PREFIX),
             Self::CoreTriangleSet => Some(CORE_TRIANGLESET_PREFIX),
+            Self::Boolean => Some(BOOLEAN_PREFIX),
         }
     }
 

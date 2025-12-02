@@ -27,3 +27,6 @@ pub mod triangle_set;
 
 /// Defines the type representing a Beam Lattice element and other elements and attributes related to it.
 pub mod beamlattice;
+
+/// Defines the type representing a Boolean Shape and other elements related to it. From 3MF Boolean Operations extension.
+pub mod booleanshape;
