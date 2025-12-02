@@ -73,6 +73,7 @@ fn main() {
                     beamlattice: None,
                 }),
                 components: None,
+                booleanshape: None,
             }],
             basematerials: vec![],
         },

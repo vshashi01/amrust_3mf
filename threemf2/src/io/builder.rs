@@ -1201,6 +1201,7 @@ impl MeshObjectBuilder {
             uuid: self.uuid,
             mesh: Some(mesh),
             components: None,
+            booleanshape: None,
         })
     }
 }
@@ -1587,6 +1588,7 @@ impl ComponentsObjectBuilder {
             uuid: self.uuid,
             mesh: None,
             components: Some(components),
+            booleanshape: None,
         })
     }
 }

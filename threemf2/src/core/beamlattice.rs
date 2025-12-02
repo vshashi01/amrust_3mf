@@ -1013,7 +1013,8 @@ mod memory_optimized_read_tests {
                                 beamsets: None,
                             }),
                         }),
-                        components: None
+                        components: None,
+                        booleanshape: None,
                     }],
                     basematerials: vec![]
                 },
@@ -1524,7 +1525,8 @@ mod speed_optimized_read_tests {
                                 beamsets: None,
                             }),
                         }),
-                        components: None
+                        components: None,
+                        booleanshape: None,
                     }],
                     basematerials: vec![]
                 },

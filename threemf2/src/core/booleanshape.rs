@@ -28,7 +28,7 @@ pub struct BooleanShape {
 
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
+        xml(ns(BOOLEAN_NS), attribute)
     )]
     pub operation: Option<BooleanOperation>,
 
@@ -54,7 +54,7 @@ pub struct BooleanShape {
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
-    xml(scalar, ns(BOOLEAN_NS), rename_all = "lowercase")
+    xml(scalar, rename_all = "lowercase")
 )]
 pub enum BooleanOperation {
     #[default]
@@ -216,7 +216,7 @@ mod write_tests {
     #[test]
     pub fn toxml_enums_test() {
         let xml_string = format!(
-            r#"<EnumBooleanOperation xmlns:bo="{BOOLEAN_NS}"><bo:operation>union</bo:operation><bo:operation>intersection</bo:operation><bo:operation>difference</bo:operation></EnumBooleanOperation>"#
+            r#"<EnumBooleanOperation xmlns:bo="{BOOLEAN_NS}"><operation>union</operation><operation>intersection</operation><operation>difference</operation></EnumBooleanOperation>"#
         );
         let enum_test = EnumBooleanOperation {
             operation: vec![
@@ -240,6 +240,70 @@ mod memory_optimized_read_tests {
     use super::*;
 
     use crate::threemf_namespaces::BOOLEAN_NS;
+
+    #[test]
+    fn fromxml_boolean_shape_full_test() {
+        let xml_string = format!(
+            r#"<booleanshape xmlns="{}" objectid="3" operation="difference" transform="1 0 0 0 0 1 0 0 0 0 1 0" path="someObjectPath"><boolean objectid="2" /><boolean objectid="1" path="someBooleanPath" /></booleanshape>"#,
+            BOOLEAN_NS
+        );
+
+        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
+        assert_eq!(
+            boolean_shape,
+            BooleanShape {
+                objectid: 3,
+                operation: Some(BooleanOperation::Difference),
+                transform: Some(Transform([
+                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                ])),
+                path: Some("someObjectPath".to_owned()),
+                boolean: vec![
+                    Boolean {
+                        objectid: 2,
+                        transform: None,
+                        path: None,
+                    },
+                    Boolean {
+                        objectid: 1,
+                        transform: None,
+                        path: Some("someBooleanPath".to_owned()),
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn fromxml_boolean_shape_test() {
+        let xml_string = format!(
+            r#"<booleanshape xmlns="{}" objectid="3"><boolean objectid="2" /><boolean objectid="1" /></booleanshape>"#,
+            BOOLEAN_NS
+        );
+
+        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
+        assert_eq!(
+            boolean_shape,
+            BooleanShape {
+                objectid: 3,
+                operation: None,
+                transform: None,
+                path: None,
+                boolean: vec![
+                    Boolean {
+                        objectid: 2,
+                        transform: None,
+                        path: None,
+                    },
+                    Boolean {
+                        objectid: 1,
+                        transform: None,
+                        path: None,
+                    },
+                ],
+            }
+        );
+    }
 
     #[test]
     fn fromxml_boolean_full_test() {
@@ -278,6 +342,140 @@ mod memory_optimized_read_tests {
 
     #[derive(Debug, FromXml, PartialEq, Eq)]
     #[xml(ns(bo = BOOLEAN_NS))]
+    struct EnumBooleanOperation {
+        operation: Vec<BooleanOperation>,
+    }
+
+    #[test]
+    pub fn fromxml_enums_test() {
+        let xml_string = format!(
+            r#"<EnumBooleanOperation xmlns:bo="{BOOLEAN_NS}"><operation>union</operation><operation>intersection</operation><operation>difference</operation></EnumBooleanOperation>"#
+        );
+        let enum_result = from_str::<EnumBooleanOperation>(&xml_string).unwrap();
+
+        assert_eq!(
+            enum_result,
+            EnumBooleanOperation {
+                operation: vec![
+                    BooleanOperation::Union,
+                    BooleanOperation::Intersection,
+                    BooleanOperation::Difference,
+                ],
+            }
+        );
+    }
+}
+
+#[cfg(feature = "speed-optimized-read")]
+#[cfg(test)]
+mod speed_optimized_read_tests {
+    use pretty_assertions::assert_eq;
+    use serde_roxmltree::from_str;
+
+    use super::*;
+
+    use crate::threemf_namespaces::BOOLEAN_NS;
+
+    #[test]
+    fn fromxml_boolean_shape_full_test() {
+        let xml_string = format!(
+            r#"<booleanshape xmlns="{}" objectid="3" operation="difference" transform="1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000 0.000000 0.000000 0.000000 1.000000 0.000000" path="someObjectPath"><boolean objectid="2" /><boolean objectid="1" path="someBooleanPath" /></booleanshape>"#,
+            BOOLEAN_NS
+        );
+
+        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
+        assert_eq!(
+            boolean_shape,
+            BooleanShape {
+                objectid: 3,
+                operation: Some(BooleanOperation::Difference),
+                transform: Some(Transform([
+                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                ])),
+                path: Some("someObjectPath".to_owned()),
+                boolean: vec![
+                    Boolean {
+                        objectid: 2,
+                        transform: None,
+                        path: None,
+                    },
+                    Boolean {
+                        objectid: 1,
+                        transform: None,
+                        path: Some("someBooleanPath".to_owned()),
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn fromxml_boolean_shape_test() {
+        let xml_string = format!(
+            r#"<booleanshape xmlns="{}" objectid="3"><boolean objectid="2" /><boolean objectid="1" /></booleanshape>"#,
+            BOOLEAN_NS
+        );
+
+        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
+        assert_eq!(
+            boolean_shape,
+            BooleanShape {
+                objectid: 3,
+                operation: None,
+                transform: None,
+                path: None,
+                boolean: vec![
+                    Boolean {
+                        objectid: 2,
+                        transform: None,
+                        path: None,
+                    },
+                    Boolean {
+                        objectid: 1,
+                        transform: None,
+                        path: None,
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn fromxml_boolean_full_test() {
+        let xml_string = format!(
+            r#"<boolean xmlns="{}" objectid="1" transform="1 0 0 0 0 1 0 0 0 0 1 0" path="someBooleanPath" />"#,
+            BOOLEAN_NS
+        );
+
+        let boolean = from_str::<Boolean>(&xml_string).unwrap();
+        assert_eq!(
+            boolean,
+            Boolean {
+                objectid: 1,
+                transform: Some(Transform([
+                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                ])),
+                path: Some("someBooleanPath".to_owned()),
+            }
+        )
+    }
+
+    #[test]
+    fn fromxml_boolean_test() {
+        let xml_string = format!(r#"<boolean xmlns="{}" objectid="1" />"#, BOOLEAN_NS);
+
+        let boolean = from_str::<Boolean>(&xml_string).unwrap();
+        assert_eq!(
+            boolean,
+            Boolean {
+                objectid: 1,
+                transform: None,
+                path: None,
+            }
+        );
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
     struct EnumBooleanOperation {
         operation: Vec<BooleanOperation>,
     }

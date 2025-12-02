@@ -675,6 +675,7 @@ mod tests {
                             uuid: Some("uuid".to_owned()),
                             mesh: None,
                             components: None,
+                            booleanshape: None,
                         }],
                         basematerials: vec![],
                     },

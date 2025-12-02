@@ -278,6 +278,7 @@ fn main() {
                 uuid: None,
                 mesh: Some(mesh),
                 components: None,
+                booleanshape: None,
             }],
             basematerials: vec![],
         },
