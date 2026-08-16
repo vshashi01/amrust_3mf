@@ -7,16 +7,12 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{FromXml, Kind};
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::{model::StrResource, threemf_namespaces::CORE_NS};
 
 /// Key-value metadata associated with a 3MF model or object.
 ///
 /// Metadata provides additional information about the model, such as author,
 /// description, or custom properties.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 // #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -35,7 +31,6 @@ pub struct Metadata {
 
     /// Value of the metadata entry.
     #[cfg_attr(any(feature = "memory-optimized-read"), xml(direct))]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "#content"))]
     pub value: Option<StrResource>,
 }
 
@@ -74,7 +69,6 @@ impl ToXml for Metadata {
 }
 
 /// Group of metadata entries.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Eq)]
@@ -84,12 +78,10 @@ impl ToXml for Metadata {
 )]
 pub struct MetadataGroup {
     /// Metadata entries in this group.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub metadata: Vec<Metadata>,
 }
 
 /// Whether metadata must be preserved when processing the model.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "preserve"))]
@@ -276,77 +268,6 @@ mod memory_optimized_read_tests {
                         name: "From Test 2".into(),
                         preserve: None,
                         value: None,
-                    }
-                ]
-            }
-        )
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::threemf_namespaces::CORE_NS;
-
-    use super::{Metadata, MetadataGroup};
-
-    #[test]
-    pub fn fromxml_metadata_test() {
-        let xml_string = format!(
-            r#"<metadata xmlns="{}" name="Copyright">Copyright (c) 2018 3MF Consortium. All rights reserved.</metadata>"#,
-            CORE_NS
-        );
-        let metadata = from_str::<Metadata>(&xml_string).unwrap();
-
-        assert_eq!(
-            metadata,
-            Metadata {
-                name: "Copyright".into(),
-                preserve: None,
-                value: Some("Copyright (c) 2018 3MF Consortium. All rights reserved.".into())
-            }
-        )
-    }
-
-    #[test]
-    pub fn fromxml_simple_metadata_test() {
-        let xml_string = format!(r#"<metadata xmlns="{}" name="From Test"/>"#, CORE_NS);
-        let metadata = from_str::<Metadata>(&xml_string).unwrap();
-
-        assert_eq!(
-            metadata,
-            Metadata {
-                name: "From Test".into(),
-                preserve: None,
-                value: Some("".into()),
-            }
-        )
-    }
-
-    #[test]
-    pub fn fromxml_metadatagroup_test() {
-        let xml_string = format!(
-            r#"<metadatagroup xmlns="{}"><metadata name="From Test"></metadata><metadata name="From Test 2"></metadata></metadatagroup>"#,
-            CORE_NS
-        );
-        let metadatagroup = from_str::<MetadataGroup>(&xml_string).unwrap();
-
-        assert_eq!(
-            metadatagroup,
-            MetadataGroup {
-                metadata: vec![
-                    Metadata {
-                        name: "From Test".into(),
-                        preserve: None,
-                        value: Some("".into()),
-                    },
-                    Metadata {
-                        name: "From Test 2".into(),
-                        preserve: None,
-                        value: Some("".into()),
                     }
                 ]
             }

@@ -23,10 +23,10 @@ default = [
 ]
 write = ["dep:instant-xml"]
 memory-optimized-read = ["dep:instant-xml"]
-speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
+# speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
 package-write = ["dep:zip", "write"]
 package-memory-optimized-read = ["dep:zip", "memory-optimized-read"]
-io-speed-optimized-read = ["dep:zip", "speed-optimized-read"]
+# io-speed-optimized-read = ["dep:zip", "speed-optimized-read"]
 package-lazy-read = ["dep:once_cell", "package-memory-optimized-read"]
 uuid = ["dep:uuid"]
 
@@ -36,8 +36,8 @@ thiserror = { version = "2.0.20" }
 zip = { version = "8.6.0", default-features = false, features = [
     "deflate",
 ], optional = true }
-serde-roxmltree = { version = "0.11.3", optional = true }
-serde = { version = "1.0.229", optional = true, features = ["derive"] }
+# serde-roxmltree = { version = "0.11.3", optional = true }
+# serde = { version = "1.0.229", optional = true, features = ["derive"] }
 once_cell = { version = "1.21.4", optional = true }
 lexical-core = { version = "1.0.6" }
 uuid = { version = "1.24.1", optional = true }

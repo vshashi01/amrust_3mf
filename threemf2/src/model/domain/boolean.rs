@@ -4,9 +4,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::{
     model::domain::transform::Transform,
     model::{PathResource, ResourceId},
@@ -18,7 +15,6 @@ use crate::{
 /// A boolean shape defines a new object by applying a sequence of boolean operations
 /// (union, difference, intersection) between a base object and one or more operand objects.
 /// The operations are applied sequentially from left to right.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -42,7 +38,6 @@ pub struct BooleanShape {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub operation: BooleanOperation,
 
     /// Optional transform to apply to the base object.
@@ -58,7 +53,6 @@ pub struct BooleanShape {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub path: Option<PathResource>,
 
     /// The sequence of boolean operations to apply to the base object.
@@ -67,7 +61,6 @@ pub struct BooleanShape {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(rename = "boolean")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "boolean"))]
     pub booleans: Vec<Boolean>,
 }
 
@@ -75,7 +68,6 @@ pub struct BooleanShape {
 ///
 /// A boolean operation references a mesh object and optionally applies a transform
 /// before performing the boolean operation with the base object.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -106,13 +98,10 @@ pub struct Boolean {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub path: Option<PathResource>,
 }
 
 /// Specifies the type of boolean operation to perform.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -368,205 +357,6 @@ mod write_tests {
 mod memory_optimized_read_tests {
     use instant_xml::from_str;
     use pretty_assertions::assert_eq;
-
-    use crate::{
-        model::domain::{
-            boolean::{Boolean, BooleanOperation, BooleanShape},
-            object::{Object, ObjectKind},
-            transform::Transform,
-        },
-        model::{OptionalResourceId, OptionalResourceIndex},
-        threemf_namespaces::{BOOLEAN_NS, BOOLEAN_PREFIX, CORE_NS},
-    };
-
-    #[test]
-    pub fn fromxml_boolean_shape_union_test() {
-        let xml_string = format!(
-            r#"<booleanshape xmlns="{}" objectid="1" operation="union"><boolean objectid="2" /></booleanshape>"#,
-            BOOLEAN_NS
-        );
-        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
-
-        assert_eq!(
-            boolean_shape,
-            BooleanShape {
-                objectid: 1,
-                operation: BooleanOperation::Union,
-                transform: None,
-                path: None,
-                booleans: vec![Boolean {
-                    objectid: 2,
-                    transform: None,
-                    path: None,
-                }],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_boolean_shape_difference_test() {
-        let xml_string = format!(
-            r#"<booleanshape xmlns="{}" objectid="3" operation="difference"><boolean objectid="4" /></booleanshape>"#,
-            BOOLEAN_NS
-        );
-        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
-
-        assert_eq!(
-            boolean_shape,
-            BooleanShape {
-                objectid: 3,
-                operation: BooleanOperation::Difference,
-                transform: None,
-                path: None,
-                booleans: vec![Boolean {
-                    objectid: 4,
-                    transform: None,
-                    path: None,
-                }],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_boolean_shape_intersection_test() {
-        let xml_string = format!(
-            r#"<booleanshape xmlns="{}" objectid="5" operation="intersection"><boolean objectid="6" /></booleanshape>"#,
-            BOOLEAN_NS
-        );
-        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
-
-        assert_eq!(
-            boolean_shape,
-            BooleanShape {
-                objectid: 5,
-                operation: BooleanOperation::Intersection,
-                transform: None,
-                path: None,
-                booleans: vec![Boolean {
-                    objectid: 6,
-                    transform: None,
-                    path: None,
-                }],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_boolean_shape_with_transform_test() {
-        let xml_string = format!(
-            r#"<booleanshape xmlns="{}" objectid="1" operation="union" transform="1 0 0 0 1 0 0 0 1 10 0 0"><boolean objectid="2" transform="0.5 0 0 0 0.5 0 0 0 0.5 0 0 0" /></booleanshape>"#,
-            BOOLEAN_NS
-        );
-        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
-
-        assert_eq!(
-            boolean_shape,
-            BooleanShape {
-                objectid: 1,
-                operation: BooleanOperation::Union,
-                transform: Some(Transform([
-                    1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.0,
-                ])),
-                path: None,
-                booleans: vec![Boolean {
-                    objectid: 2,
-                    transform: Some(Transform([
-                        0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0,
-                    ])),
-                    path: None,
-                }],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_boolean_shape_multiple_booleans_test() {
-        let xml_string = format!(
-            r#"<booleanshape xmlns="{}" objectid="1" operation="union"><boolean objectid="2" /><boolean objectid="3" /><boolean objectid="4" /></booleanshape>"#,
-            BOOLEAN_NS
-        );
-        let boolean_shape = from_str::<BooleanShape>(&xml_string).unwrap();
-
-        assert_eq!(
-            boolean_shape,
-            BooleanShape {
-                objectid: 1,
-                operation: BooleanOperation::Union,
-                transform: None,
-                path: None,
-                booleans: vec![
-                    Boolean {
-                        objectid: 2,
-                        transform: None,
-                        path: None,
-                    },
-                    Boolean {
-                        objectid: 3,
-                        transform: None,
-                        path: None,
-                    },
-                    Boolean {
-                        objectid: 4,
-                        transform: None,
-                        path: None,
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_obj_with_booleanshape_test() {
-        let xml_string = format!(
-            r##"<object xmlns="{}" xmlns:{}="{}" id="100"><bo:booleanshape objectid="95" operation="difference"><bo:boolean objectid="66" /><bo:boolean objectid="213" /></bo:booleanshape></object>"##,
-            CORE_NS, BOOLEAN_PREFIX, BOOLEAN_NS,
-        );
-
-        let obj = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            obj,
-            Object {
-                id: 100,
-                objecttype: None,
-                thumbnail: None,
-                partnumber: None,
-                name: None,
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                uuid: None,
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-
-                kind: Some(ObjectKind::BooleanShape(BooleanShape {
-                    objectid: 95,
-                    operation: BooleanOperation::Difference,
-                    transform: None,
-                    path: None,
-                    booleans: vec![
-                        Boolean {
-                            objectid: 66,
-                            transform: None,
-                            path: None,
-                        },
-                        Boolean {
-                            objectid: 213,
-                            transform: None,
-                            path: None
-                        }
-                    ]
-                })),
-            }
-        )
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
 
     use crate::{
         model::domain::{
