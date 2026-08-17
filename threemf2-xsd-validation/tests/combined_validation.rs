@@ -146,13 +146,13 @@ fn validate_beamlattice_with_trianglesets() {
         trianglesets: vec![
             TriangleSet {
                 name: "Beam Lattice Surface".into(),
-                identifier: "urn:3mf:example:beams".into(),
+                identifier: "trianglessetscombined".into(),
                 triangle_ref: vec![TriangleRef { index: 0 }],
                 triangle_refrange: vec![],
             },
             TriangleSet {
                 name: "Mesh Surface".into(),
-                identifier: "urn:3mf:example:mesh".into(),
+                identifier: "trianglesetscombined2".into(),
                 triangle_ref: vec![TriangleRef { index: 1 }],
                 triangle_refrange: vec![],
             },

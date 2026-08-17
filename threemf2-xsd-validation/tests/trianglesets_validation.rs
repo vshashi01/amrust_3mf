@@ -96,13 +96,13 @@ fn validate_simple_trianglesets() {
         trianglesets: vec![
             TriangleSet {
                 name: "Top Surface".into(),
-                identifier: "urn:3mf:example:top-surface".into(),
+                identifier: "topsurface".into(),
                 triangle_ref: vec![TriangleRef { index: 0 }, TriangleRef { index: 1 }],
                 triangle_refrange: vec![],
             },
             TriangleSet {
                 name: "Side Surface".into(),
-                identifier: "urn:3mf:example:side-surface".into(),
+                identifier: "sidesurface".into(),
                 triangle_ref: vec![TriangleRef { index: 2 }],
                 triangle_refrange: vec![],
             },
@@ -212,7 +212,7 @@ fn validate_trianglesets_with_ref_ranges() {
         trianglesets: vec![
             TriangleSet {
                 name: "First Half".into(),
-                identifier: "urn:3mf:example:first-half".into(),
+                identifier: "firsthalf".into(),
                 triangle_ref: vec![],
                 triangle_refrange: vec![TriangleRefRange {
                     startindex: 0,
@@ -221,7 +221,7 @@ fn validate_trianglesets_with_ref_ranges() {
             },
             TriangleSet {
                 name: "Second Half".into(),
-                identifier: "urn:3mf:example:second-half".into(),
+                identifier: "secondhalf".into(),
                 triangle_ref: vec![],
                 triangle_refrange: vec![TriangleRefRange {
                     startindex: 8,
