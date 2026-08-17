@@ -5,6 +5,7 @@ rust-version = "1.89"
 edition = "2024"
 license = "MIT or Apache-2.0"
 description = "XSD validation tests for threemf2 generated 3MF files"
+publish = false
 
 [features]
 uuid = ["threemf2/uuid"]
