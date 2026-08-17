@@ -136,7 +136,7 @@ impl ThreemfPackage {
                         } else {
                             return Err(Error::WriteError(format!(
                                 "No thumbnail image found for relationship target {}",
-                                &relationship.target
+                                relationship.target
                             )));
                         }
                     }
@@ -147,7 +147,7 @@ impl ThreemfPackage {
                         } else {
                             return Err(Error::WriteError(format!(
                                 "No data found for relationship target {}",
-                                &relationship.target
+                                relationship.target
                             )));
                         }
                     }

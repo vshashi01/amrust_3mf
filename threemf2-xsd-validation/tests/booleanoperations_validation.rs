@@ -37,8 +37,9 @@ fn validate_boolean_model(model_xml: &str) {
                 threemf2::threemf_namespaces::BOOLEAN_NS,
                 BOOLEAN_XSD.as_bytes(),
             ),
+            (threemf2::threemf_namespaces::PROD_NS, PROD_XSD.as_bytes()),
         ],
-        "Boolean Operations Schema",
+        "Boolean Operations + Production",
     );
 }
 
@@ -46,21 +47,6 @@ fn build_package(model: Model) -> ThreemfPackage {
     let mut builder = ThreemfPackageBuilder::new();
     builder.set_root_model(model);
     builder.build().expect("Error building package")
-}
-
-fn validate_boolean_with_production_model(model_xml: &str) {
-    validate_or_panic(
-        model_xml,
-        &[
-            (threemf2::threemf_namespaces::CORE_NS, CORE_XSD.as_bytes()),
-            (
-                threemf2::threemf_namespaces::BOOLEAN_NS,
-                BOOLEAN_XSD.as_bytes(),
-            ),
-            (threemf2::threemf_namespaces::PROD_NS, PROD_XSD.as_bytes()),
-        ],
-        "Boolean Operations + Production Schema",
-    );
 }
 
 /// Helper function to create a simple cube mesh
@@ -1014,5 +1000,5 @@ fn validate_boolean_with_production_extension() {
     let model_xml =
         extract_model_xml(buf.get_ref()).expect("Failed to extract model XML from package");
 
-    validate_boolean_with_production_model(&model_xml);
+    validate_boolean_model(&model_xml);
 }

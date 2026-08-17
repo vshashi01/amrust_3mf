@@ -4,6 +4,7 @@ version = "0.1.0"
 rust-version = "1.89"
 edition = "2024"
 license = "MIT or Apache-2.0"
+publish = false
 
 [dependencies]
 threemf2 = { path = "../threemf2", features = [
@@ -18,5 +19,4 @@ pretty_assertions = { version = "1.4.1" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.140" }
 serde-roxmltree = { version = "0.11.1" }
-instant-xml = { version = "0.7.5" }
-# instant-xml = { version = "0.7.4", path = "../../../../instant-xml/instant-xml/instant-xml" }
+instant-xml = { version = "0.7.6" }

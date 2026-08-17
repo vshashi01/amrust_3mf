@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns="http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07"
-  xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xml="http://www.w3.org/XML/1998/namespace"
-  targetNamespace="http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07"
-  elementFormDefault="unqualified" attributeFormDefault="unqualified" blockDefault="#all">
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:xml="http://www.w3.org/XML/1998/namespace" targetNamespace="http://schemas.microsoft.com/3dmanufacturing/beamlattice/balls/2020/07" elementFormDefault="unqualified" attributeFormDefault="unqualified" blockDefault="#all">
   <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="http://www.w3.org/2001/xml.xsd"/>
   <xs:annotation>
     <xs:documentation>
@@ -21,16 +20,16 @@
   <!-- Complex Types -->
   <xs:complexType name="CT_BeamLattice">
     <xs:sequence>
-       <xs:element ref="balls" minOccurs="0" maxOccurs="1"/>
+      <xs:element ref="balls" minOccurs="0" maxOccurs="1"/>
     </xs:sequence>
     <xs:attribute name="ballmode" type="ST_BallMode" default="none"/>
     <xs:attribute name="ballradius" type="ST_PositiveNumber"/>
     <xs:anyAttribute namespace="##other" processContents="lax"/>
   </xs:complexType>
   <xs:complexType name="CT_Ball">
-     <xs:sequence>
-       <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="2147483647"/>
-     </xs:sequence>
+    <xs:sequence>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="2147483647"/>
+    </xs:sequence>
     <xs:attribute name="vindex" type="ST_ResourceIndex" use="required" />
     <xs:attribute name="r" type="ST_PositiveNumber" />
     <xs:attribute name="p" type="ST_ResourceIndex" />
@@ -38,10 +37,10 @@
     <xs:anyAttribute namespace="##other" processContents="lax"/>
   </xs:complexType>
   <xs:complexType name="CT_Balls">
-      <xs:sequence>
-        <xs:element ref="ball" minOccurs="1" maxOccurs="2147483647"/>
-        <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="2147483647"/>
-      </xs:sequence>
+    <xs:sequence>
+      <xs:element ref="ball" minOccurs="1" maxOccurs="2147483647"/>
+      <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="2147483647"/>
+    </xs:sequence>
   </xs:complexType>
   <xs:complexType name="CT_BallRef">
     <xs:sequence>
@@ -52,10 +51,10 @@
   </xs:complexType>
   <xs:complexType name="CT_BeamSet">
     <xs:sequence>
-      <xs:element ref="ballref" minOccurs="0" maxOccurs="2147483647"/>	
+      <xs:element ref="ballref" minOccurs="0" maxOccurs="2147483647"/>
     </xs:sequence>
     <xs:anyAttribute namespace="##other" processContents="lax"/>
-  </xs:complexType>  
+  </xs:complexType>
   <!-- Simple Types -->
   <xs:simpleType name="ST_BallMode">
     <xs:restriction base="xs:string">
@@ -80,7 +79,7 @@
       <xs:maxExclusive value="2147483648"/>
     </xs:restriction>
   </xs:simpleType>
-  <!-- Elements -->  
+  <!-- Elements -->
   <xs:element name="ball" type="CT_Ball"/>
   <xs:element name="balls" type="CT_Balls"/>
   <xs:element name="beamset" type="CT_BeamSet"/>

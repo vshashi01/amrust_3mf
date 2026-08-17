@@ -36,7 +36,7 @@ mod tests {
                 Err(err) => {
                     panic!(
                         "Failed to read the file: {:?} with err: {:?}",
-                        &filepath, err
+                        filepath, err
                     );
                 }
             }
@@ -77,7 +77,7 @@ mod tests {
                 Err(err) => {
                     panic!(
                         "Failed to read the file: {:?} with err: {:?}",
-                        &filepath, err
+                        filepath, err
                     );
                 }
             }

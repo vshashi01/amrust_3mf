@@ -1,15 +1,15 @@
 name: CI
 
 on:
-  # push:
-  #   branches: ["main"]
-  pull_request_review:
-    types: [submitted]
+  pull_request:
+    branches: ["main"]
+  # pull_request_review:
+  #   types: [submitted]
   workflow_dispatch: {}
 
 jobs:
   test:
-    if: ${{ github.event_name == 'push' || github.event.pull_request.base.ref == 'main' }}
+    # if: ${{ github.event_name == 'push' || github.event.pull_request.base.ref == 'main' }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -54,7 +54,7 @@ jobs:
       - run: cargo clippy --all-targets --all-features -- -W warnings
 
   audit:
-   runs-on: ubuntu-latest
-   steps:
-   - uses: actions/checkout@v5
-   - uses: EmbarkStudios/cargo-deny-action@v2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2

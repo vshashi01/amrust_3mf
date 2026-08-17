@@ -4,6 +4,7 @@ version = "0.1.0"
 rust-version = "1.89"
 edition = "2024"
 license = "MIT or Apache-2.0"
+publish = false
 
 description = "Thumbnail generation for 3MF File format as an add-on to threemf2 library"
 keywords = ["3MF", "CAD", "slicer", "triangle", "mesh"]

@@ -5,12 +5,8 @@
 
 // Validation utilities for XSD testing
 pub mod validation {
-    use fastxml::{
-        parse,
-        schema::{
-            XmlSchemaValidationContext, parse_xsd_multiple, validate_document_by_schema_context,
-        },
-    };
+    use fastxml::schema::SchemaBuilder;
+    use fastxml::schema::Validator;
     use std::io::{Cursor, Read};
     use zip::ZipArchive;
 
@@ -39,22 +35,24 @@ pub mod validation {
     }
 
     pub fn validate_against_xsd(xml: &str, contents: &[(&str, &[u8])]) -> Result<(), String> {
-        let compiled_schema = parse_xsd_multiple(contents).unwrap();
+        let mut builder = SchemaBuilder::new();
+        for (uri, content) in contents {
+            builder = builder.add(*uri, *content);
+        }
+        let schema = builder
+            .resolve()
+            .map_err(|e| format!("Schema compilation failed: {:?}", e))?;
 
-        let context = XmlSchemaValidationContext::new(compiled_schema);
+        let report = Validator::from(xml)
+            .schema(schema)
+            .run()
+            .map_err(|e| format!("Validation execution failed: {:?}", e))?;
 
-        let xml_doc = parse(xml).unwrap();
-
-        match validate_document_by_schema_context(&xml_doc, &context) {
-            Ok(result) => {
-                if result.is_empty() {
-                    Ok(())
-                } else {
-                    let errors: Vec<String> = result.iter().map(|e| e.to_string()).collect();
-                    Err(errors.join("\n"))
-                }
-            }
-            Err(err) => panic!("{err:?}"),
+        if report.is_valid() {
+            Ok(())
+        } else {
+            let errors: Vec<String> = report.errors().iter().map(|e| e.to_string()).collect();
+            Err(errors.join("\n"))
         }
     }
 
