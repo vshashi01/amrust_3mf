@@ -357,14 +357,12 @@ fn build_relationships(
             relationship_type: RelationshipType::Model,
         });
 
-        let mut rel_index = 1;
-        for path in thumbnails.keys() {
+        for (rel_index, path) in (1..).zip(thumbnails.keys()) {
             rels.push(Relationship {
                 id: format_compact!("rel{rel_index}").into(),
                 target: path.clone(),
                 relationship_type: RelationshipType::Thumbnail,
             });
-            rel_index += 1;
         }
 
         relationships.insert(
