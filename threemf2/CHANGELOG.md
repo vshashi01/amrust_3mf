@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.1 (2026-08-17)
+
+### Bug Fixes
+
+ - <csr-id-cee575d04caed1f0e1f8ce149cae70411190c2a7/> Bump dependencies
+   - Bumped dependencies of all crates 
+   - improved the XSD validation tests
+   - excluded all unpublished crates from cargo deny explicitly
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 54 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#51](https://github.com/vshashi01/threemf2/issues/51)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#51](https://github.com/vshashi01/threemf2/issues/51)**
+    - Bump dependencies ([`cee575d`](https://github.com/vshashi01/threemf2/commit/cee575d04caed1f0e1f8ce149cae70411190c2a7))
+</details>
+
 ## 0.4.0 (2026-06-23)
 
 ### New Features
@@ -67,7 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 13 commits contributed to the release over the course of 15 calendar days.
+ - 14 commits contributed to the release over the course of 15 calendar days.
  - 50 days passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 13 unique issues were worked on: [#38](https://github.com/vshashi01/threemf2/issues/38), [#39](https://github.com/vshashi01/threemf2/issues/39), [#40](https://github.com/vshashi01/threemf2/issues/40), [#41](https://github.com/vshashi01/threemf2/issues/41), [#42](https://github.com/vshashi01/threemf2/issues/42), [#43](https://github.com/vshashi01/threemf2/issues/43), [#44](https://github.com/vshashi01/threemf2/issues/44), [#45](https://github.com/vshashi01/threemf2/issues/45), [#46](https://github.com/vshashi01/threemf2/issues/46), [#47](https://github.com/vshashi01/threemf2/issues/47), [#48](https://github.com/vshashi01/threemf2/issues/48), [#49](https://github.com/vshashi01/threemf2/issues/49), [#50](https://github.com/vshashi01/threemf2/issues/50)
@@ -104,6 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Improve Docs ([`656c7a4`](https://github.com/vshashi01/threemf2/commit/656c7a4874bd2a58a77b06b237b9118134910729))
  * **[#50](https://github.com/vshashi01/threemf2/issues/50)**
     - Update version to 0.4.0 ([`0df9de7`](https://github.com/vshashi01/threemf2/commit/0df9de74f34597c669bb7df095ce874a14a7a461))
+ * **Uncategorized**
+    - Release threemf2 v0.4.0 ([`bfb3294`](https://github.com/vshashi01/threemf2/commit/bfb3294206ffa2abde421669a46072ee2b0a787e))
 </details>
 
 ## 0.3.0 (2026-05-04)
