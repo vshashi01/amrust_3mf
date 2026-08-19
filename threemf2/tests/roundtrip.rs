@@ -1,4 +1,4 @@
-#[cfg(all(feature = "package-memory-optimized-read", feature = "package-write"))]
+#[cfg(all(feature = "package-read", feature = "package-write"))]
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -100,11 +100,10 @@ mod tests {
         write_package
             .write(&mut buf)
             .expect("Error writing package");
-        #[cfg(feature = "package-memory-optimized-read")]
+        #[cfg(feature = "package-read")]
         {
             let package =
-                ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
-                    .expect("Error reading package");
+                ThreemfPackage::from_reader(&mut buf, false).expect("Error reading package");
             assert_eq!(package, write_package);
 
             let ns = package.get_namespaces_on_model(None).unwrap();
@@ -116,11 +115,8 @@ mod tests {
 
             buf.set_position(0); // Reset cursor position
             let lazy_package =
-                ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-                    &mut buf,
-                    CachePolicy::NoCache,
-                )
-                .expect("Error reading package with lazy reader");
+                ThreemfPackageLazyReader::from_reader(&mut buf, CachePolicy::NoCache)
+                    .expect("Error reading package with lazy reader");
 
             // Verify basic structure
             assert_eq!(lazy_package.relationships().len(), 1);

@@ -60,10 +60,10 @@
 
 ```rust
 // Eager loading
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, unpack_sub_models)?;
+let package = ThreemfPackage::from_reader(reader, unpack_sub_models)?;
 
 // Lazy loading
-let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(reader, CachePolicy::NoCache)?;
+let package = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache)?;
 package.with_model("path/to/model.model", |model| {
     // Work with model
 })?;

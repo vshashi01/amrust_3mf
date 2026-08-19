@@ -46,15 +46,15 @@ use crate::{
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 /// Tile style for texture coordinates outside the `[0,1]` range.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(MATERIAL_NS), rename_all = "lowercase")
 )]
 pub enum TileStyle {
@@ -82,11 +82,11 @@ impl From<String> for TileStyle {
 }
 
 /// Texture filter for scaling operations.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(MATERIAL_NS), rename_all = "lowercase")
 )]
 pub enum Filter {
@@ -111,11 +111,11 @@ impl From<String> for Filter {
 }
 
 /// Blend method for combining layers in multi-properties.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(MATERIAL_NS), rename_all = "lowercase")
 )]
 pub enum BlendMethod {
@@ -140,19 +140,16 @@ impl From<String> for BlendMethod {
 ///
 /// A color group defines a set of sRGB colors that can be referenced by index.
 /// The order of colors forms an implicit 0-based index.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "colorgroup", force_prefix)
 )]
 pub struct ColorGroup {
     /// Unique identifier for this color group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Colors in this group, ordered by implicit 0-based index.
@@ -163,19 +160,16 @@ pub struct ColorGroup {
 ///
 /// The color is specified as a hex string like "#RRGGBB" or "#RRGGBBAA".
 /// When used outside a multi-properties context, colors are fully opaque.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "color", force_prefix)
 )]
 pub struct ColorElement {
     /// The sRGB color value as a hex string (e.g., "#FF0000" or "#FF0000FF").
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub color: Color,
 }
 
@@ -183,24 +177,21 @@ pub struct ColorElement {
 ///
 /// A texture 2D group defines UV coordinates for mapping a texture image to mesh vertices.
 /// The order of coordinates forms an implicit 0-based index.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "texture2dgroup", force_prefix)
 )]
 pub struct Texture2DGroup {
     /// Unique identifier for this texture coordinate group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Reference to the texture2d resource to use.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "texid")
     )]
     pub texid: ResourceId,
@@ -229,7 +220,7 @@ pub struct Tex2Coord {
     pub v: Double,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Tex2Coord {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -290,34 +281,28 @@ impl<'xml> FromXml<'xml> for Tex2Coord {
 ///
 /// Composite materials are created by mixing 2 or more base materials in defined ratios.
 /// Each composite represents a specific mixture ratio of the materials.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "compositematerials", force_prefix)
 )]
 pub struct CompositeMaterials {
     /// Unique identifier for this composite material group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Reference to the base materials group containing the constituent materials.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "matid")
     )]
     pub matid: ResourceId,
 
     /// Space-delimited list of material indices from the base materials group.
     /// These are the constituents that will be mixed.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub matindices: ResourceIndexCollection,
 
     /// Composite definitions, ordered by implicit 0-based index.
@@ -372,7 +357,7 @@ impl ToXml for Composite {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> instant_xml::FromXml<'xml> for Composite {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
@@ -430,35 +415,26 @@ impl<'xml> instant_xml::FromXml<'xml> for Composite {
 /// Multi-properties allow layering multiple property types (e.g., material + color + texture)
 /// to create complex material appearances. Properties are blended in the order specified
 /// by the `pids` attribute.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "multiproperties", force_prefix)
 )]
 pub struct MultiProperties {
     /// Unique identifier for this multi-property group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Space-delimited list of property group IDs to layer.
     /// First element should be the material (base or composite), followed by color/texture layers.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pids: ResourceIdCollection,
 
     /// Optional space-delimited list of blend methods for each layer.
     /// One value per layer after the first. Defaults to "mix" if not specified.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub blendmethods: Option<StrResource>,
 
     /// Multi-property index combinations, ordered by implicit 0-based index.
@@ -469,20 +445,17 @@ pub struct MultiProperties {
 ///
 /// The `pindices` attribute is a space-delimited list of property indices, one for each
 /// property group specified in the parent `MultiProperties.pids` attribute.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "multi", force_prefix)
 )]
 pub struct Multi {
     /// Space-delimited list of property indices.
     /// Indices correspond to the property groups listed in `MultiProperties.pids`.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pindices: ResourceIndexCollection,
 }
 
@@ -509,7 +482,7 @@ impl ToXml for TextureContentType {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for TextureContentType {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -580,54 +553,36 @@ impl TextureContentType {
 ///
 /// References an image file in the 3MF package that can be used for texture mapping.
 /// The texture is referenced by `Texture2DGroup` elements via the `texid` attribute.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(MATERIAL_NS), rename = "texture2d", force_prefix)
 )]
 pub struct Texture2D {
     /// Unique identifier for this texture resource.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Path to the texture image part within the 3MF package.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: PathResource,
 
     /// Content type of the texture image. Must be "image/jpeg" or "image/png".
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub contenttype: TextureContentType,
 
     /// Tile style for u-coordinates outside `[0,1]` range. Defaults to "wrap".
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub tilestyleu: Option<TileStyle>,
 
     /// Tile style for v-coordinates outside `[0,1]` range. Defaults to "wrap".
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub tilestylev: Option<TileStyle>,
 
     /// Filter to apply when scaling the texture. Defaults to "auto".
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub filter: Option<Filter>,
 }
 
@@ -865,7 +820,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

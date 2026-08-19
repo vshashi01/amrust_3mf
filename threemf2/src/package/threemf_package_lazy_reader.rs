@@ -54,11 +54,9 @@ pub struct ThreemfPackageLazyReader<R: Read + Seek> {
 }
 
 impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
-    fn from_reader(
-        reader: R,
-        deserializer: XmlDeserializer,
-        cache_policy: CachePolicy,
-    ) -> Result<Self, Error> {
+    /// Reads from a Reader
+    pub fn from_reader(reader: R, cache_policy: CachePolicy) -> Result<Self, Error> {
+        let deserializer = XmlDeserializer::MemoryOptimized;
         let (mut zip, content_types, _, root_rels_filename) =
             zip_utils::setup_archive_and_content_types(reader, deserializer)?;
 
@@ -410,17 +408,18 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     }
 }
 
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     /// Create a pull-based package with memory-optimized deserialization
     ///
     /// * `reader` - A readable and seekable source (e.g., `File`)
     /// * `cache_policy` - Whether to cache loaded data (`CachePolicy::NoCache` is default)
+    #[deprecated(since = "0.5.0", note = "Use the equivalent `from_reader` instead")]
     pub fn from_reader_with_memory_optimized_deserializer(
         reader: R,
         cache_policy: CachePolicy,
     ) -> Result<Self, Error> {
-        Self::from_reader(reader, XmlDeserializer::MemoryOptimized, cache_policy)
+        Self::from_reader(reader, cache_policy)
     }
 }
 
@@ -433,18 +432,14 @@ mod tests {
 
     use super::*;
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_root_model_lazy_load() {
         let path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-            reader,
-            CachePolicy::NoCache,
-        )
-        .unwrap();
+        let package = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache).unwrap();
 
         assert_eq!(package.relationships().len(), 1);
         assert!(package.root_model_path().as_str().contains("3dmodel.model"));
@@ -457,17 +452,13 @@ mod tests {
         assert_eq!(root_model.used_namespaces().len(), 3);
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_with_sub_models() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-            reader,
-            CachePolicy::CacheAll,
-        )
-        .unwrap();
+        let package = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::CacheAll).unwrap();
 
         assert_eq!(package.content_types().defaults.len(), 3);
         assert_eq!(package.relationships().len(), 2);
@@ -488,17 +479,13 @@ mod tests {
         assert!(exists.is_err());
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_thumbnails() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-            reader,
-            CachePolicy::NoCache,
-        )
-        .unwrap();
+        let package = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache).unwrap();
 
         let thumbnail_paths: Vec<_> = package.thumbnail_paths().collect();
         assert!(!thumbnail_paths.is_empty());

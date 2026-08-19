@@ -1,10 +1,10 @@
-#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+#[cfg(any(feature = "write", feature = "read"))]
 use instant_xml::Error;
 
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::{FromXml, Kind};
 
 use crate::model::{PathResource, StrResource};
@@ -18,31 +18,28 @@ const RELATIONSHIP_NS: &str = "http://schemas.openxmlformats.org/package/2006/re
 ///
 /// Each relationship has an ID, a target path, and a [`RelationshipType`] that describes
 /// the nature of the relationship.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(ns(RELATIONSHIP_NS))
-)]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(RELATIONSHIP_NS)))]
 pub struct Relationship {
     /// The unique identifier of the relationship.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "Id")
     )]
     pub id: StrResource,
 
     /// Target path of the part in the archive.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "Target")
     )]
     pub target: PathResource,
 
     /// The actual relationship of the target part
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "Type")
     )]
     pub relationship_type: RelationshipType,
@@ -50,13 +47,10 @@ pub struct Relationship {
 
 /// Represents a collection of [Relationship]s where each collection is an independent
 /// relationship part in the 3mf package. A single 3mf package may contain multiple [Relationships].
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(ns(RELATIONSHIP_NS))
-)]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(RELATIONSHIP_NS)))]
 pub struct Relationships {
     /// Field of relationship
     pub relationships: Vec<Relationship>,
@@ -98,7 +92,7 @@ impl ToXml for RelationshipType {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for RelationshipType {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         match field {
@@ -189,7 +183,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

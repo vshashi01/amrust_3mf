@@ -12,7 +12,7 @@ use std::{borrow::Borrow, fmt, num::NonZeroU32, ops::Deref, str::FromStr};
 #[cfg(feature = "write")]
 use instant_xml::{Id, Serializer, ToXml};
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::{Error, FromXml, Kind};
 
 use thiserror::Error;
@@ -114,7 +114,7 @@ impl ToXml for StrResource {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for StrResource {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -238,7 +238,7 @@ impl ToXml for PathResource {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for PathResource {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         if let Some(field_id) = field {
@@ -416,7 +416,7 @@ impl ToXml for UuidResource {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for UuidResource {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         if let Some(field_id) = field {
@@ -543,7 +543,7 @@ impl ToXml for OptionalResourceId {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for OptionalResourceId {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         if let Some(field_id) = field {
@@ -586,7 +586,7 @@ impl<'xml> FromXml<'xml> for OptionalResourceId {
     const KIND: Kind = Kind::Scalar;
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl instant_xml::Accumulate<OptionalResourceId> for OptionalResourceId {
     fn try_done(self, _: &'static str) -> Result<OptionalResourceId, Error> {
         Ok(self)
@@ -680,7 +680,7 @@ impl ToXml for OptionalResourceIndex {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for OptionalResourceIndex {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -719,7 +719,7 @@ impl<'xml> FromXml<'xml> for OptionalResourceIndex {
     const KIND: Kind = instant_xml::Kind::Scalar;
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl instant_xml::Accumulate<OptionalResourceIndex> for OptionalResourceIndex {
     fn try_done(self, _: &'static str) -> Result<OptionalResourceIndex, Error> {
         Ok(self)
@@ -810,7 +810,7 @@ impl ToXml for ResourceIdCollection {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for ResourceIdCollection {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -933,7 +933,7 @@ impl ToXml for ResourceIndexCollection {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for ResourceIndexCollection {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -1033,7 +1033,7 @@ impl ToXml for Double {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Double {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
@@ -1108,7 +1108,7 @@ impl ToXml for Color {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Color {
     #[inline]
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {

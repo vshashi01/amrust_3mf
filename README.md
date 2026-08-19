@@ -56,7 +56,7 @@ use std::fs::File;
 use threemf2::package::ThreemfPackage;
 
 let file = File::open("model.3mf")?;
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
+let package = ThreemfPackage::from_reader(file, true)?;
 
 // Access the root model
 let model = &package.root;
@@ -119,13 +119,13 @@ This crate uses optional Cargo features to control functionality. Enable only wh
 ### Core Serialization Features
 
 - `write` — Enable writing 3MF data (adds `ToXml` derive to all 3MF types using `instant_xml`)
-- `memory-optimized-read` — Enable memory-efficient reading (adds `FromXml` derive to all 3MF types using `instant_xml`)
+- `read` — Enable memory-efficient reading (adds `FromXml` derive to all 3MF types using `instant_xml`)
 
 ### Package I/O Features
 
 - `package-write` — Package writing with ZIP creation (requires `write`)
-- `package-memory-optimized-read` — Package reading with memory optimization (requires `memory-optimized-read`)
-- `package-lazy-read` — Lazy loading functionality (requires `package-memory-optimized-read`)
+- `package-read` — Package reading with memory optimization (requires `read`)
+- `package-lazy-read` — Lazy loading functionality (requires `package-read`)
 
 ### Utility Features
 
@@ -133,7 +133,7 @@ This crate uses optional Cargo features to control functionality. Enable only wh
 
 ### Default Features
 
-`package-write`, `package-memory-optimized-read`, `package-lazy-read`, `write`, `memory-optimized-read`
+`package-write`, `package-read`, `package-lazy-read`, `write`, `read`
 
 ### Feature Combinations
 
@@ -171,7 +171,7 @@ Run examples with:
 ```bash
 cargo run --example write --features package-write
 cargo run --example unpack --features package-lazy-read
-cargo run --example query_example --features package-memory-optimized-read,uuid
+cargo run --example query_example --features package-read,uuid
 ```
 
 ## Benchmarks
@@ -179,7 +179,7 @@ cargo run --example query_example --features package-memory-optimized-read,uuid
 The benchmarks use Criterion.rs as the benchmark harness on stable Rust channel.
 Benchmarks are located in the `threemf2-benches` crate. To run them, use `cargo bench --package threemf2-benches`. The files used for the benchmarks are on Git LFS, so ensure `git lfs` is enabled.
 
-- **reader** — Benchmarks the different serialization options `instant-xml` and `serde-roxmltree` on an uncompressed 3MF model file.
+- **reader** — Benchmarks the different deserialization.
 - **threemf_reader** — Benchmarks the different reader methods on `ThreemfPackage`.
 - **threemf_write** — Benchmarks the writer method on a full 3MF package.
 

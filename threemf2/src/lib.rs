@@ -36,7 +36,7 @@ pub mod threemf_namespaces;
 /// This module can be disabled if you only want the [`model`] module.
 #[cfg(any(
     feature = "package-write",
-    feature = "package-memory-optimized-read",
+    feature = "package-read",
     feature = "package-lazy-read"
 ))]
 pub mod package;

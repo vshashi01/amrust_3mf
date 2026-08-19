@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::{Error, Id, Serializer, ToXml};
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -10,9 +10,9 @@ use crate::{
 };
 
 /// Collection of Triangle Set. See [`TriangleSet`] for more details.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(
-    feature = "memory-optimized-read",
+    feature = "read",
     xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets")
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,19 +65,19 @@ impl ToXml for TriangleSets {
 
 /// Triangle Set allows to define a collection of triangles as grouped collection
 /// with a unique identifier for reusable references.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(
-    feature = "memory-optimized-read",
+    feature = "read",
     xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset", force_prefix)
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TriangleSet {
     /// Name of this set.
-    #[cfg_attr(feature = "memory-optimized-read", xml(attribute))]
+    #[cfg_attr(feature = "read", xml(attribute))]
     pub name: StrResource,
 
     /// A string based unique identifier of this set.
-    #[cfg_attr(feature = "memory-optimized-read", xml(attribute))]
+    #[cfg_attr(feature = "read", xml(attribute))]
     pub identifier: StrResource,
 
     /// A collection of Triangle references. See [`TriangleRef`] for more details.
@@ -132,43 +132,34 @@ impl ToXml for TriangleSet {
 }
 
 /// A reference to a Triangle in the Mesh as an index into [`Triangles`](crate::model::domain::mesh::Triangles).
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_TRIANGLESET_NS), rename = "ref", force_prefix)
 )]
 pub struct TriangleRef {
     /// Index of the Triangle
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub index: ResourceIndex,
 }
 
 /// A reference to continous Range of Triangles in the Mesh.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_TRIANGLESET_NS), rename = "refrange", force_prefix)
 )]
 pub struct TriangleRefRange {
     /// The start index of the range.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub startindex: ResourceIndex,
 
     /// The end idnex of the range.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub endindex: ResourceIndex,
 }
 
@@ -302,7 +293,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

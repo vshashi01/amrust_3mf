@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -15,11 +15,11 @@ use crate::{
 /// A boolean shape defines a new object by applying a sequence of boolean operations
 /// (union, difference, intersection) between a base object and one or more operand objects.
 /// The operations are applied sequentially from left to right.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BOOLEAN_NS), rename = "booleanshape", force_prefix)
 )]
 pub struct BooleanShape {
@@ -27,40 +27,28 @@ pub struct BooleanShape {
     /// The base object must be a model object defining a shape (mesh, booleanshape,
     /// or other extension shapes), but NOT a components object.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "objectid")
     )]
     pub objectid: ResourceId,
 
     /// The boolean operation to perform on the base object with the operands.
     /// Default is `BooleanOperation::Union`.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub operation: BooleanOperation,
 
     /// Optional transform to apply to the base object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Optional path to the base object file (for Production extension).
     /// Only valid in root model files when used with Production extension.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: Option<PathResource>,
 
     /// The sequence of boolean operations to apply to the base object.
     /// Must contain at least one boolean operation.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(rename = "boolean")
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(rename = "boolean"))]
     pub booleans: Vec<Boolean>,
 }
 
@@ -68,11 +56,11 @@ pub struct BooleanShape {
 ///
 /// A boolean operation references a mesh object and optionally applies a transform
 /// before performing the boolean operation with the base object.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BOOLEAN_NS), rename = "boolean", force_prefix)
 )]
 pub struct Boolean {
@@ -80,33 +68,27 @@ pub struct Boolean {
     /// Must be a triangle mesh object of type "model", and must NOT contain
     /// shapes defined in other extensions.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "objectid")
     )]
     pub objectid: ResourceId,
 
     /// Optional transform to apply to the operand object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Optional path to the operand object file (for Production extension).
     /// Only valid in root model files when used with Production extension.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: Option<PathResource>,
 }
 
 /// Specifies the type of boolean operation to perform.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, rename_all = "lowercase")
 )]
 pub enum BooleanOperation {
@@ -352,7 +334,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

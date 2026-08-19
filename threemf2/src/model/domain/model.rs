@@ -3,7 +3,7 @@ use std::collections::HashSet;
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -18,30 +18,21 @@ use crate::{
 ///
 /// A model defines the 3D objects, materials, and build instructions for a 3MF package.
 /// It serves as the primary container for all 3MF data structures.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(any(feature="write", feature="memory-optimized-read"), 
+#[cfg_attr(any(feature="write", feature="read"), 
 xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS, bo = BOOLEAN_NS, s = SLICE_NS, m = MATERIAL_NS, d = DISPLACEMENT_NS), rename = "model"))]
 pub struct Model {
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Measurement unit for the model.
     pub unit: Option<Unit>,
 
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Required extension namespaces for this model.
     pub requiredextensions: ThreemfExtensions,
 
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Recommended extension namespaces for this model.
     pub recommendedextensions: ThreemfExtensions,
 
@@ -56,11 +47,11 @@ pub struct Model {
 }
 
 /// Model measurement unit, default is millimeter
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, rename_all = "lowercase")
 )]
 pub enum Unit {
@@ -175,7 +166,7 @@ impl ToXml for ThreemfExtensions {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for ThreemfExtensions {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         match field {
@@ -211,7 +202,7 @@ impl<'xml> FromXml<'xml> for ThreemfExtensions {
     const KIND: instant_xml::Kind = instant_xml::Kind::Scalar;
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl instant_xml::Accumulate<ThreemfExtensions> for ThreemfExtensions {
     fn try_done(self, _: &'static str) -> Result<ThreemfExtensions, instant_xml::Error> {
         Ok(self)
@@ -1264,7 +1255,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::FromXml;

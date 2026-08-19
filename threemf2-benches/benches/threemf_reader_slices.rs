@@ -47,7 +47,7 @@ fn bench_memory_optimized(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("read", name), &path, |b, path| {
             b.iter(|| {
                 let file = std::fs::File::open(path).unwrap();
-                ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+                ThreemfPackage::from_reader(file, true).unwrap();
             });
         });
     }

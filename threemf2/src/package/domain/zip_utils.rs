@@ -21,10 +21,10 @@ use std::io::{Read, Seek};
 use std::path::Path;
 
 /// Enum for different XML deserialization strategies
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 #[derive(Clone, Copy)]
 pub(crate) enum XmlDeserializer {
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     MemoryOptimized,
 }
 
@@ -34,7 +34,7 @@ impl XmlDeserializer {
         xml_string: &str,
     ) -> Result<ContentTypes, Error> {
         match self {
-            #[cfg(feature = "package-memory-optimized-read")]
+            #[cfg(feature = "package-read")]
             XmlDeserializer::MemoryOptimized => {
                 instant_xml::from_str::<ContentTypes>(xml_string).map_err(Error::from)
             }
@@ -46,7 +46,7 @@ impl XmlDeserializer {
         xml_string: &str,
     ) -> Result<Relationships, Error> {
         match self {
-            #[cfg(feature = "package-memory-optimized-read")]
+            #[cfg(feature = "package-read")]
             XmlDeserializer::MemoryOptimized => {
                 instant_xml::from_str::<Relationships>(xml_string).map_err(Error::from)
             }
@@ -55,7 +55,7 @@ impl XmlDeserializer {
 
     pub(crate) fn deserialize_model(&self, xml_string: &str) -> Result<Model, Error> {
         let model = match self {
-            #[cfg(feature = "package-memory-optimized-read")]
+            #[cfg(feature = "package-read")]
             XmlDeserializer::MemoryOptimized => instant_xml::from_str::<Model>(xml_string)?,
         };
 

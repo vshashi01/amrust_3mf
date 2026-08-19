@@ -1,10 +1,10 @@
-#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+#[cfg(any(feature = "write", feature = "read"))]
 use instant_xml::{Error, Id};
 
 #[cfg(feature = "write")]
 use instant_xml::{Serializer, ToXml};
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::{Deserializer, FromXml, Kind};
 
 use std::ops::Index;
@@ -102,7 +102,7 @@ impl ToXml for Transform {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Transform {
     fn matches(id: Id<'_>, field: Option<Id<'_>>) -> bool {
         match field {
@@ -236,7 +236,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::{FromXml, from_str};

@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -24,16 +24,13 @@ use crate::{
 /// - Boolean operations defining a shape ([`ObjectKind::BooleanShape`])
 ///
 /// These three options are mutually exclusive - an object can only have one of them set.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
-#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS, bo=BOOLEAN_NS, s=SLICE_NS), rename="object", force_prefix))]
+#[cfg_attr(any(feature="write", feature="read"), xml(ns(CORE_NS, p=PROD_NS, bo=BOOLEAN_NS, s=SLICE_NS), rename="object", force_prefix))]
 pub struct Object {
     /// A unique identifier for this object
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Optionally defines the intend of this object. If not defined, the
@@ -41,54 +38,39 @@ pub struct Object {
     ///
     /// See [`ObjectType`] for more details.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "type")
     )]
     pub objecttype: Option<ObjectType>,
 
     /// Optional path to the thumbnail in the 3MF Package for this object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub thumbnail: Option<PathResource>,
 
     /// Optional string defining the part number for this object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub partnumber: Option<StrResource>,
 
     /// Optional string defining the name for this object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub name: Option<StrResource>,
 
     /// Reference to the property group element with the
     /// matching id attribute value (e.g. Basematerials).
     /// It is REQUIRED if pindex is specified.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pid: OptionalResourceId,
 
     /// References a zero-based index into the properties
     /// group specified by pid. This property is used to build the object.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pindex: OptionalResourceIndex,
 
     /// Optional UUID as a string.
     ///
     /// The UUID is required when using the Production extension.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
     )]
     pub uuid: Option<UuidResource>,
@@ -96,27 +78,18 @@ pub struct Object {
     /// Identifies the SliceStack that contains the slice data for this object.
     /// If used alone, the slice data exists in the same file as the object.
     /// If used with slicepath, the slice data is in the specified file.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute, ns(SLICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute, ns(SLICE_NS)))]
     pub slicestackid: OptionalResourceId,
 
     /// Absolute path to a non-root model file containing slice data.
     /// Used in combination with slicestackid when slices are in separate files.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute, ns(SLICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute, ns(SLICE_NS)))]
     pub slicepath: Option<PathResource>,
 
     /// Indicates the intended resolution of mesh models when slice data is present.
     /// "fullres" means the mesh can regenerate the slices; "lowres" means it cannot.
     /// Packages with "lowres" MUST list the slice extension in requiredextensions.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute, ns(SLICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute, ns(SLICE_NS)))]
     pub meshresolution: Option<MeshResolution>,
 
     /// The actual geometry that is contained in this [`Object`].
@@ -177,11 +150,11 @@ impl Object {
     }
 }
 
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, rename_all = "lowercase")
 )]
 /// Specifies the type of a 3MF object, indicating its role in the build process.
@@ -216,13 +189,10 @@ impl From<String> for ObjectType {
     }
 }
 
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
-#[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
-    xml(forward)
-)]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(forward))]
 #[non_exhaustive]
 /// This is not a type found in the 3MF data model but it is introduced here
 /// for better ergonomics of this library. This kind will specify all different variants
@@ -448,7 +418,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::{FromXml, from_str};

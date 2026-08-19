@@ -1,10 +1,10 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use crate::model::domain::constants;
 
 use crate::{
@@ -16,63 +16,45 @@ use crate::{
 };
 
 /// Displacement texture resource.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(DISPLACEMENT_NS), rename = "displacement2d")
 )]
 pub struct Displacement2D {
     /// Unique identifier for this displacement texture.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Path to the displacement texture image inside the package.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: PathResource,
 
     /// Color channel to use for displacement.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub channel: Option<ChannelName>,
 
     /// Horizontal tiling style.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub tilestyleu: Option<TileStyle>,
 
     /// Vertical tiling style.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub tilestylev: Option<TileStyle>,
 
     /// Sampling filter for displacement map.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub filter: Option<Filter>,
 }
 
 /// Displacement channel.
 #[cfg_attr(feature = "write", derive(ToXml))]
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(DISPLACEMENT_NS))
 )]
 pub enum ChannelName {
@@ -100,11 +82,11 @@ impl From<String> for ChannelName {
 }
 
 /// Tile style for displacement coordinates outside the `[0,1]` range.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(DISPLACEMENT_NS), rename_all = "lowercase")
 )]
 pub enum TileStyle {
@@ -132,11 +114,11 @@ impl From<String> for TileStyle {
 }
 
 /// Filter used for displacement map sampling.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(DISPLACEMENT_NS), rename_all = "lowercase")
 )]
 pub enum Filter {
@@ -176,7 +158,7 @@ pub struct NormVectorGroup {
     pub normvector: Vec<NormVector>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for NormVectorGroup {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -263,7 +245,7 @@ pub struct NormVector {
     pub z: Double,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for NormVector {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -326,47 +308,32 @@ impl<'xml> FromXml<'xml> for NormVector {
 }
 
 /// Group of displacement map coordinates.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(DISPLACEMENT_NS), rename = "disp2dgroup")
 )]
 pub struct Disp2DGroup {
     /// Unique identifier for this displacement coordinate group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Reference to the displacement texture resource.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub dispid: ResourceId,
 
     /// Reference to the normal vector group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub nid: ResourceId,
 
     /// Maximum displacement height.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub height: Double,
 
     /// Optional displacement offset.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub offset: Option<Double>,
 
     /// Displacement coordinates for this group.
@@ -374,49 +341,37 @@ pub struct Disp2DGroup {
 }
 
 /// A displacement map coordinate entry.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(DISPLACEMENT_NS), rename = "disp2dcoord")
 )]
 pub struct Disp2DCoord {
     /// U texture coordinate.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub u: Double,
 
     /// V texture coordinate.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub v: Double,
 
     /// Index into the normal vector group.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub n: ResourceIndex,
 
     /// Optional scaling factor for displacement.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub f: Option<Double>,
 }
 
 /// Displacement mesh object payload.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(DISPLACEMENT_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "displacementmesh")
 )]
 pub struct DisplacementMesh {
@@ -428,19 +383,13 @@ pub struct DisplacementMesh {
     /// Optional TriangleSets that allows to create identifiable group of triangles
     ///
     /// See [`TriangleSet`](crate::model::domain::triangle_set::TriangleSet) for more details
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(ns(CORE_TRIANGLESET_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(CORE_TRIANGLESET_NS)))]
     pub trianglesets: Option<TriangleSets>,
 
     /// Optional Beam Lattice geometry that is part of this mesh
     ///
     /// See [`BeamLattice`] for more details
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(ns(BEAM_LATTICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(BEAM_LATTICE_NS)))]
     pub beamlattice: Option<BeamLattice>,
 }
 
@@ -453,7 +402,7 @@ pub struct Vertices {
     pub vertex: Vec<Vertex>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertices {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -522,7 +471,7 @@ pub struct Vertex {
     pub z: Double,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertex {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -597,7 +546,7 @@ pub struct Triangles {
     pub triangle: Vec<Triangle>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Triangles {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -709,7 +658,7 @@ pub struct Triangle {
     pub pid: OptionalResourceId,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Triangle {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -1132,7 +1081,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

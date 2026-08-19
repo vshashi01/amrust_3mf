@@ -51,7 +51,7 @@ use crate::{
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 const MAX_VERTEX_BUFFER: usize = 1000;
@@ -61,11 +61,11 @@ const MAX_VERTEX_BUFFER: usize = 1000;
 /// When a 3MF package contains both mesh and slice data, this attribute helps
 /// consumers understand whether the mesh is intended for fabrication or is a
 /// lower-resolution representation.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(SLICE_NS), rename_all = "lowercase")
 )]
 pub enum MeshResolution {
@@ -101,27 +101,21 @@ impl From<String> for MeshResolution {
 /// - SliceStacks MUST NOT contain both `<slice>` and `<sliceref>` elements concurrently
 /// - The zbottom attribute indicates the starting level relative to the build platform
 /// - SliceStack IDs must be unique within a single model part
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(SLICE_NS), rename = "slicestack", force_prefix)
 )]
 pub struct SliceStack {
     /// Unique identifier for this slice stack within the model part.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Starting level relative to the build platform in model units.
     /// This allows alignment between mesh vertices and slice data.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub zbottom: Option<Double>,
 
     /// Owned slice data entries.
@@ -143,26 +137,20 @@ impl SliceStack {
 ///
 /// This allows slice data to be stored in separate XML files for easier parsing
 /// and better organization of large datasets.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(SLICE_NS), rename = "sliceref", force_prefix)
 )]
 pub struct SliceRef {
     /// Identifies the SliceStack in the referenced file.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub slicestackid: ResourceId,
 
     /// Absolute path to the model file containing the slice data.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub slicepath: PathResource,
 }
 
@@ -171,20 +159,17 @@ pub struct SliceRef {
 /// A slice defines the geometry at a specific z-height. It contains vertices
 /// and polygons that describe the 2D contours. A slice can be empty (containing
 /// only ztop) to represent void space.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(SLICE_NS), rename = "slice", force_prefix)
 )]
 pub struct Slice {
     /// Z-position of the top of this slice relative to the build platform.
     /// Must be monotonically increasing throughout the slice stack.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub ztop: Double,
 
     /// 2D vertices for this slice. Required if slice contains geometry.
@@ -206,7 +191,7 @@ pub struct Vertices {
     pub vertex: Vec<Vertex>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertices {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -273,7 +258,7 @@ pub struct Vertex {
     pub y: Double,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertex {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -331,19 +316,16 @@ impl<'xml> FromXml<'xml> for Vertex {
 }
 
 /// Closed or open contour defined by a sequence of segments.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(SLICE_NS), rename = "polygon", force_prefix)
 )]
 pub struct Polygon {
     /// Index of the first vertex of the first segment.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub startv: ResourceIndex,
 
     /// Segments defining this polygon.
@@ -376,7 +358,7 @@ pub struct Segment {
     pub pid: OptionalResourceId,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Segment {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -639,7 +621,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

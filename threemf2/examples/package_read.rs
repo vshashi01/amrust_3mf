@@ -4,7 +4,7 @@ use std::{fs::File, path::PathBuf};
 
 /// This is an example to show how to do a memory-optimized-read
 /// run with
-/// `cargo run --example package_memory_optimized_read --no-default-features --features package-memory-optimized-read`
+/// `cargo run --example package_read --no-default-features --features package-read`
 /// Note: io_memory-optimized-read is part of the default features also
 ///
 fn main() {
@@ -12,7 +12,7 @@ fn main() {
         .join("tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
     let reader = File::open(path).unwrap();
 
-    let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+    let result = ThreemfPackage::from_reader(reader, true);
 
     match result {
         Ok(package) => {

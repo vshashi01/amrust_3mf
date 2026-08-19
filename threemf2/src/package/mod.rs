@@ -23,21 +23,15 @@ pub mod builder;
 #[cfg(feature = "package-write")]
 pub use builder::ThreemfPackageBuilder;
 
-#[cfg(any(feature = "package-write", feature = "package-memory-optimized-read",))]
+#[cfg(any(feature = "package-write", feature = "package-read",))]
 mod threemf_package;
-#[cfg(any(feature = "package-write", feature = "package-memory-optimized-read",))]
+#[cfg(any(feature = "package-write", feature = "package-read",))]
 pub use threemf_package::ThreemfPackage;
 
-#[cfg(any(feature = "package-write", feature = "package-memory-optimized-read",))]
+#[cfg(any(feature = "package-write", feature = "package-read",))]
 pub mod query;
 
-#[cfg(all(
-    feature = "package-lazy-read",
-    feature = "package-memory-optimized-read"
-))]
+#[cfg(all(feature = "package-lazy-read", feature = "package-read"))]
 mod threemf_package_lazy_reader;
-#[cfg(all(
-    feature = "package-lazy-read",
-    feature = "package-memory-optimized-read"
-))]
+#[cfg(all(feature = "package-lazy-read", feature = "package-read"))]
 pub use threemf_package_lazy_reader::{CachePolicy, ThreemfPackageLazyReader};

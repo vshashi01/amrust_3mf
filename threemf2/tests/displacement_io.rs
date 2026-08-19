@@ -1,7 +1,4 @@
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "package-lazy-read"
-))]
+#[cfg(any(feature = "package-read", feature = "package-lazy-read"))]
 #[cfg(test)]
 mod tests {
 
@@ -11,7 +8,7 @@ mod tests {
 
     use std::{fs::File, path::PathBuf};
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn read_displacement_package_memory_optimized() {
         use threemf2::threemf_namespaces::ThreemfNamespace;
@@ -20,8 +17,7 @@ mod tests {
             PathBuf::from("./tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
         let reader = File::open(path).unwrap();
 
-        let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true).unwrap();
+        let package = ThreemfPackage::from_reader(reader, true).unwrap();
 
         assert_eq!(io_query::get_displacement_mesh_objects(&package).count(), 1);
         for object in io_query::get_displacement_mesh_objects(&package) {
@@ -39,10 +35,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(
-        feature = "package-lazy-read",
-        feature = "package-memory-optimized-read"
-    ))]
+    #[cfg(all(feature = "package-lazy-read", feature = "package-read"))]
     #[test]
     fn read_displacement_package_lazy_memory_optimized() {
         use threemf2::{
@@ -54,11 +47,7 @@ mod tests {
             PathBuf::from("./tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-            reader,
-            CachePolicy::NoCache,
-        )
-        .unwrap();
+        let package = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache).unwrap();
 
         package
             .with_model(
