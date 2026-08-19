@@ -1,5 +1,5 @@
 #[cfg(any(
-    feature = "package-memory-optimized-read",
+    feature = "package-read",
     feature = "package-lazy-read"
 ))]
 #[cfg(test)]
@@ -8,7 +8,7 @@ mod tests {
 
     use std::{fs::File, path::PathBuf};
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn read_threemf_package_memory_optimized() {
         use threemf2::package::ThreemfPackage;
@@ -63,7 +63,7 @@ mod tests {
 
     #[cfg(all(
         feature = "package-lazy-read",
-        feature = "package-memory-optimized-read"
+        feature = "package-read"
     ))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {

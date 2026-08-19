@@ -1,4 +1,4 @@
-#[cfg(all(feature = "package-memory-optimized-read", feature = "package-write"))]
+#[cfg(all(feature = "package-read", feature = "package-write"))]
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -100,7 +100,7 @@ mod tests {
         write_package
             .write(&mut buf)
             .expect("Error writing package");
-        #[cfg(feature = "package-memory-optimized-read")]
+        #[cfg(feature = "package-read")]
         {
             let package =
                 ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)

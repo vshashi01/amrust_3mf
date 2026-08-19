@@ -410,7 +410,7 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     }
 }
 
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     /// Create a pull-based package with memory-optimized deserialization
     ///
@@ -433,7 +433,7 @@ mod tests {
 
     use super::*;
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_root_model_lazy_load() {
         let path =
@@ -457,7 +457,7 @@ mod tests {
         assert_eq!(root_model.used_namespaces().len(), 3);
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_with_sub_models() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
@@ -488,7 +488,7 @@ mod tests {
         assert!(exists.is_err());
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_pull_based_thumbnails() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");

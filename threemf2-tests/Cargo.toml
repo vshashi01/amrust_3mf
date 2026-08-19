@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 threemf2 = { path = "../threemf2", features = [
     "package-write",
-    "package-memory-optimized-read",
+    "package-read",
     "package-lazy-read",
 ] }
 

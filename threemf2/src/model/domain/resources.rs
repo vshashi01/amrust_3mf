@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -16,11 +16,11 @@ use crate::{
 };
 
 /// A collection of Objects and other properties that are referenced by other elements.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Debug, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_NS, s = SLICE_NS, m = MATERIAL_NS), rename = "resources")
 )]
 pub struct Resources {
@@ -32,104 +32,104 @@ pub struct Resources {
 
     /// Collection of slice stacks. See [`SliceStack`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(SLICE_NS))
     )]
     pub slicestack: Vec<SliceStack>,
 
     /// Collection of color groups. See [`ColorGroup`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(MATERIAL_NS))
     )]
     pub colorgroup: Vec<ColorGroup>,
 
     /// Collection of texture coordinate groups. See [`Texture2DGroup`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(MATERIAL_NS))
     )]
     pub texture2dgroup: Vec<Texture2DGroup>,
 
     /// Collection of composite materials. See [`CompositeMaterials`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(MATERIAL_NS))
     )]
     pub compositematerials: Vec<CompositeMaterials>,
 
     /// Collection of multi-property definitions. See [`MultiProperties`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(MATERIAL_NS))
     )]
     pub multiproperties: Vec<MultiProperties>,
 
     /// Collection of 2D texture references. See [`Texture2D`]
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(MATERIAL_NS))
     )]
     pub texture2d: Vec<Texture2D>,
 
     /// Collection of displacement texture resources.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(DISPLACEMENT_NS))
     )]
     pub displacement2d: Vec<Displacement2D>,
 
     /// Collection of normalized vector groups for displacement.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(DISPLACEMENT_NS))
     )]
     pub normvectorgroup: Vec<NormVectorGroup>,
 
     /// Collection of displacement coordinate groups.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(DISPLACEMENT_NS))
     )]
     pub disp2dgroup: Vec<Disp2DGroup>,
 }
 
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Eq, Debug, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_NS), rename = "base")
 )]
 /// A single base material entry with name and color.
 pub struct Base {
     /// Name of the base material.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute)
     )]
     pub name: StrResource,
 
     /// Display color of the base material in hex format.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute)
     )]
     pub displaycolor: StrResource, //ToDo: Make this a specific color struct for flexibility
 }
 
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_NS), rename = "basematerials")
 )]
 /// A group of base materials referenced by objects.
 pub struct BaseMaterials {
     /// Unique identifier for this base materials group.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute)
     )]
     pub id: ResourceId,
@@ -568,7 +568,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

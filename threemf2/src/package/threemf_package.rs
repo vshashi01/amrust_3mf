@@ -18,7 +18,7 @@ use crate::{
     threemf_namespaces::ThreemfNamespace,
 };
 
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 use crate::package::domain::zip_utils::XmlDeserializer;
 
 use std::collections::HashMap;
@@ -251,10 +251,10 @@ impl ThreemfPackage {
     }
 }
 
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 impl ThreemfPackage {
     /// Reads a 3MF package using the memory-optimized XML deserializer.
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     pub fn from_reader_with_memory_optimized_deserializer<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
@@ -366,7 +366,7 @@ impl PartialEq for ThreemfPackage {
     }
 }
 
-#[cfg(feature = "package-memory-optimized-read")]
+#[cfg(feature = "package-read")]
 mod processor {
     use zip::ZipArchive;
 
@@ -520,7 +520,7 @@ mod tests {
     use std::path::PathBuf;
     use std::{collections::HashMap, io::Cursor};
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     pub fn from_reader_root_model_with_memory_optimized_read_test() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
@@ -641,7 +641,7 @@ mod tests {
         assert_eq!(bytes.into_inner().len(), 945);
     }
 
-    #[cfg(all(feature = "package-memory-optimized-read", feature = "package-write"))]
+    #[cfg(all(feature = "package-read", feature = "package-write"))]
     #[test]
     pub fn io_unknown_content_test() {
         use crate::model::{StrResource, domain::model::ThreemfExtensions};
@@ -730,7 +730,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "package-memory-optimized-read", feature = "package-write"))]
+    #[cfg(all(feature = "package-read", feature = "package-write"))]
     #[test]
     pub fn io_thumbnail_content_test() {
         use crate::{
@@ -828,7 +828,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn i_root_namespaces_tracking_test() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -856,7 +856,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn i_submodel_namespaces_tracking_test() {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -885,7 +885,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "package-memory-optimized-read")]
+    #[cfg(feature = "package-read")]
     #[test]
     fn test_boolean_operations_namespace_tracking() {
         use crate::threemf_namespaces::BOOLEAN_NS;

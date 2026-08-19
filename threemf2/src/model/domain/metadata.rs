@@ -1,10 +1,10 @@
-#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+#[cfg(any(feature = "write", feature = "read"))]
 use instant_xml::Error;
 
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::{FromXml, Kind};
 
 use crate::{model::StrResource, threemf_namespaces::CORE_NS};
@@ -13,24 +13,24 @@ use crate::{model::StrResource, threemf_namespaces::CORE_NS};
 ///
 /// Metadata provides additional information about the model, such as author,
 /// description, or custom properties.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 // #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Eq)]
 #[cfg_attr(
-    any(feature = "memory-optimized-read"),
+    any(feature = "read"),
     xml(ns(CORE_NS), rename = "metadata")
 )]
 pub struct Metadata {
     /// Name of the metadata entry.
-    #[cfg_attr(any(feature = "memory-optimized-read"), xml(attribute))]
+    #[cfg_attr(any(feature = "read"), xml(attribute))]
     pub name: StrResource,
 
     /// Whether this metadata must be preserved by consumers.
-    #[cfg_attr(any(feature = "memory-optimized-read"), xml(attribute))]
+    #[cfg_attr(any(feature = "read"), xml(attribute))]
     pub preserve: Option<Preserve>,
 
     /// Value of the metadata entry.
-    #[cfg_attr(any(feature = "memory-optimized-read"), xml(direct))]
+    #[cfg_attr(any(feature = "read"), xml(direct))]
     pub value: Option<StrResource>,
 }
 
@@ -69,11 +69,11 @@ impl ToXml for Metadata {
 }
 
 /// Group of metadata entries.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_NS), rename = "metadatagroup")
 )]
 pub struct MetadataGroup {
@@ -87,7 +87,7 @@ pub struct MetadataGroup {
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "preserve"))]
 pub struct Preserve(pub bool);
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Preserve {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         match field {
@@ -204,7 +204,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

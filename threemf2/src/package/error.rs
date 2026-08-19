@@ -26,7 +26,7 @@ pub enum Error {
     WriteError(String),
 
     /// XML deserialization error from instant-xml.
-    #[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+    #[cfg(any(feature = "write", feature = "read"))]
     #[error("(De)Serialization error from Instant-Xml")]
     InstantXmlError(#[from] instant_xml::Error),
 

@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -16,11 +16,11 @@ use crate::{
 ///
 /// Components allow building complex objects by referencing other objects
 /// with transforms, enabling hierarchical model construction.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CORE_NS, p=PROD_NS), rename = "components")
 )]
 pub struct Components {
@@ -32,13 +32,13 @@ pub struct Components {
 ///
 /// Components enable reusing objects in different positions, orientations,
 /// and scales within a components object.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
-#[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "component"))]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(CORE_NS, p=PROD_NS), rename = "component"))]
 pub struct Component {
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute)
     )]
     /// Unique identifier of the referenced object.
@@ -46,21 +46,21 @@ pub struct Component {
 
     /// Optional transform applied to the referenced object.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute)
     )]
     pub transform: Option<Transform>,
 
     /// Optional path to the referenced object (Production extension).
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, ns(PROD_NS))
     )]
     pub path: Option<PathResource>,
 
     /// Optional UUID for the referenced object (Production extension).
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
     )]
     pub uuid: Option<UuidResource>,
@@ -148,7 +148,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

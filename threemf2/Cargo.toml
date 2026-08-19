@@ -16,16 +16,16 @@ readme.workspace = true
 [features]
 default = [
     "package-write",
-    "package-memory-optimized-read",
+    "package-read",
     "package-lazy-read",
     "write",
-    "memory-optimized-read",
+    "read",
 ]
 write = ["dep:instant-xml"]
-memory-optimized-read = ["dep:instant-xml"]
+read = ["dep:instant-xml"]
 package-write = ["dep:zip", "write"]
-package-memory-optimized-read = ["dep:zip", "memory-optimized-read"]
-package-lazy-read = ["dep:once_cell", "package-memory-optimized-read"]
+package-read = ["dep:zip", "read"]
+package-lazy-read = ["dep:once_cell", "package-read"]
 uuid = ["dep:uuid"]
 
 [dependencies]
@@ -58,7 +58,7 @@ required-features = ["package-lazy-read"]
 [[example]]
 name = "package_memory_optimized_read"
 path = "examples/package_memory_optimized_read.rs"
-required-features = ["package-memory-optimized-read"]
+required-features = ["package-read"]
 
 [[example]]
 name = "beamlattice_write"
@@ -83,7 +83,7 @@ required-features = ["package-write"]
 [[example]]
 name = "query_example"
 path = "examples/query_example.rs"
-required-features = ["package-memory-optimized-read", "uuid"]
+required-features = ["package-read", "uuid"]
 
 [[example]]
 name = "boolean_write"

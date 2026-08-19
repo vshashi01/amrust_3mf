@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 instant-xml = { version = "0.7.6" }
 threemf2 = { path = "../threemf2", features = [
-    "package-memory-optimized-read",
+    "package-read",
     "package-write",
 ] }
 lib3mf-core = { version = "0.4.0", features = ["parallel"] }

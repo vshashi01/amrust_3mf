@@ -1,7 +1,7 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::{
@@ -21,14 +21,14 @@ use crate::{
 ///
 /// - **Root models** MUST have a `Build` section with at least one item.
 /// - **Sub-models** CANNOT have a `Build` section.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Debug, Clone)]
-#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "build"))]
+#[cfg_attr(any(feature="write", feature="read"), xml(ns(CORE_NS, p=PROD_NS), rename = "build"))]
 pub struct Build {
     /// Uuid specified to this Build
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
     )]
     pub uuid: Option<UuidResource>,
@@ -38,42 +38,30 @@ pub struct Build {
 }
 
 /// Represents a single item in the build configuration, referencing an object with transform.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Debug, Clone)]
-#[cfg_attr(any(feature="write", feature="memory-optimized-read"), xml(ns(CORE_NS, p=PROD_NS), rename = "item"))]
+#[cfg_attr(any(feature="write", feature="read"), xml(ns(CORE_NS, p=PROD_NS), rename = "item"))]
 pub struct Item {
     /// Id of the Object referenced by this Item
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub objectid: ResourceId,
 
     /// Transform associated to this Item
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Part number associated with this Item
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub partnumber: Option<StrResource>,
 
     /// Optional Path to the model where the Object referenced by this Item is located in
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute, ns(PROD_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute, ns(PROD_NS)))]
     pub path: Option<PathResource>,
 
     /// Uuuid assigned to this Item
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
     )]
     pub uuid: Option<UuidResource>,
@@ -189,7 +177,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

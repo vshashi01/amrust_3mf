@@ -64,7 +64,7 @@ The `domain/` directory contains the raw Rust types that map directly to the 3MF
 Domain types use feature-gated derive macros so that the same struct can be serialized with different XML backends:
 
 ```rust
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq)]
 ```
@@ -156,7 +156,7 @@ The `Error` enum is a unified error type for all package I/O operations, using `
 
 ## 5. Serialization Strategy
 
-Since version 0.5.0 only one serialization backend is supported. A fully DOM based `speed-optimized` backend has been fully removed.
+Since version 0.5.0 only one deserialization backend is supported. A fully DOM based `speed-optimized` backend has been fully removed since 0.4.1.
 
 ### 5.1. `instant-xml` (default, memory-optimized)
 
@@ -164,7 +164,7 @@ Since version 0.5.0 only one serialization backend is supported. A fully DOM bas
 - **Strategy**: Streaming XML parser. Reads XML incrementally without building a full DOM tree.
 - **Pros**: Lower peak memory usage. Suitable for large files.
 - **Cons**: Slightly slower than DOM-based parsing.
-- **Feature**: `memory-optimized-read` (for deserialization), `write` (for serialization).
+- **Feature**: `read` (for deserialization), `write` (for serialization).
 
 ### 5.4. Feature gating pattern
 
@@ -228,10 +228,10 @@ The crate uses Cargo features to control compilation of I/O operations and seria
 ```toml
 default = [
     "package-write",
-    "package-memory-optimized-read",
+    "package-read",
     "package-lazy-read",
     "write",
-    "memory-optimized-read",
+    "read",
 ]
 ```
 

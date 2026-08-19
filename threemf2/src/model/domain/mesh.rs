@@ -1,11 +1,11 @@
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 use crate::model::domain::beamlattice::BeamLattice;
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use crate::model::domain::constants;
 use crate::model::domain::triangle_set::TriangleSets;
 use crate::model::{Double, OptionalResourceId, OptionalResourceIndex, ResourceIndex};
@@ -16,10 +16,10 @@ use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 ///
 /// It is expected that users of this library will use their own mesh type,
 /// and the simplicity of [`Mesh`] provides an easy target for conversion to and from.
-#[cfg_attr(all(feature = "memory-optimized-read",), derive(FromXml))]
+#[cfg_attr(all(feature = "read",), derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
-#[cfg_attr(any(feature = "write", feature = "memory-optimized-read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(CORE_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS), rename = "mesh"))]
 pub struct Mesh {
     /// The vertices of the mesh
     ///
@@ -37,7 +37,7 @@ pub struct Mesh {
     ///
     /// See [`TriangleSet`](crate::model::domain::triangle_set::TriangleSet) for more details
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(CORE_TRIANGLESET_NS))
     )]
     pub trianglesets: Option<TriangleSets>,
@@ -46,7 +46,7 @@ pub struct Mesh {
     ///
     /// See [`BeamLattice`] for more details
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_NS))
     )]
     pub beamlattice: Option<BeamLattice>,
@@ -63,7 +63,7 @@ pub struct Vertices {
     pub vertex: Vec<Vertex>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertices {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -145,7 +145,7 @@ impl Vertex {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Vertex {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -218,7 +218,7 @@ pub struct Triangles {
     pub triangle: Vec<Triangle>,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Triangles {
     fn matches(id: instant_xml::Id<'_>, _field: Option<instant_xml::Id<'_>>) -> bool {
         id == ::instant_xml::Id {
@@ -308,7 +308,7 @@ pub struct Triangle {
     pub pid: OptionalResourceId,
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for Triangle {
     #[inline]
     fn matches(id: ::instant_xml::Id<'_>, _: Option<::instant_xml::Id<'_>>) -> bool {
@@ -531,7 +531,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

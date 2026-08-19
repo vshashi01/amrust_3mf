@@ -1,10 +1,10 @@
-#[cfg(any(feature = "write", feature = "memory-optimized-read"))]
+#[cfg(any(feature = "write", feature = "read"))]
 use instant_xml::Error;
 
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::{FromXml, Kind};
 
 use crate::model::StrResource;
@@ -16,11 +16,11 @@ use crate::model::StrResource;
 ///
 /// This struct represents the content types container, which holds a collection of
 /// [`DefaultContentTypes`] mappings.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CONTENT_TYPES_NS), rename = "Types")
 )]
 pub struct ContentTypes {
@@ -74,7 +74,7 @@ impl ToXml for DefaultContentTypeEnum {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 impl<'xml> FromXml<'xml> for DefaultContentTypeEnum {
     fn matches(id: instant_xml::Id<'_>, field: Option<instant_xml::Id<'_>>) -> bool {
         match field {
@@ -120,24 +120,24 @@ impl From<String> for DefaultContentTypeEnum {
 }
 
 /// Internal structure for serde of [ContentTypes].
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(CONTENT_TYPES_NS), rename = "Default")
 )]
 pub struct DefaultContentTypes {
     /// Extension of the Content Type (useful in some ambiguous case like jpeg vs jpg)
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "Extension")
     )]
     pub extension: StrResource,
 
     /// Enum of the Content Type
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(attribute, rename = "ContentType")
     )]
     pub content_type: DefaultContentTypeEnum,
@@ -194,7 +194,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;

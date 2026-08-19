@@ -6,88 +6,70 @@ use crate::{
 #[cfg(feature = "write")]
 use instant_xml::ToXml;
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 use instant_xml::FromXml;
 
 /// A beam lattice provides information about lattice data, in the form of a simplistic node-beam model
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS, b2 = BEAM_LATTICE_BALLS_NS), rename = "beamlattice")
 )]
 pub struct BeamLattice {
     /// A producer MUST specify the minimal length of all beams in the lattice.
     /// The producer SHOULD NOT produce zero length beams (i.e. shorter than minlength).
     /// The consumer MUST ignore all beams with length shorter than minlength.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub minlength: f64,
 
     /// Default uniform radius value for the beams.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub radius: f64,
 
     /// Specifies whether balls are created at beam vertices
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_BALLS_NS), attribute)
     )]
     pub ballmode: Option<BallMode>,
 
     /// Default uniform radius value for the balls. Required if ballmode is different to "none".
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_BALLS_NS), attribute)
     )]
     pub ballradius: Option<f64>,
 
     /// Specifies the clipping mode of the beam lattice
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_NS), attribute)
     )]
     pub clippingmode: Option<ClippingMode>,
 
     /// References the clippingmesh object. Required if clippingmode is different to "none".
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub clippingmesh: OptionalResourceId,
 
     /// References a mesh object that represents the intentional shape of the lattice geometry
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub representationmesh: OptionalResourceId,
 
     /// Overrides the object-level pid as default for all beams
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pid: OptionalResourceId,
 
     /// Overrides the object-level pindex as default for all beams
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pindex: OptionalResourceIndex,
 
     /// Default capping mode for beam ends
     ///
     /// See [`CapMode`] for more details.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_NS), attribute)
     )]
     pub cap: Option<CapMode>,
@@ -97,7 +79,7 @@ pub struct BeamLattice {
 
     /// Optional balls in this beam lattice.
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_BALLS_NS))
     )]
     pub balls: Option<Balls>,
@@ -107,11 +89,11 @@ pub struct BeamLattice {
 }
 
 /// Ball mode for beam lattices - specifies whether balls are created at beam vertices
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, ns(BEAM_LATTICE_BALLS_NS), rename_all = "lowercase")
 )]
 pub enum BallMode {
@@ -139,11 +121,11 @@ impl From<String> for BallMode {
 }
 
 /// Clipping mode for beam lattices
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, rename_all = "lowercase")
 )]
 pub enum ClippingMode {
@@ -172,11 +154,11 @@ impl From<String> for ClippingMode {
 }
 
 /// Capping mode for beam ends
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(scalar, rename_all = "lowercase")
 )]
 pub enum CapMode {
@@ -203,11 +185,11 @@ impl From<String> for CapMode {
 }
 
 /// A container for beams
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS), rename = "beams")
 )]
 pub struct Beams {
@@ -220,84 +202,57 @@ pub struct Beams {
 /// A beam is the core geometry within beam lattice. It has 2 vertices that defines
 /// the end of the beam usually called beam nodes. Each beam nodes can have its own
 /// thickness.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS), rename = "beam")
 )]
 pub struct Beam {
     /// References a zero-based index into the vertices of this mesh. Defines the first vertex of the beam.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub v1: ResourceIndex,
 
     /// References a zero-based index into the vertices of this mesh. Defines the second vertex of the beam.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub v2: ResourceIndex,
 
     /// Defines the radius of the first vertex of beam. If not given, defaults to beamlattice radius.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub r1: Option<f64>,
 
     /// Defines the radius of the second vertex of the beam. If not given, defaults to r1.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub r2: Option<f64>,
 
     /// Overrides the beamlattice-level pindex for the first vertex of the beam
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub p1: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pindex for the second vertex of the beam
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub p2: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pid for the beam
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pid: OptionalResourceId,
 
     /// Capping mode for the first end of the beam
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub cap1: Option<CapMode>,
 
     /// Capping mode for the second end of the beam
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub cap2: Option<CapMode>,
 }
 
 /// A Collection of Ball elements. See [`Ball`] for more details.
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_BALLS_NS), rename = "balls", force_prefix)
 )]
 pub struct Balls {
@@ -306,50 +261,38 @@ pub struct Balls {
 }
 
 /// A ball element defines a sphere of a given radius centered at the position of the vertex
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_BALLS_NS), rename = "ball", force_prefix)
 )]
 pub struct Ball {
     /// References a zero-based index into the vertices of this mesh.
     /// Defines the vertex that serves as the center for this ball.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub vindex: ResourceIndex,
 
     /// The radius of this ball. If not given, uses default ballradius of the enclosing beamlattice.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub r: Option<f64>,
 
     /// Overrides the beamlattice-level pindex for this ball
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub p: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pid for this ball
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub pid: OptionalResourceId,
 }
 
 /// A container for beam sets
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS), rename = "beamsets")
 )]
 pub struct BeamSets {
@@ -358,75 +301,60 @@ pub struct BeamSets {
 }
 
 /// A beam set contains a reference list to a subset of beams and a reference list to a subset of balls
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS), rename = "beamset")
 )]
 pub struct BeamSet {
     /// Human-readable name of the beam collection
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub name: Option<StrResource>,
 
     /// Might be used for external identification of the beam collection data.
     /// The identifier attribute MUST be unique within the beam lattice.
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub identifier: Option<StrResource>,
 
     /// References to beams in this set
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(rename = "ref")
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(rename = "ref"))]
     pub refs: Vec<BeamRef>,
 
     /// References to balls in this set  
     #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
+        any(feature = "write", feature = "read"),
         xml(ns(BEAM_LATTICE_BALLS_NS))
     )]
     pub ballref: Vec<BallRef>,
 }
 
 /// A reference to a beam element
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_NS), rename = "ref")
 )]
 pub struct BeamRef {
     /// References an index in the beamlattice beam list
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub index: ResourceIndex,
 }
 
 /// A reference to a ball element
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
+#[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
-    any(feature = "write", feature = "memory-optimized-read"),
+    any(feature = "write", feature = "read"),
     xml(ns(BEAM_LATTICE_BALLS_NS), rename = "ballref")
 )]
 pub struct BallRef {
     /// References an index in the beamlattice ball list
-    #[cfg_attr(
-        any(feature = "write", feature = "memory-optimized-read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub index: ResourceIndex,
 }
 
@@ -601,7 +529,7 @@ mod write_tests {
     }
 }
 
-#[cfg(feature = "memory-optimized-read")]
+#[cfg(feature = "read")]
 #[cfg(test)]
 mod memory_optimized_read_tests {
     use instant_xml::from_str;
