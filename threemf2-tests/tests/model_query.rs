@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use instant_xml::from_str;
+    use pretty_assertions::assert_eq;
     use std::path::PathBuf;
     use threemf2::model::query::{
         get_components_objects_from_model, get_items_from_model, get_mesh_objects_from_model,

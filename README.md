@@ -103,8 +103,7 @@ package.write(std::io::Cursor::new(&mut bytes)).unwrap();
 
 ## Performance Options
 
-- **Memory-Optimized**: Lower memory usage, good for large files. This is the default. Parsing speed in the slowest path is 10-20% slower than speed-optimized configuration
-- **Speed-Optimized (deprecated)**: Faster parsing however uses 1.5x to 3x more memory than memory-optimized
+- **Memory-Optimized-Read**: Lower memory usage, good for large files.
 - **Lazy Loading**: Defers loading until accessed, best for inspection-only use cases
 
 Key types and files:
@@ -121,13 +120,11 @@ This crate uses optional Cargo features to control functionality. Enable only wh
 
 - `write` — Enable writing 3MF data (adds `ToXml` derive to all 3MF types using `instant_xml`)
 - `memory-optimized-read` — Enable memory-efficient reading (adds `FromXml` derive to all 3MF types using `instant_xml`)
-- `speed-optimized-read` (deprecated) — Enable fast reading (adds `serde::Deserialize` derive to all 3MF types using `serde_roxmltree`)
 
 ### Package I/O Features
 
 - `package-write` — Package writing with ZIP creation (requires `write`)
 - `package-memory-optimized-read` — Package reading with memory optimization (requires `memory-optimized-read`)
-- `io-speed-optimized-read` (deprecated) — Package reading with speed optimization (requires `speed-optimized-read`)
 - `package-lazy-read` — Lazy loading functionality (requires `package-memory-optimized-read`)
 
 ### Utility Features
@@ -150,9 +147,6 @@ threemf2 = { version = "0.4.0", features = ["package-lazy-read"] }
 # Memory-constrained environments
 threemf2 = { version = "0.4.0", features = ["package-lazy-read"], default-features = false }
 
-# High-performance reading (deprecated)
-threemf2 = { version = "0.4.0", features = ["io-speed-optimized-read"] }
-
 # With UUID validation
 threemf2 = { version = "0.4.0", features = ["uuid"] }
 ```
@@ -166,7 +160,6 @@ The [examples/](examples/) directory contains runnable examples for different us
 - **`builder_beamlattice_example.rs`** — Building models with beam lattice extensions
 - **`unpack.rs`** — Lazy loading with `ThreemfPackageLazyReader`
 - **`package_memory_optimized_read.rs`** — Memory-efficient reading
-- **`io_speed_optimized_read.rs`** — High-performance reading (deprecated)
 - **`string_extraction.rs`** — Access raw XML content
 - **`beamlattice_write.rs`** — Working with beam lattice extensions
 - **`query_example.rs`** — Using the query API to inspect package contents

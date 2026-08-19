@@ -1,10 +1,4 @@
-#[cfg(all(
-    any(
-        feature = "package-memory-optimized-read",
-        feature = "io-speed-optimized-read"
-    ),
-    feature = "package-write"
-))]
+#[cfg(all(feature = "package-memory-optimized-read", feature = "package-write"))]
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -116,18 +110,6 @@ mod tests {
             let ns = package.get_namespaces_on_model(None).unwrap();
             assert_eq!(ns.len(), 1);
         }
-        #[cfg(feature = "io-speed-optimized-read")]
-        #[allow(deprecated)]
-        {
-            let package =
-                ThreemfPackage::from_reader_with_speed_optimized_deserializer(&mut buf, false)
-                    .expect("Error reading package");
-            assert_eq!(package, write_package);
-
-            let ns = package.get_namespaces_on_model(None).unwrap();
-            assert_eq!(ns.len(), 1);
-        }
-
         #[cfg(feature = "package-lazy-read")]
         {
             use threemf2::package::{CachePolicy, ThreemfPackageLazyReader};

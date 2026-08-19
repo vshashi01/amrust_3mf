@@ -24,10 +24,7 @@ pub struct XmlNamespace {
     pub uri: String,
 }
 
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
+#[cfg(feature = "package-memory-optimized-read")]
 pub(crate) mod zip_utils;
 
 pub(crate) mod utils;

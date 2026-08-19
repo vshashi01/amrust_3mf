@@ -1440,9 +1440,7 @@ dependencies = [
  "lexical-core",
  "once_cell",
  "pretty_assertions",
- "serde",
  "serde-roxmltree",
- "serde_json",
  "thiserror",
  "uuid",
  "zip 8.6.0",
@@ -1458,10 +1456,8 @@ dependencies = [
  "lib3mf",
  "lib3mf-core",
  "serde",
- "serde-roxmltree",
  "serde_json",
  "threemf2",
- "zip 8.6.0",
 ]
 
 [[package]]
@@ -1471,7 +1467,6 @@ dependencies = [
  "instant-xml",
  "pretty_assertions",
  "serde",
- "serde-roxmltree",
  "serde_json",
  "threemf2",
 ]
@@ -1493,7 +1488,6 @@ name = "threemf2-xsd-validation"
 version = "0.1.0"
 dependencies = [
  "fastxml",
- "pretty_assertions",
  "threemf2",
  "zip 8.6.0",
 ]

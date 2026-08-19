@@ -7,9 +7,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{FromXml, Kind};
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::model::{PathResource, StrResource};
 
 const RELATIONSHIP_NS: &str = "http://schemas.openxmlformats.org/package/2006/relationships";
@@ -21,7 +18,6 @@ const RELATIONSHIP_NS: &str = "http://schemas.openxmlformats.org/package/2006/re
 ///
 /// Each relationship has an ID, a target path, and a [`RelationshipType`] that describes
 /// the nature of the relationship.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +31,6 @@ pub struct Relationship {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "Id")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Id"))]
     pub id: StrResource,
 
     /// Target path of the part in the archive.
@@ -43,7 +38,6 @@ pub struct Relationship {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "Target")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Target"))]
     pub target: PathResource,
 
     /// The actual relationship of the target part
@@ -51,13 +45,11 @@ pub struct Relationship {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "Type")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Type"))]
     pub relationship_type: RelationshipType,
 }
 
 /// Represents a collection of [Relationship]s where each collection is an independent
 /// relationship part in the 3mf package. A single 3mf package may contain multiple [Relationships].
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,13 +59,10 @@ pub struct Relationship {
 )]
 pub struct Relationships {
     /// Field of relationship
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Relationship"))]
     pub relationships: Vec<Relationship>,
 }
 
 /// Represents the type of relationship of a part in the 3mf package.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RelationshipType {
     /// Represents a thumbnail part in the package.
@@ -205,52 +194,6 @@ mod write_tests {
 mod memory_optimized_read_tests {
     use instant_xml::from_str;
     use pretty_assertions::assert_eq;
-
-    use crate::model::PathResource;
-
-    use super::{
-        MODEL_TYPE_NS, RELATIONSHIP_NS, Relationship, RelationshipType, Relationships,
-        THUMBNAIL_TYPE_NS,
-    };
-
-    #[test]
-    pub fn fromxml_relationships_test() {
-        let xml_string = format!(
-            r#"<Relationships xmlns="{}"><Relationship Id="someId" Target="//somePath//Of//Resources" Type="{}" /><Relationship Id="someId1" Target="//somePath//Of//Resources" Type="{}" /><Relationship Id="someId2" Target="//somePath//Of//Unknown" Type="unknown" /></Relationships>"#,
-            RELATIONSHIP_NS, MODEL_TYPE_NS, THUMBNAIL_TYPE_NS
-        );
-        let relationships = from_str::<Relationships>(&xml_string).unwrap();
-
-        assert_eq!(
-            relationships,
-            Relationships {
-                relationships: vec![
-                    Relationship {
-                        id: "someId".into(),
-                        target: PathResource::new("/somePath/Of/Resources", true).unwrap(),
-                        relationship_type: RelationshipType::Model,
-                    },
-                    Relationship {
-                        id: "someId1".into(),
-                        target: PathResource::new("/somePath/Of/Resources", true).unwrap(),
-                        relationship_type: RelationshipType::Thumbnail,
-                    },
-                    Relationship {
-                        id: "someId2".into(),
-                        target: PathResource::new("//somePath//Of/Unknown", false).unwrap(),
-                        relationship_type: RelationshipType::Unknown("unknown".into()),
-                    },
-                ],
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
 
     use crate::model::PathResource;
 

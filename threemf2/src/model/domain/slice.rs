@@ -54,9 +54,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 const MAX_VERTEX_BUFFER: usize = 1000;
 
 /// Indicates the intended resolution of mesh models when slice data is present.
@@ -64,11 +61,6 @@ const MAX_VERTEX_BUFFER: usize = 1000;
 /// When a 3MF package contains both mesh and slice data, this attribute helps
 /// consumers understand whether the mesh is intended for fabrication or is a
 /// lower-resolution representation.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(
-    feature = "speed-optimized-read",
-    serde(from = "String", rename_all = "lowercase")
-)]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -109,7 +101,6 @@ impl From<String> for MeshResolution {
 /// - SliceStacks MUST NOT contain both `<slice>` and `<sliceref>` elements concurrently
 /// - The zbottom attribute indicates the starting level relative to the build platform
 /// - SliceStack IDs must be unique within a single model part
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -134,11 +125,9 @@ pub struct SliceStack {
     pub zbottom: Option<Double>,
 
     /// Owned slice data entries.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub slice: Vec<Slice>,
 
     /// References to external slice data.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub sliceref: Vec<SliceRef>,
 }
 
@@ -154,7 +143,6 @@ impl SliceStack {
 ///
 /// This allows slice data to be stored in separate XML files for easier parsing
 /// and better organization of large datasets.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -183,7 +171,6 @@ pub struct SliceRef {
 /// A slice defines the geometry at a specific z-height. It contains vertices
 /// and polygons that describe the 2D contours. A slice can be empty (containing
 /// only ztop) to represent void space.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -201,16 +188,13 @@ pub struct Slice {
     pub ztop: Double,
 
     /// 2D vertices for this slice. Required if slice contains geometry.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub vertices: Option<Vertices>,
 
     /// Polygons defining the contours of this slice.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub polygon: Vec<Polygon>,
 }
 
 /// Container for 2D vertices within a slice.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
@@ -219,7 +203,6 @@ pub struct Slice {
 )]
 pub struct Vertices {
     /// 2D vertices within a slice.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub vertex: Vec<Vertex>,
 }
 
@@ -277,7 +260,6 @@ impl<'xml> FromXml<'xml> for Vertices {
 /// 2D vertex representing a point in slice space.
 ///
 /// Vertices are referenced by zero-based indices in segments.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "write", xml(ns(SLICE_NS), rename = "vertex", force_prefix))]
@@ -349,7 +331,6 @@ impl<'xml> FromXml<'xml> for Vertex {
 }
 
 /// Closed or open contour defined by a sequence of segments.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -366,7 +347,6 @@ pub struct Polygon {
     pub startv: ResourceIndex,
 
     /// Segments defining this polygon.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub segment: Vec<Segment>,
 }
 
@@ -375,7 +355,6 @@ pub struct Polygon {
 /// Each segment connects from the previous segment's v2 (or startv for the
 /// first segment) to this segment's v2. This creates a chain of connected
 /// vertices that form the polygon.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "write", xml(ns(SLICE_NS), rename = "segment", force_prefix))]
@@ -386,35 +365,14 @@ pub struct Segment {
 
     /// Property index for the first vertex of this segment (overrides slice-level).
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p1: OptionalResourceIndex,
 
     /// Property index for the second vertex of this segment (overrides slice-level).
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p2: OptionalResourceIndex,
 
     /// Property group ID for this segment (overrides object-level).
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 }
 
@@ -793,133 +751,6 @@ mod memory_optimized_read_tests {
         assert_eq!(slicestack.id, 1);
         assert_eq!(slicestack.zbottom, Some(0.0.into()));
         assert!(slicestack.has_owned_slices());
-    }
-
-    #[test]
-    pub fn fromxml_slicestack_with_slicerefs_test() {
-        let xml_string = format!(
-            r#"<slicestack xmlns="{}" id="1"><sliceref slicestackid="2" slicepath="/2D/slices.model" /></slicestack>"#,
-            SLICE_NS
-        );
-        let slicestack = from_str::<SliceStack>(&xml_string).unwrap();
-
-        assert_eq!(slicestack.id, 1);
-        assert!(!slicestack.has_owned_slices());
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::model::{OptionalResourceId, OptionalResourceIndex, PathResource};
-    use crate::threemf_namespaces::SLICE_NS;
-
-    use super::{MeshResolution, Slice, SliceRef, SliceStack, Vertex, Vertices};
-
-    #[test]
-    pub fn fromxml_meshresolution_fullres_test() {
-        let xml_string = format!(
-            r#"<MeshResolution xmlns="{}">fullres</MeshResolution>"#,
-            SLICE_NS
-        );
-        let resolution = from_str::<MeshResolution>(&xml_string).unwrap();
-
-        assert_eq!(resolution, MeshResolution::FullRes);
-    }
-
-    #[test]
-    pub fn fromxml_meshresolution_lowres_test() {
-        let xml_string = format!(
-            r#"<MeshResolution xmlns="{}">lowres</MeshResolution>"#,
-            SLICE_NS
-        );
-        let resolution = from_str::<MeshResolution>(&xml_string).unwrap();
-
-        assert_eq!(resolution, MeshResolution::LowRes);
-    }
-
-    #[test]
-    pub fn fromxml_slice_vertex_test() {
-        let xml_string = format!(r#"<vertex xmlns="{}" x="1.5" y="2.5" />"#, SLICE_NS);
-        let vertex = from_str::<Vertex>(&xml_string).unwrap();
-
-        assert_eq!(
-            vertex,
-            Vertex {
-                x: 1.5.into(),
-                y: 2.5.into()
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_slice_test() {
-        let xml_string = format!(
-            r#"<slice xmlns="{}" ztop="0.1"><vertices><vertex x="0.0" y="0.0" /><vertex x="1.0" y="0.0" /></vertices><polygon startv="0"><segment v2="1" /></polygon></slice>"#,
-            SLICE_NS
-        );
-        let slice = from_str::<Slice>(&xml_string).unwrap();
-
-        assert_eq!(
-            slice,
-            Slice {
-                ztop: 0.1.into(),
-                vertices: Some(Vertices {
-                    vertex: vec![
-                        Vertex {
-                            x: 0.0.into(),
-                            y: 0.0.into()
-                        },
-                        Vertex {
-                            x: 1.0.into(),
-                            y: 0.0.into()
-                        },
-                    ],
-                }),
-                polygon: vec![super::Polygon {
-                    startv: 0,
-                    segment: vec![super::Segment {
-                        v2: 1,
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                    }],
-                }],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_sliceref_test() {
-        let xml_string = format!(
-            r#"<sliceref xmlns="{}" slicestackid="2" slicepath="/2D/slices.model" />"#,
-            SLICE_NS
-        );
-        let sliceref = from_str::<SliceRef>(&xml_string).unwrap();
-
-        assert_eq!(
-            sliceref,
-            SliceRef {
-                slicestackid: 2,
-                slicepath: PathResource::try_from("/2D/slices.model").unwrap(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_slicestack_with_slices_test() {
-        let xml_string = format!(
-            r#"<slicestack xmlns="{}" id="1" zbottom="0.0"><slice ztop="0.1"><vertices><vertex x="0.0" y="0.0" /></vertices></slice></slicestack>"#,
-            SLICE_NS
-        );
-        let slicestack = from_str::<SliceStack>(&xml_string).unwrap();
-
-        assert_eq!(slicestack.id, 1);
-        assert_eq!(slicestack.zbottom, Some(0.0.into()));
-        assert!(slicestack.has_owned_slices())
     }
 
     #[test]

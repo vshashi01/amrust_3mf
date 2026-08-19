@@ -64,7 +64,6 @@ The `domain/` directory contains the raw Rust types that map directly to the 3MF
 Domain types use feature-gated derive macros so that the same struct can be serialized with different XML backends:
 
 ```rust
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq)]
@@ -72,7 +71,6 @@ Domain types use feature-gated derive macros so that the same struct can be seri
 
 - **`write` feature** → adds `ToXml` derive via `instant-xml` (serializes to XML string).
 - **`memory-optimized-read` feature** → adds `FromXml` derive via `instant-xml` (streaming XML parser, lower memory).
-- **`speed-optimized-read` feature** → adds `serde::Deserialize` derive via `serde-roxmltree` (DOM-based parser, faster but higher memory). **Deprecated.**
 
 This pattern allows the same data model to work with multiple )de)serialization backends without duplicating the struct definitions.
 
@@ -158,27 +156,15 @@ The `Error` enum is a unified error type for all package I/O operations, using `
 
 ## 5. Serialization Strategy
 
-The crate supports two XML serialization backends, selected at compile time via feature flags.
+Since version 0.5.0 only one serialization backend is supported. A fully DOM based `speed-optimized` backend has been fully removed.
 
 ### 5.1. `instant-xml` (default, memory-optimized)
 
-- **Backend**: `instant-xml` crate (version 0.7.5).
+- **Backend**: `instant-xml` crate (version 0.7.6).
 - **Strategy**: Streaming XML parser. Reads XML incrementally without building a full DOM tree.
 - **Pros**: Lower peak memory usage. Suitable for large files.
 - **Cons**: Slightly slower than DOM-based parsing.
 - **Feature**: `memory-optimized-read` (for deserialization), `write` (for serialization).
-
-### 5.2. `serde-roxmltree` (deprecated, speed-optimized)
-
-- **Backend**: `serde-roxmltree` crate + `serde::Deserialize`.
-- **Strategy**: DOM-based parsing. Builds the entire XML tree in memory before deserialization.
-- **Pros**: Faster parsing for small to medium files.
-- **Cons**: Higher memory usage. Deprecated because the performance gain does not justify the memory cost for most 3MF workflows.
-- **Feature**: `speed-optimized-read`.
-
-### 5.3. Why both exist
-
-3MF files vary widely in size. A simple test cube is a few kilobytes; a complex architectural model with millions of triangles can be hundreds of megabytes. The dual-backend design lets users choose the right trade-off for their use case. The speed-optimized backend is maintained for backward compatibility but is not recommended for new code.
 
 ### 5.4. Feature gating pattern
 

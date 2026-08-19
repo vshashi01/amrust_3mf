@@ -9,12 +9,7 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 /// A beam lattice provides information about lattice data, in the form of a simplistic node-beam model
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "beamlattice"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -40,7 +35,6 @@ pub struct BeamLattice {
     pub radius: f64,
 
     /// Specifies whether balls are created at beam vertices
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_BALLS_NS), attribute)
@@ -55,7 +49,6 @@ pub struct BeamLattice {
     pub ballradius: Option<f64>,
 
     /// Specifies the clipping mode of the beam lattice
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_NS), attribute)
@@ -67,26 +60,12 @@ pub struct BeamLattice {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub clippingmesh: OptionalResourceId,
 
     /// References a mesh object that represents the intentional shape of the lattice geometry
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
-    )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
     )]
     pub representationmesh: OptionalResourceId,
 
@@ -95,13 +74,6 @@ pub struct BeamLattice {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 
     /// Overrides the object-level pindex as default for all beams
@@ -109,19 +81,11 @@ pub struct BeamLattice {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub pindex: OptionalResourceIndex,
 
     /// Default capping mode for beam ends
     ///
     /// See [`CapMode`] for more details.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_NS), attribute)
@@ -143,8 +107,6 @@ pub struct BeamLattice {
 }
 
 /// Ball mode for beam lattices - specifies whether balls are created at beam vertices
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -177,8 +139,6 @@ impl From<String> for BallMode {
 }
 
 /// Clipping mode for beam lattices
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -212,8 +172,6 @@ impl From<String> for ClippingMode {
 }
 
 /// Capping mode for beam ends
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
@@ -245,7 +203,6 @@ impl From<String> for CapMode {
 }
 
 /// A container for beams
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -255,7 +212,6 @@ impl From<String> for CapMode {
 )]
 pub struct Beams {
     /// Field of beams
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub beam: Vec<Beam>,
 }
 
@@ -264,7 +220,6 @@ pub struct Beams {
 /// A beam is the core geometry within beam lattice. It has 2 vertices that defines
 /// the end of the beam usually called beam nodes. Each beam nodes can have its own
 /// thickness.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -306,13 +261,6 @@ pub struct Beam {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p1: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pindex for the second vertex of the beam
@@ -320,26 +268,12 @@ pub struct Beam {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p2: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pid for the beam
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
-    )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
     )]
     pub pid: OptionalResourceId,
 
@@ -359,7 +293,6 @@ pub struct Beam {
 }
 
 /// A Collection of Ball elements. See [`Ball`] for more details.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -369,12 +302,10 @@ pub struct Beam {
 )]
 pub struct Balls {
     /// Field of balls
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub ball: Vec<Ball>,
 }
 
 /// A ball element defines a sphere of a given radius centered at the position of the vertex
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -403,13 +334,6 @@ pub struct Ball {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p: OptionalResourceIndex,
 
     /// Overrides the beamlattice-level pid for this ball
@@ -417,18 +341,10 @@ pub struct Ball {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 }
 
 /// A container for beam sets
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -438,12 +354,10 @@ pub struct Ball {
 )]
 pub struct BeamSets {
     /// Field of beamsets
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub beamset: Vec<BeamSet>,
 }
 
 /// A beam set contains a reference list to a subset of beams and a reference list to a subset of balls
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -468,7 +382,6 @@ pub struct BeamSet {
     pub identifier: Option<StrResource>,
 
     /// References to beams in this set
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "ref"))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(rename = "ref")
@@ -476,7 +389,6 @@ pub struct BeamSet {
     pub refs: Vec<BeamRef>,
 
     /// References to balls in this set  
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_BALLS_NS))
@@ -485,7 +397,6 @@ pub struct BeamSet {
 }
 
 /// A reference to a beam element
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -503,7 +414,6 @@ pub struct BeamRef {
 }
 
 /// A reference to a ball element
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -969,485 +879,6 @@ mod memory_optimized_read_tests {
             mesh,
             Model {
                 unit: None,
-                requiredextensions: ThreemfExtensions::new(&[
-                    ThreemfNamespace::BeamLattice,
-                    ThreemfNamespace::BeamLatticeBalls
-                ]),
-                recommendedextensions: ThreemfExtensions::default(),
-                metadata: vec![],
-                resources: Resources {
-                    object: vec![Object {
-                        id: 1,
-                        objecttype: None,
-                        thumbnail: None,
-                        partnumber: None,
-                        name: None,
-                        pid: OptionalResourceId::none(),
-                        pindex: OptionalResourceIndex::none(),
-                        uuid: None,
-                        slicestackid: OptionalResourceId::none(),
-                        slicepath: None,
-                        meshresolution: None,
-                        kind: Some(ObjectKind::Mesh(Mesh {
-                            vertices: Vertices {
-                                vertex: vec![
-                                    Vertex::new(-1.0, -1.0, 0.0),
-                                    Vertex::new(1.0, -1.0, 0.0),
-                                    Vertex::new(1.0, 1.0, 0.0),
-                                    Vertex::new(-1.0, 1.0, 0.0),
-                                ]
-                            },
-                            triangles: Triangles { triangle: vec![] },
-                            trianglesets: None,
-                            beamlattice: Some(BeamLattice {
-                                minlength: 0.0001,
-                                radius: 0.25,
-                                ballmode: Some(BallMode::Mixed),
-                                ballradius: Some(0.25),
-                                clippingmode: None,
-                                clippingmesh: OptionalResourceId::none(),
-                                representationmesh: OptionalResourceId::none(),
-                                pid: OptionalResourceId::none(),
-                                pindex: OptionalResourceIndex::none(),
-                                cap: Some(CapMode::Hemisphere),
-                                beams: Beams {
-                                    beam: vec![
-                                        Beam {
-                                            v1: 0,
-                                            v2: 1,
-                                            r1: None,
-                                            r2: None,
-                                            p1: OptionalResourceIndex::none(),
-                                            p2: OptionalResourceIndex::none(),
-                                            pid: OptionalResourceId::none(),
-                                            cap1: None,
-                                            cap2: None
-                                        },
-                                        Beam {
-                                            v1: 1,
-                                            v2: 2,
-                                            r1: None,
-                                            r2: None,
-                                            p1: OptionalResourceIndex::none(),
-                                            p2: OptionalResourceIndex::none(),
-                                            pid: OptionalResourceId::none(),
-                                            cap1: None,
-                                            cap2: None
-                                        },
-                                        Beam {
-                                            v1: 0,
-                                            v2: 2,
-                                            r1: None,
-                                            r2: None,
-                                            p1: OptionalResourceIndex::none(),
-                                            p2: OptionalResourceIndex::none(),
-                                            pid: OptionalResourceId::none(),
-                                            cap1: None,
-                                            cap2: None
-                                        }
-                                    ]
-                                },
-                                balls: Some(Balls {
-                                    ball: vec![Ball {
-                                        vindex: 0,
-                                        r: Some(0.5),
-                                        p: OptionalResourceIndex::none(),
-                                        pid: OptionalResourceId::none()
-                                    }]
-                                }),
-                                beamsets: None,
-                            }),
-                        })),
-                    }],
-                    basematerials: vec![],
-                    slicestack: vec![],
-                    colorgroup: Vec::new(),
-                    texture2dgroup: Vec::new(),
-                    compositematerials: Vec::new(),
-                    multiproperties: Vec::new(),
-                    texture2d: Vec::new(),
-                    displacement2d: Vec::new(),
-                    normvectorgroup: Vec::new(),
-                    disp2dgroup: Vec::new(),
-                },
-                build: Build {
-                    uuid: None,
-                    item: vec![]
-                }
-            }
-        )
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::{
-        model::OptionalResourceIndex,
-        model::domain::{
-            build::Build,
-            mesh::{Mesh, Triangles, Vertex, Vertices},
-            model::{Model, ThreemfExtensions},
-            object::{Object, ObjectKind},
-            resources::Resources,
-        },
-        threemf_namespaces::{
-            BEAM_LATTICE_BALLS_NS, BEAM_LATTICE_BALLS_PREFIX, BEAM_LATTICE_NS, BEAM_LATTICE_PREFIX,
-            CORE_NS, ThreemfNamespace,
-        },
-    };
-
-    use super::*;
-
-    #[test]
-    pub fn fromxml_beam_test() {
-        let xml_string = format!(
-            r#"<beam xmlns="{}" v1="0" v2="1" r1="1.5" r2="1.6" />"#,
-            BEAM_LATTICE_NS
-        );
-        let beam = from_str::<Beam>(&xml_string).unwrap();
-
-        assert_eq!(
-            beam,
-            Beam {
-                v1: 0,
-                v2: 1,
-                r1: Some(1.5),
-                r2: Some(1.6),
-                p1: OptionalResourceIndex::none(),
-                p2: OptionalResourceIndex::none(),
-                pid: OptionalResourceId::none(),
-                cap1: None,
-                cap2: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_ball_test() {
-        let xml_string = format!(
-            r#"<ball xmlns="{}" vindex="0" r="0.5" />"#,
-            BEAM_LATTICE_BALLS_NS
-        );
-        let ball = from_str::<Ball>(&xml_string).unwrap();
-
-        assert_eq!(
-            ball,
-            Ball {
-                vindex: 0,
-                r: Some(0.5),
-                p: OptionalResourceIndex::none(),
-                pid: OptionalResourceId::none(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_simple_beamlattice_test() {
-        let xml_string = format!(
-            r#"<beamlattice xmlns="{}" xmlns:{}="{}" minlength="0.0001" radius="1" cap="sphere"><beams><beam v1="0" v2="1" r1="1.5" r2="1.6" /></beams></beamlattice>"#,
-            BEAM_LATTICE_NS, BEAM_LATTICE_BALLS_PREFIX, BEAM_LATTICE_BALLS_NS
-        );
-        let beamlattice = from_str::<BeamLattice>(&xml_string).unwrap();
-
-        assert_eq!(
-            beamlattice,
-            BeamLattice {
-                minlength: 0.0001,
-                radius: 1.0,
-                ballmode: None,
-                ballradius: None,
-                clippingmode: None,
-                clippingmesh: OptionalResourceId::none(),
-                representationmesh: OptionalResourceId::none(),
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                cap: Some(CapMode::Sphere),
-                beams: Beams {
-                    beam: vec![Beam {
-                        v1: 0,
-                        v2: 1,
-                        r1: Some(1.5),
-                        r2: Some(1.6),
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                        cap1: None,
-                        cap2: None,
-                    }],
-                },
-                balls: None,
-                beamsets: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_beamlattice_with_balls_test() {
-        let xml_string = format!(
-            r#"<beamlattice xmlns="{}" xmlns:{}="{}" minlength="0.0001" radius="1" cap="sphere" {}:ballmode="mixed" {}:ballradius="0.25"><beams><beam v1="0" v2="1" r1="1.5" r2="1.6" /></beams><{}:balls><{}:ball vindex="0" r="0.5" /></{}:balls></beamlattice>"#,
-            BEAM_LATTICE_NS,
-            BEAM_LATTICE_BALLS_PREFIX,
-            BEAM_LATTICE_BALLS_NS,
-            BEAM_LATTICE_BALLS_PREFIX,
-            BEAM_LATTICE_BALLS_PREFIX,
-            BEAM_LATTICE_BALLS_PREFIX,
-            BEAM_LATTICE_BALLS_PREFIX,
-            BEAM_LATTICE_BALLS_PREFIX
-        );
-        let beamlattice = from_str::<BeamLattice>(&xml_string).unwrap();
-
-        assert_eq!(
-            beamlattice,
-            BeamLattice {
-                minlength: 0.0001,
-                radius: 1.0,
-                ballmode: Some(BallMode::Mixed),
-                ballradius: Some(0.25),
-                clippingmode: None,
-                clippingmesh: OptionalResourceId::none(),
-                representationmesh: OptionalResourceId::none(),
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                cap: Some(CapMode::Sphere),
-                beams: Beams {
-                    beam: vec![Beam {
-                        v1: 0,
-                        v2: 1,
-                        r1: Some(1.5),
-                        r2: Some(1.6),
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                        cap1: None,
-                        cap2: None,
-                    }],
-                },
-                balls: Some(Balls {
-                    ball: vec![Ball {
-                        vindex: 0,
-                        r: Some(0.5),
-                        p: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                    }],
-                }),
-                beamsets: None,
-            }
-        );
-    }
-
-    #[derive(Deserialize, Debug, PartialEq, Eq)]
-    struct EnumTestType {
-        ballmode: Vec<BallMode>,
-        clippingmode: Vec<ClippingMode>,
-        capmode: Vec<CapMode>,
-    }
-
-    #[test]
-    pub fn fromxml_enums_test() {
-        let xml_string = "<EnumTestType><ballmode>none</ballmode><ballmode>mixed</ballmode><ballmode>all</ballmode><clippingmode>none</clippingmode><clippingmode>inside</clippingmode><clippingmode>outside</clippingmode><capmode>hemisphere</capmode><capmode>sphere</capmode><capmode>butt</capmode></EnumTestType>";
-        let enum_test = from_str::<EnumTestType>(xml_string).unwrap();
-
-        assert_eq!(
-            enum_test,
-            EnumTestType {
-                ballmode: vec![BallMode::None, BallMode::Mixed, BallMode::All],
-                clippingmode: vec![
-                    ClippingMode::None,
-                    ClippingMode::Inside,
-                    ClippingMode::Outside
-                ],
-                capmode: vec![CapMode::Hemisphere, CapMode::Sphere, CapMode::Butt],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_mesh_with_beam_lattice_test() {
-        let xml_string = format!(
-            r##"<mesh xmlns="{}" xmlns:{}="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles/><b:beamlattice minlength="0.0001" radius="0.25" cap="hemisphere"><b:beams><b:beam v1="0" v2="1" /><b:beam v1="1" v2="2" /><b:beam v1="0" v2="2" /></b:beams></b:beamlattice></mesh>"##,
-            CORE_NS, BEAM_LATTICE_PREFIX, BEAM_LATTICE_NS
-        );
-
-        let mesh = from_str::<Mesh>(&xml_string).unwrap();
-
-        assert_eq!(
-            mesh,
-            Mesh {
-                vertices: Vertices {
-                    vertex: vec![
-                        Vertex::new(-1.0, -1.0, 0.0),
-                        Vertex::new(1.0, -1.0, 0.0),
-                        Vertex::new(1.0, 1.0, 0.0),
-                        Vertex::new(-1.0, 1.0, 0.0),
-                    ]
-                },
-                triangles: Triangles { triangle: vec![] },
-                trianglesets: None,
-                beamlattice: Some(BeamLattice {
-                    minlength: 0.0001,
-                    radius: 0.25,
-                    ballmode: None,
-                    ballradius: None,
-                    clippingmode: None,
-                    clippingmesh: OptionalResourceId::none(),
-                    representationmesh: OptionalResourceId::none(),
-                    pid: OptionalResourceId::none(),
-                    pindex: OptionalResourceIndex::none(),
-                    cap: Some(CapMode::Hemisphere),
-                    beams: Beams {
-                        beam: vec![
-                            Beam {
-                                v1: 0,
-                                v2: 1,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            },
-                            Beam {
-                                v1: 1,
-                                v2: 2,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            },
-                            Beam {
-                                v1: 0,
-                                v2: 2,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            }
-                        ]
-                    },
-                    balls: None,
-                    beamsets: None,
-                }),
-            }
-        )
-    }
-
-    #[test]
-    pub fn fromxml_mesh_with_beam_lattice_with_balls_test() {
-        let xml_string = format!(
-            r##"<mesh xmlns="{core_ns}" xmlns:{bl_prefix}="{bl_ns}" xmlns:{bl2_prefix}="{bl2_ns}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles/><b:beamlattice minlength="0.0001" radius="0.25" cap="hemisphere" {bl2_prefix}:ballmode="mixed" {bl2_prefix}:ballradius="0.25"><b:beams><b:beam v1="0" v2="1" /><b:beam v1="1" v2="2" /><b:beam v1="0" v2="2" /></b:beams><{bl2_prefix}:balls><{bl2_prefix}:ball vindex="0" r="0.5" /></{bl2_prefix}:balls></b:beamlattice></mesh>"##,
-            core_ns = CORE_NS,
-            bl_prefix = BEAM_LATTICE_PREFIX,
-            bl_ns = BEAM_LATTICE_NS,
-            bl2_prefix = BEAM_LATTICE_BALLS_PREFIX,
-            bl2_ns = BEAM_LATTICE_BALLS_NS
-        );
-
-        let mesh = from_str::<Mesh>(&xml_string).unwrap();
-
-        assert_eq!(
-            mesh,
-            Mesh {
-                vertices: Vertices {
-                    vertex: vec![
-                        Vertex::new(-1.0, -1.0, 0.0),
-                        Vertex::new(1.0, -1.0, 0.0),
-                        Vertex::new(1.0, 1.0, 0.0),
-                        Vertex::new(-1.0, 1.0, 0.0),
-                    ]
-                },
-                triangles: Triangles { triangle: vec![] },
-                trianglesets: None,
-                beamlattice: Some(BeamLattice {
-                    minlength: 0.0001,
-                    radius: 0.25,
-                    ballmode: Some(BallMode::Mixed),
-                    ballradius: Some(0.25),
-                    clippingmode: None,
-                    clippingmesh: OptionalResourceId::none(),
-                    representationmesh: OptionalResourceId::none(),
-                    pid: OptionalResourceId::none(),
-                    pindex: OptionalResourceIndex::none(),
-                    cap: Some(CapMode::Hemisphere),
-                    beams: Beams {
-                        beam: vec![
-                            Beam {
-                                v1: 0,
-                                v2: 1,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            },
-                            Beam {
-                                v1: 1,
-                                v2: 2,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            },
-                            Beam {
-                                v1: 0,
-                                v2: 2,
-                                r1: None,
-                                r2: None,
-                                p1: OptionalResourceIndex::none(),
-                                p2: OptionalResourceIndex::none(),
-                                pid: OptionalResourceId::none(),
-                                cap1: None,
-                                cap2: None
-                            }
-                        ]
-                    },
-                    balls: Some(Balls {
-                        ball: vec![Ball {
-                            vindex: 0,
-                            r: Some(0.5),
-                            p: OptionalResourceIndex::none(),
-                            pid: OptionalResourceId::none()
-                        }]
-                    }),
-                    beamsets: None,
-                }),
-            }
-        )
-    }
-
-    #[test]
-    pub fn fromxml_model_with_beam_lattice_with_balls_test() {
-        let xml_string = format!(
-            r##"<model xmlns="{core_ns}" xmlns:{bl_prefix}="{bl_ns}" xmlns:{bl2_prefix}="{bl2_ns}" requiredextensions="b b2"><resources><object id="1"><mesh><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles/><{bl_prefix}:beamlattice minlength="0.0001" radius="0.25" cap="hemisphere" {bl2_prefix}:ballmode="mixed" {bl2_prefix}:ballradius="0.25"><{bl_prefix}:beams><b:beam v1="0" v2="1" /><{bl_prefix}:beam v1="1" v2="2" /><{bl_prefix}:beam v1="0" v2="2" /></{bl_prefix}:beams><{bl2_prefix}:balls><{bl2_prefix}:ball vindex="0" r="0.5" /></{bl2_prefix}:balls></{bl_prefix}:beamlattice></mesh></object></resources><build></build></model>"##,
-            core_ns = CORE_NS,
-            bl_prefix = BEAM_LATTICE_PREFIX,
-            bl_ns = BEAM_LATTICE_NS,
-            bl2_prefix = BEAM_LATTICE_BALLS_PREFIX,
-            bl2_ns = BEAM_LATTICE_BALLS_NS
-        );
-
-        let mesh = from_str::<Model>(&xml_string).unwrap();
-
-        assert_eq!(
-            mesh,
-            Model {
-                unit: None,
-                // requiredextensions: Some("b b2".to_owned()),
                 requiredextensions: ThreemfExtensions::new(&[
                     ThreemfNamespace::BeamLattice,
                     ThreemfNamespace::BeamLatticeBalls

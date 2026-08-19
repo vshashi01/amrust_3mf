@@ -424,23 +424,6 @@ impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
     }
 }
 
-#[cfg(feature = "io-speed-optimized-read")]
-impl<R: Read + Seek> ThreemfPackageLazyReader<R> {
-    /// Create a pull-based package with speed-optimized deserialization
-    ///
-    /// * `reader` - A readable and seekable source (e.g., `File`)
-    /// * `cache_policy` - Whether to cache loaded data (`CachePolicy::NoCache` is default)
-    #[deprecated(
-        note = "speed-optimized-read is deprecated; use from_reader_with_memory_optimized_deserializer"
-    )]
-    pub fn from_reader_with_speed_optimized_deserializer(
-        reader: R,
-        cache_policy: CachePolicy,
-    ) -> Result<Self, Error> {
-        Self::from_reader(reader, XmlDeserializer::SpeedOptimized, cache_policy)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -527,101 +510,5 @@ mod tests {
                 assert_eq!(rep.format, ImageFormat::Png);
             })
             .unwrap();
-    }
-
-    #[cfg(feature = "io-speed-optimized-read")]
-    #[test]
-    #[allow(deprecated)]
-    fn test_pull_based_speed_optimized() {
-        let path =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/mesh-composedpart.3mf");
-        let reader = File::open(path).unwrap();
-
-        let package = ThreemfPackageLazyReader::from_reader_with_speed_optimized_deserializer(
-            reader,
-            CachePolicy::CacheAll,
-        )
-        .unwrap();
-
-        assert!(!package.relationships().is_empty());
-
-        let root_model = package.root_model().unwrap();
-        assert_eq!(root_model.build.item.len(), 2);
-        assert_eq!(root_model.used_namespaces().len(), 3);
-    }
-
-    #[cfg(feature = "package-memory-optimized-read")]
-    #[test]
-    fn test_string_extraction() {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
-        let reader = File::open(path).unwrap();
-
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
-            reader,
-            CachePolicy::NoCache,
-        )
-        .unwrap();
-
-        // Test model XML extraction
-        package
-            .with_model_xml(
-                &PathResource::new("/3D/3dmodel.model", true).unwrap(),
-                |xml| {
-                    assert!(xml.contains("<model"));
-                    assert!(xml.contains("</model>"));
-                    assert!(xml.contains("xmlns"));
-                },
-            )
-            .unwrap();
-
-        // Test sub-model XML extraction
-        package
-            .with_model_xml(
-                &PathResource::new("/3D/midway.model", true).unwrap(),
-                |xml| {
-                    assert!(xml.contains("<model"));
-                    assert!(xml.contains("</model>"));
-                },
-            )
-            .unwrap();
-
-        // Test relationships XML extraction
-        package
-            .with_relationships_xml(&PathResource::new("_rels/.rels", true).unwrap(), |xml| {
-                assert!(xml.contains("<Relationships"));
-                assert!(xml.contains("<Relationship"));
-            })
-            .unwrap();
-
-        // Test sub-model relationships XML extraction
-        package
-            .with_relationships_xml(
-                &PathResource::new("/3D/_rels/3dmodel.model.rels", true).unwrap(),
-                |xml| {
-                    assert!(xml.contains("<Relationships"));
-                },
-            )
-            .unwrap();
-
-        // Test content types XML extraction
-        package
-            .with_content_types_xml(|xml| {
-                assert!(xml.contains("<Types"));
-                assert!(xml.contains("<Default"));
-            })
-            .unwrap();
-
-        // Test invalid paths return errors
-        let invalid_result = package.with_model_xml(
-            &PathResource::new("/invalid/path.model", true).unwrap(),
-            |_| (),
-        );
-        assert!(matches!(invalid_result, Err(Error::ResourceNotFound(_))));
-
-        let invalid_rels = package.with_relationships_xml(
-            &PathResource::new("/invalid/rels.xml", true).unwrap(),
-            |_| (),
-        );
-        assert!(matches!(invalid_rels, Err(Error::ResourceNotFound(_))));
     }
 }

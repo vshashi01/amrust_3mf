@@ -7,9 +7,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{FromXml, Kind};
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::model::StrResource;
 
 /// Content types for the Open Packaging Conventions (OPC).
@@ -19,8 +16,6 @@ use crate::model::StrResource;
 ///
 /// This struct represents the content types container, which holds a collection of
 /// [`DefaultContentTypes`] mappings.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "Types"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,14 +25,11 @@ use crate::model::StrResource;
 )]
 pub struct ContentTypes {
     /// Field containing Content Types
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Default"))]
     pub defaults: Vec<DefaultContentTypes>,
 }
 
 /// Predefined content types supported by this library currently.
 /// If a content type is not found, it will fail the 3mf file parsing.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DefaultContentTypeEnum {
     /// Represents a relationship content.
@@ -128,8 +120,6 @@ impl From<String> for DefaultContentTypeEnum {
 }
 
 /// Internal structure for serde of [ContentTypes].
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "Default"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -143,7 +133,6 @@ pub struct DefaultContentTypes {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "Extension")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "Extension"))]
     pub extension: StrResource,
 
     /// Enum of the Content Type
@@ -151,7 +140,6 @@ pub struct DefaultContentTypes {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "ContentType")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "ContentType"))]
     pub content_type: DefaultContentTypeEnum,
 }
 
@@ -276,85 +264,6 @@ mod memory_optimized_read_tests {
                         content_type: DefaultContentTypeEnum::Unknown(
                             "some/unknown/content".into(),
                         ),
-                    }
-                ]
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::model::StrResource;
-
-    use super::{
-        CONTENT_TYPES_NS, ContentTypes, DefaultContentTypeEnum, DefaultContentTypes, JPEG_NS,
-        MODEL_NS, PNG_NS, RELATIONSHIP_NS,
-    };
-
-    #[test]
-    pub fn fromxml_content_types_test() {
-        let xml_string = format!(
-            r#"<Types xmlns="{}"><Default Extension="rels" ContentType="{}" /><Default Extension="model" ContentType="{}" /><Default Extension="png" ContentType="{}" /><Default Extension="jpg" ContentType="{}" /></Types>"#,
-            CONTENT_TYPES_NS, RELATIONSHIP_NS, MODEL_NS, PNG_NS, JPEG_NS
-        );
-
-        let content = from_str::<ContentTypes>(&xml_string).unwrap();
-
-        assert_eq!(
-            content,
-            ContentTypes {
-                defaults: vec![
-                    DefaultContentTypes {
-                        extension: "rels".into(),
-                        content_type: DefaultContentTypeEnum::Relationship,
-                    },
-                    DefaultContentTypes {
-                        extension: "model".into(),
-                        content_type: DefaultContentTypeEnum::Model,
-                    },
-                    DefaultContentTypes {
-                        extension: "png".into(),
-                        content_type: DefaultContentTypeEnum::ImagePng,
-                    },
-                    DefaultContentTypes {
-                        extension: "jpg".into(),
-                        content_type: DefaultContentTypeEnum::ImageJPEG,
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_unknown_content_types_test() {
-        let xml_string = format!(
-            r#"<Types xmlns="{}"><Default Extension="rels" ContentType="{}"/><Default Extension="model" ContentType="{}"/><Default Extension="unknown" ContentType="some/unknown/content"/></Types>"#,
-            CONTENT_TYPES_NS, RELATIONSHIP_NS, MODEL_NS,
-        );
-        let content = from_str::<ContentTypes>(&xml_string).unwrap();
-
-        assert_eq!(
-            content,
-            ContentTypes {
-                defaults: vec![
-                    DefaultContentTypes {
-                        extension: "rels".into(),
-                        content_type: DefaultContentTypeEnum::Relationship,
-                    },
-                    DefaultContentTypes {
-                        extension: "model".into(),
-                        content_type: DefaultContentTypeEnum::Model,
-                    },
-                    DefaultContentTypes {
-                        extension: "unknown".into(),
-                        content_type: DefaultContentTypeEnum::Unknown(StrResource::from(
-                            "some/unknown/content"
-                        ),),
                     }
                 ]
             }
