@@ -21,7 +21,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true).unwrap();
+            ThreemfPackage::from_reader(reader, true).unwrap();
 
         assert_eq!(io_query::get_displacement_mesh_objects(&package).count(), 1);
         for object in io_query::get_displacement_mesh_objects(&package) {
@@ -54,7 +54,7 @@ mod tests {
             PathBuf::from("./tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
         let reader = File::open(path).unwrap();
 
-        let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+        let package = ThreemfPackageLazyReader::from_reader(
             reader,
             CachePolicy::NoCache,
         )

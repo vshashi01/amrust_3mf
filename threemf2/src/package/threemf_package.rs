@@ -255,26 +255,29 @@ impl ThreemfPackage {
 impl ThreemfPackage {
     /// Reads a 3MF package using the memory-optimized XML deserializer.
     #[cfg(feature = "package-read")]
+    #[deprecated(
+        since = "0.5.0",
+        note = "This function is now deprecated use `from_reader` directly"
+    )]
     pub fn from_reader_with_memory_optimized_deserializer<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
     ) -> Result<Self, Error> {
-        Self::from_reader(reader, process_sub_models, XmlDeserializer::MemoryOptimized)
+        Self::from_reader(reader, process_sub_models)
     }
 
     /// Reads a 3mf package from a type [Read] + [io::Seek].
     /// Expected to deal with nested parts of the 3mf package and flatten them into the respective dictionaries.
     /// Only If [process_sub_models] is set to true, it will process the sub models and thumbnails associated with the sub models in the package.
     /// Will return an error if the package is not a valid 3mf package or if the package contains unsupported content types.
-    fn from_reader<R: Read + io::Seek>(
+    pub fn from_reader<R: Read + io::Seek>(
         reader: R,
         process_sub_models: bool,
-        deserializer: XmlDeserializer,
     ) -> Result<Self, Error> {
         use crate::package::domain::zip_utils;
 
         let (mut zip, content_types, _, root_rels_filename) =
-            zip_utils::setup_archive_and_content_types(reader, deserializer)?;
+            zip_utils::setup_archive_and_content_types(reader, XmlDeserializer::MemoryOptimized)?;
         //println!("{:?}", zip.file_names().collect::<Vec<_>>());
         let rels_ext = {
             let rels_content = content_types
@@ -293,7 +296,7 @@ impl ThreemfPackage {
         let root_rels: Relationships = zip_utils::relationships_from_zip_by_name(
             &mut zip,
             &root_rels_filename,
-            &deserializer,
+            &XmlDeserializer::MemoryOptimized,
         )?;
 
         let root_model_rel = root_rels
@@ -322,7 +325,7 @@ impl ThreemfPackage {
                 let rels = zip_utils::relationships_from_zip_by_name(
                     &mut zip,
                     &rel_file_path,
-                    &deserializer,
+                    &XmlDeserializer::MemoryOptimized,
                 )?;
                 relationships.insert(rel_file_path, rels);
             }
@@ -330,7 +333,11 @@ impl ThreemfPackage {
 
         let mut processor = processor::ThreemfPackageProcessor::new(content_types, relationships);
 
-        processor.process_relationships(&mut zip, &deserializer, &root_model_path)?;
+        processor.process_relationships(
+            &mut zip,
+            &XmlDeserializer::MemoryOptimized,
+            &root_model_path,
+        )?;
 
         Ok(processor.into_threemf_package())
     }
@@ -526,7 +533,7 @@ mod tests {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
         // println!("{:?}", result);
 
         match result {
@@ -717,8 +724,7 @@ mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
+        let read_result = ThreemfPackage::from_reader(writer, false);
 
         match read_result {
             Ok(package) => {
@@ -812,8 +818,7 @@ mod tests {
         let write_result = package.write(&mut writer);
         assert!(write_result.is_ok());
 
-        let read_result =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(writer, false);
+        let read_result = ThreemfPackage::from_reader(writer, false);
 
         match read_result {
             Ok(package) => {
@@ -835,7 +840,7 @@ mod tests {
             .join("tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
         match result {
             Ok(threemf) => {
                 use crate::threemf_namespaces::ThreemfNamespace;
@@ -863,7 +868,7 @@ mod tests {
             .join("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
         match result {
             Ok(threemf) => {
                 use crate::threemf_namespaces::ThreemfNamespace;
@@ -894,7 +899,7 @@ mod tests {
             .join("tests/data/mesh-booleans-operations-material.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
         match result {
             Ok(threemf) => {
                 use crate::threemf_namespaces::ThreemfNamespace;

@@ -17,7 +17,7 @@ mod tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
 
         assert!(result.is_ok());
 
@@ -51,7 +51,7 @@ mod tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart-beamlattice.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+        let result = ThreemfPackageLazyReader::from_reader(
             reader,
             CachePolicy::NoCache,
         );

@@ -56,7 +56,7 @@ use std::fs::File;
 use threemf2::package::ThreemfPackage;
 
 let file = File::open("model.3mf")?;
-let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
+let package = ThreemfPackage::from_reader(file, true)?;
 
 // Access the root model
 let model = &package.root;

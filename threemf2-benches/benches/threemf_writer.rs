@@ -11,7 +11,7 @@ pub fn write_package(c: &mut Criterion) {
             .unwrap();
     let file = std::fs::File::open(path.clone()).unwrap();
     let package =
-        ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true).unwrap();
+        ThreemfPackage::from_reader(file, true).unwrap();
     let mut c = c.benchmark_group("read_group");
     c.sample_size(10);
     c.measurement_time(std::time::Duration::from_secs(70));

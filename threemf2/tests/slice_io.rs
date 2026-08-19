@@ -1,7 +1,4 @@
-#[cfg(any(
-    feature = "package-read",
-    feature = "package-lazy-read"
-))]
+#[cfg(any(feature = "package-read", feature = "package-lazy-read"))]
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -21,7 +18,7 @@ mod tests {
         let path = PathBuf::from("./tests/data/mesh-slice.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
+        let result = ThreemfPackage::from_reader(reader, true);
 
         assert!(result.is_ok());
 

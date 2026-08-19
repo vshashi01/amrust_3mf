@@ -468,7 +468,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let generator = ThumbnailGenerator::default();
         let meshes = generator.collect_meshes(&package.root).unwrap();
 
@@ -482,7 +482,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let generator = ThumbnailGenerator::default();
         let meshes = generator.collect_meshes(&package.root).unwrap();
         let bbox = generator.calculate_bounding_box(&meshes);
@@ -499,7 +499,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let config = ThumbnailConfig::default()
             .with_wireframe(false)
             .with_surface(true)
@@ -542,7 +542,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let config = ThumbnailConfig::default()
             .with_zoom(2.0)
             .with_wireframe(false)
@@ -587,7 +587,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let config = ThumbnailConfig::default()
             .with_wireframe(false)
             .with_surface(true)
@@ -630,7 +630,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let config = ThumbnailConfig::default()
             .with_wireframe(true)
             .with_surface(false)
@@ -674,7 +674,7 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let package =
-            ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, false).unwrap();
+            ThreemfPackage::from_reader(reader, false).unwrap();
         let config = ThumbnailConfig::default()
             .with_wireframe(false)
             .with_surface(true)

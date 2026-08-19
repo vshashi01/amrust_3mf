@@ -99,7 +99,7 @@ The `package` module handles the physical ZIP archive format that 3MF files use.
 
 `ThreemfPackage` (`threemf_package.rs`) loads the entire 3MF file into memory upfront:
 
-- **Reading**: The `from_reader_with_memory_optimized_deserializer()` method reads the ZIP archive, parses `[Content_Types].xml`, discovers all relationship files, and loads all models, thumbnails, and unknown parts into the respective `HashMap`s.
+- **Reading**: The `from_reader()` method reads the ZIP archive, parses `[Content_Types].xml`, discovers all relationship files, and loads all models, thumbnails, and unknown parts into the respective `HashMap`s.
 - **Writing**: The `write()` method writes a well-formed ZIP archive with all parts, relationship files, and content types.
 
 ### 4.2. Lazy loading: `ThreemfPackageLazyReader`

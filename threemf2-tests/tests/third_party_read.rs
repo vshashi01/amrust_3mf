@@ -26,7 +26,7 @@ mod tests {
             let file = File::open(&filepath).unwrap();
 
             let package =
-                ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true);
+                ThreemfPackage::from_reader(file, true);
 
             match package {
                 Ok(threemf) => {
@@ -64,7 +64,7 @@ mod tests {
             let filepath = folder_path.join(fixture.filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+            let package = ThreemfPackageLazyReader::from_reader(
                 file,
                 CachePolicy::NoCache,
             );

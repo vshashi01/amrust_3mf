@@ -103,7 +103,7 @@ mod tests {
         #[cfg(feature = "package-read")]
         {
             let package =
-                ThreemfPackage::from_reader_with_memory_optimized_deserializer(&mut buf, false)
+                ThreemfPackage::from_reader(&mut buf, false)
                     .expect("Error reading package");
             assert_eq!(package, write_package);
 
@@ -116,7 +116,7 @@ mod tests {
 
             buf.set_position(0); // Reset cursor position
             let lazy_package =
-                ThreemfPackageLazyReader::from_reader_with_memory_optimized_deserializer(
+                ThreemfPackageLazyReader::from_reader(
                     &mut buf,
                     CachePolicy::NoCache,
                 )

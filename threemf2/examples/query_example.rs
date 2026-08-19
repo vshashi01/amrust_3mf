@@ -5,7 +5,7 @@
 //!
 //! Run with:
 //! ```bash
-//! cargo run --example query_example --no-default-features --features package-write
+//! cargo run --example query_example --no-default-features --features package-read
 //! ```
 
 use threemf2::{
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/data/mesh-composedpart-beamlattice-separate-model-files.3mf");
     let file = File::open(&path)?;
-    let package = ThreemfPackage::from_reader_with_memory_optimized_deserializer(file, true)?;
+    let package = ThreemfPackage::from_reader(file, true)?;
 
     println!("Loaded package: {:?}\n", path.file_name().unwrap());
 
