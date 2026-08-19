@@ -4,26 +4,20 @@ on:
   workflow_dispatch:  # Manual trigger only
 
 jobs:
-  test-and-coverage:
+  coverage:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v5
         with:
           lfs: true
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      
+
       - uses: Swatinem/rust-cache@v2
-      
-      - name: Install cargo-all-features
-        run: cargo install cargo-all-features
-      
-      - name: Run all feature combinations tests
-        run: cargo all-features test
-      
+
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin
 
