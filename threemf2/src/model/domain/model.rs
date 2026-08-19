@@ -6,9 +6,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::{
     model::domain::{build::Build, metadata::Metadata, object::ObjectKind, resources::Resources},
     threemf_namespaces::{
@@ -21,15 +18,12 @@ use crate::{
 ///
 /// A model defines the 3D objects, materials, and build instructions for a 3MF package.
 /// It serves as the primary container for all 3MF data structures.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "model"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(any(feature="write", feature="memory-optimized-read"), 
 xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS, bo = BOOLEAN_NS, s = SLICE_NS, m = MATERIAL_NS, d = DISPLACEMENT_NS), rename = "model"))]
 pub struct Model {
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -41,7 +35,6 @@ pub struct Model {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     /// Required extension namespaces for this model.
     pub requiredextensions: ThreemfExtensions,
 
@@ -49,11 +42,9 @@ pub struct Model {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     /// Recommended extension namespaces for this model.
     pub recommendedextensions: ThreemfExtensions,
 
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     /// Metadata entries associated with the model.
     pub metadata: Vec<Metadata>,
 
@@ -65,8 +56,6 @@ pub struct Model {
 }
 
 /// Model measurement unit, default is millimeter
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -107,8 +96,6 @@ impl From<String> for Unit {
 /// A collection of [`ThreemfNamespace`] specified in the 3mf model file
 /// Only Extension namespaces are allowed.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 pub struct ThreemfExtensions(Vec<ThreemfNamespace>);
 
 impl ThreemfExtensions {
@@ -1447,251 +1434,6 @@ mod memory_optimized_read_tests {
     #[test]
     pub fn fromxml_units_test() {
         let xml_string = r#"<UnitsType attr="inch"><unit>micron</unit><unit>millimeter</unit><unit>centimeter</unit><unit>inch</unit><unit>foot</unit><unit>meter</unit></UnitsType>"#;
-        let unitsvector = from_str::<UnitsType>(xml_string).unwrap();
-
-        assert_eq!(
-            unitsvector,
-            UnitsType {
-                attribute: Some(Unit::Inch),
-                unit: vec![
-                    Unit::Micron,
-                    Unit::Millimeter,
-                    Unit::Centimeter,
-                    Unit::Inch,
-                    Unit::Foot,
-                    Unit::Meter,
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_model_with_material_resources_test() {
-        let xml_string = format!(
-            r##"<model xmlns="{}" xmlns:{}="{}" unit="millimeter"><resources><{}:colorgroup id="1"><{}:color color="#FF0000" /></{}:colorgroup><{}:texture2d id="2" path="/3D/texture.png" contenttype="image/png" /></resources><build></build></model>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let model = from_str::<Model>(&xml_string).unwrap();
-
-        assert_eq!(
-            model,
-            Model {
-                unit: Some(Unit::Millimeter),
-                requiredextensions: ThreemfExtensions::default(),
-                recommendedextensions: ThreemfExtensions::default(),
-                metadata: vec![],
-                resources: Resources {
-                    basematerials: vec![],
-                    slicestack: vec![],
-                    object: vec![],
-                    colorgroup: vec![ColorGroup {
-                        id: 1,
-                        color: vec![ColorElement {
-                            color: Color::from_hex("#FF0000").unwrap()
-                        }],
-                    }],
-                    texture2dgroup: Vec::new(),
-                    compositematerials: Vec::new(),
-                    multiproperties: Vec::new(),
-                    texture2d: vec![Texture2D {
-                        id: 2,
-                        path: PathResource::try_from("/3D/texture.png").unwrap(),
-                        contenttype: TextureContentType::Png,
-                        tilestyleu: None,
-                        tilestylev: None,
-                        filter: None,
-                    }],
-                    displacement2d: Vec::new(),
-                    normvectorgroup: Vec::new(),
-                    disp2dgroup: Vec::new(),
-                },
-                build: Build {
-                    uuid: None,
-                    item: vec![],
-                },
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde::Deserialize;
-    use serde_roxmltree::from_str;
-
-    use crate::{
-        model::domain::{
-            build::{Build, Item},
-            component::{Component, Components},
-            material::{ColorElement, ColorGroup, Texture2D, TextureContentType},
-            metadata::Metadata,
-            model::ThreemfExtensions,
-            object::{Object, ObjectKind, ObjectType},
-            resources::Resources,
-        },
-        model::{Color, OptionalResourceId, OptionalResourceIndex, PathResource, UuidResource},
-        threemf_namespaces::{CORE_NS, MATERIAL_NS, MATERIAL_PREFIX, PROD_NS},
-    };
-
-    use super::{Model, Unit};
-
-    #[test]
-    pub fn fromxml_simple_model_test() {
-        let xml_string = format!(
-            r#"<model xmlns="{}"><metadata name="Trial Metadata" /><resources><object id="346" type="model" name="test part"></object></resources><build><item objectid="346" /></build></model>"#,
-            CORE_NS
-        );
-
-        let model = from_str::<Model>(&xml_string).unwrap();
-
-        assert_eq!(
-            model,
-            Model {
-                // xmlns: None,
-                unit: None, //ToDo: Set the default value when unit is not supplied.
-                requiredextensions: ThreemfExtensions::default(),
-                recommendedextensions: ThreemfExtensions::default(),
-                metadata: vec![Metadata {
-                    name: "Trial Metadata".into(),
-                    preserve: None,
-                    value: Some("".into()), //ToDo: Import output for empty value
-                }],
-                resources: Resources {
-                    basematerials: vec![],
-                    slicestack: vec![],
-                    object: vec![Object {
-                        id: 346,
-                        objecttype: Some(ObjectType::Model),
-                        thumbnail: None,
-                        partnumber: None,
-                        name: Some("test part".into()),
-                        pid: OptionalResourceId::none(),
-                        pindex: OptionalResourceIndex::none(),
-                        uuid: None,
-                        slicestackid: OptionalResourceId::none(),
-                        slicepath: None,
-                        meshresolution: None,
-                        kind: None,
-                    }],
-                    colorgroup: Vec::new(),
-                    texture2dgroup: Vec::new(),
-                    compositematerials: Vec::new(),
-                    multiproperties: Vec::new(),
-                    texture2d: Vec::new(),
-                    displacement2d: Vec::new(),
-                    normvectorgroup: Vec::new(),
-                    disp2dgroup: Vec::new(),
-                },
-                build: Build {
-                    uuid: None,
-                    item: vec![Item {
-                        objectid: 346,
-                        transform: None,
-                        partnumber: None,
-                        path: None,
-                        uuid: None,
-                    }],
-                },
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_production_model_test() {
-        const CUSTOM_PROD_PREFIX: &str = "custom";
-        let xml_string = format!(
-            r#"<model xmlns="{}" xmlns:{}="{}" xml:lang="en-us" unit="millimeter"><metadata name="Trial Metadata" /><resources><object id="346" type="model" name="test part" {}:UUID="someObjectUUID"><components><component objectid="1" {}:path="//somePath//Component" {}:UUID="someComponentUUID" /></components></object></resources><build {}:UUID="someBuildUUID"><item objectid="346" {}:UUID="someItemUUID"/></build></model>"#,
-            CORE_NS,
-            CUSTOM_PROD_PREFIX,
-            PROD_NS,
-            CUSTOM_PROD_PREFIX,
-            CUSTOM_PROD_PREFIX,
-            CUSTOM_PROD_PREFIX,
-            CUSTOM_PROD_PREFIX,
-            CUSTOM_PROD_PREFIX,
-        );
-        let model = from_str::<Model>(&xml_string).unwrap();
-
-        assert_eq!(
-            model,
-            Model {
-                // xmlns: None,
-                unit: Some(Unit::Millimeter),
-                requiredextensions: ThreemfExtensions::default(),
-                recommendedextensions: ThreemfExtensions::default(),
-                metadata: vec![Metadata {
-                    name: "Trial Metadata".into(),
-                    preserve: None,
-                    value: Some("".into()), //ToDo: Improve output for empty value
-                }],
-                resources: Resources {
-                    basematerials: vec![],
-                    slicestack: vec![],
-                    object: vec![Object {
-                        id: 346,
-                        objecttype: Some(ObjectType::Model),
-                        thumbnail: None,
-                        partnumber: None,
-                        name: Some("test part".into()),
-                        pid: OptionalResourceId::none(),
-                        pindex: OptionalResourceIndex::none(),
-                        uuid: Some(UuidResource::from("someObjectUUID")),
-                        kind: Some(ObjectKind::Components(Components {
-                            component: vec![Component {
-                                objectid: 1,
-                                transform: None,
-                                path: Some(
-                                    PathResource::try_from("//somePath//Component").unwrap()
-                                ),
-                                uuid: Some(UuidResource::from("someComponentUUID")),
-                            }]
-                        })),
-                        slicestackid: OptionalResourceId::none(),
-                        slicepath: None,
-                        meshresolution: None,
-                    }],
-                    colorgroup: Vec::new(),
-                    texture2dgroup: Vec::new(),
-                    compositematerials: Vec::new(),
-                    multiproperties: Vec::new(),
-                    texture2d: Vec::new(),
-                    displacement2d: Vec::new(),
-                    normvectorgroup: Vec::new(),
-                    disp2dgroup: Vec::new(),
-                },
-                build: Build {
-                    uuid: Some(UuidResource::from("someBuildUUID")),
-                    item: vec![Item {
-                        objectid: 346,
-                        transform: None,
-                        partnumber: None,
-                        path: None,
-                        uuid: Some(UuidResource::from("someItemUUID")),
-                    }],
-                },
-            }
-        );
-    }
-
-    #[derive(Deserialize, Debug, PartialEq, Eq)]
-    struct UnitsType {
-        // #[serde(rename = "unit")]
-        unit: Vec<Unit>,
-        #[serde(rename = "attr")]
-        attribute: Option<Unit>,
-    }
-
-    #[test]
-    pub fn fromxml_units_test() {
-        let xml_string = r#"<UnitsType attr="Inch"><unit>micron</unit><unit>millimeter</unit><unit>centimeter</unit><unit>inch</unit><unit>foot</unit><unit>meter</unit></UnitsType>"#;
         let unitsvector = from_str::<UnitsType>(xml_string).unwrap();
 
         assert_eq!(

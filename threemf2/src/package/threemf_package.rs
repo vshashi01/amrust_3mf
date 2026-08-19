@@ -18,10 +18,7 @@ use crate::{
     threemf_namespaces::ThreemfNamespace,
 };
 
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
+#[cfg(feature = "package-memory-optimized-read")]
 use crate::package::domain::zip_utils::XmlDeserializer;
 
 use std::collections::HashMap;
@@ -254,10 +251,7 @@ impl ThreemfPackage {
     }
 }
 
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
+#[cfg(feature = "package-memory-optimized-read")]
 impl ThreemfPackage {
     /// Reads a 3MF package using the memory-optimized XML deserializer.
     #[cfg(feature = "package-memory-optimized-read")]
@@ -266,18 +260,6 @@ impl ThreemfPackage {
         process_sub_models: bool,
     ) -> Result<Self, Error> {
         Self::from_reader(reader, process_sub_models, XmlDeserializer::MemoryOptimized)
-    }
-
-    /// Reads a 3MF package using the speed-optimized XML deserializer (deprecated).
-    #[cfg(feature = "io-speed-optimized-read")]
-    #[deprecated(
-        note = "speed-optimized-read is deprecated; use from_reader_with_memory_optimized_deserializer"
-    )]
-    pub fn from_reader_with_speed_optimized_deserializer<R: Read + io::Seek>(
-        reader: R,
-        process_sub_models: bool,
-    ) -> Result<Self, Error> {
-        Self::from_reader(reader, process_sub_models, XmlDeserializer::SpeedOptimized)
     }
 
     /// Reads a 3mf package from a type [Read] + [io::Seek].
@@ -384,10 +366,7 @@ impl PartialEq for ThreemfPackage {
     }
 }
 
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
+#[cfg(feature = "package-memory-optimized-read")]
 mod processor {
     use zip::ZipArchive;
 
@@ -548,45 +527,6 @@ mod tests {
         let reader = File::open(path).unwrap();
 
         let result = ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true);
-        // println!("{:?}", result);
-
-        match result {
-            Ok(threemf) => {
-                assert_eq!(threemf.content_types.defaults.len(), 3);
-                assert_eq!(threemf.sub_models.len(), 1);
-                assert_eq!(threemf.thumbnails.len(), 1);
-                assert_eq!(threemf.relationships.len(), 2);
-
-                assert!(
-                    threemf
-                        .sub_models
-                        .contains_key(&PathResource::new("/3D/midway.model", true).unwrap())
-                );
-
-                assert!(
-                    threemf
-                        .relationships
-                        .contains_key(&PathResource::new("_rels/.rels", true).unwrap())
-                );
-                assert!(threemf.relationships.contains_key(
-                    &PathResource::new("/3D/_rels/3dmodel.model.rels", true).unwrap()
-                ));
-                assert!(threemf.thumbnails.contains_key(
-                    &PathResource::new("/Thumbnails/P_XPX_0702_02.png", true).unwrap()
-                ))
-            }
-            Err(err) => panic!("{:?}", err),
-        }
-    }
-
-    #[cfg(feature = "io-speed-optimized-read")]
-    #[test]
-    #[allow(deprecated)]
-    pub fn from_reader_root_model_with_speed_optimized_read_test() {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/P_XPX_0702_02.3mf");
-        let reader = File::open(path).unwrap();
-
-        let result = ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, true);
         // println!("{:?}", result);
 
         match result {

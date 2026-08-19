@@ -4,9 +4,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::model::domain::beamlattice::BeamLattice;
 #[cfg(feature = "memory-optimized-read")]
 use crate::model::domain::constants;
@@ -19,7 +16,6 @@ use crate::threemf_namespaces::{CORE_NS, CORE_TRIANGLESET_NS};
 ///
 /// It is expected that users of this library will use their own mesh type,
 /// and the simplicity of [`Mesh`] provides an easy target for conversion to and from.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(all(feature = "memory-optimized-read",), derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
@@ -49,7 +45,6 @@ pub struct Mesh {
     /// Optional Beam Lattice geometry that is part of this mesh
     ///
     /// See [`BeamLattice`] for more details
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_NS))
@@ -60,13 +55,11 @@ pub struct Mesh {
 /// Collection of Vertex
 ///
 /// See [`Vertex`] for more details
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "vertices"))]
 pub struct Vertices {
     /// Field containing the collection
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub vertex: Vec<Vertex>,
 }
 
@@ -124,7 +117,6 @@ impl<'xml> FromXml<'xml> for Vertices {
 /// A vertex in a mesh
 ///
 /// A vertex is defined as a Point coordinate in 3D coordinate system.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "vertex"))]
@@ -218,13 +210,11 @@ impl<'xml> FromXml<'xml> for Vertex {
 /// Collection of Triangle
 ///
 /// See [`Triangle`] for more details.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "triangles"))]
 pub struct Triangles {
     /// Field containing the triangles
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub triangle: Vec<Triangle>,
 }
 
@@ -285,7 +275,6 @@ impl<'xml> FromXml<'xml> for Triangles {
 /// Each vertex of the triangle are defined as an index into [`Vertices`]
 /// additional indices into other resources can be specified
 /// for each vertex of the triangle as well.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "write", xml(ns(CORE_NS), rename = "triangle"))]
@@ -304,46 +293,18 @@ pub struct Triangle {
 
     /// Overrides the object level pindex for Vertex 1 of this [`Triangle`]
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p1: OptionalResourceIndex,
 
     /// Overrides the object level pindex for Vertex 2 of this [`Triangle`]
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p2: OptionalResourceIndex,
 
     /// Overrides the object level pindex for Vertex 3 of this [`Triangle`]
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p3: OptionalResourceIndex,
 
     /// Overrides the object level pid for this [`Triangle`]
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 }
 
@@ -578,148 +539,6 @@ mod memory_optimized_read_tests {
 
     use crate::model::{OptionalResourceId, OptionalResourceIndex};
     use crate::threemf_namespaces::CORE_NS;
-
-    use super::{Mesh, Triangle, Triangles, Vertex, Vertices};
-
-    #[test]
-    pub fn fromxml_vertex_test() {
-        let xml_string = format!(r#"<vertex xmlns="{}" x="100.5" y="100" z="0" />"#, CORE_NS);
-        let vertex = from_str::<Vertex>(&xml_string).unwrap();
-
-        assert_eq!(vertex, Vertex::new(100.5, 100.0, 0.0,));
-    }
-
-    #[test]
-    pub fn fromxml_vertices_test() {
-        let xml_string = format!(
-            r#"<vertices xmlns="{}"><vertex x="100" y="110.5" z="0" /><vertex x="0.156" y="55.6896" z="-10" /></vertices>"#,
-            CORE_NS
-        );
-        let vertices = from_str::<Vertices>(&xml_string).unwrap();
-
-        assert_eq!(
-            vertices,
-            Vertices {
-                vertex: vec![
-                    Vertex::new(100., 110.5, 0.0,),
-                    Vertex::new(0.156, 55.6896, -10.0,),
-                ],
-            }
-        )
-    }
-
-    #[test]
-    pub fn fromxml_required_fields_triangle_test() {
-        let xml_string = format!(r#"<triangle xmlns="{}" v1="1" v2="2" v3="3" />"#, CORE_NS);
-        let triangle = from_str::<Triangle>(&xml_string).unwrap();
-
-        assert_eq!(
-            triangle,
-            Triangle {
-                v1: 1,
-                v2: 2,
-                v3: 3,
-                p1: OptionalResourceIndex::none(),
-                p2: OptionalResourceIndex::none(),
-                p3: OptionalResourceIndex::none(),
-                pid: OptionalResourceId::none(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_triangles_test() {
-        let xml_string = format!(
-            r#"<triangles xmlns="{}"><triangle v1="1" v2="2" v3="3" /><triangle v1="2" v2="3" v3="4" /></triangles>"#,
-            CORE_NS
-        );
-        let triangles = from_str::<Triangles>(&xml_string).unwrap();
-
-        assert_eq!(
-            triangles,
-            Triangles {
-                triangle: vec![
-                    Triangle {
-                        v1: 1,
-                        v2: 2,
-                        v3: 3,
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        p3: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                    },
-                    Triangle {
-                        v1: 2,
-                        v2: 3,
-                        v3: 4,
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        p3: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_mesh_test() {
-        let xml_string = format!(
-            r##"<mesh xmlns="{}"><vertices><vertex x="-1" y="-1" z="0" /><vertex x="1" y="-1" z="0" /><vertex x="1" y="1" z="0" /><vertex x="-1" y="1" z="0" /></vertices><triangles><triangle v1="0" v2="1" v3="2" /><triangle v1="0" v2="2" v3="3" /></triangles></mesh>"##,
-            CORE_NS
-        );
-        let mesh = from_str::<Mesh>(&xml_string).unwrap();
-
-        assert_eq!(
-            mesh,
-            Mesh {
-                vertices: Vertices {
-                    vertex: vec![
-                        Vertex::new(-1.0, -1.0, 0.0),
-                        Vertex::new(1.0, -1.0, 0.0),
-                        Vertex::new(1.0, 1.0, 0.0),
-                        Vertex::new(-1.0, 1.0, 0.0),
-                    ]
-                },
-                triangles: Triangles {
-                    triangle: vec![
-                        Triangle {
-                            v1: 0,
-                            v2: 1,
-                            v3: 2,
-                            p1: OptionalResourceIndex::none(),
-                            p2: OptionalResourceIndex::none(),
-                            p3: OptionalResourceIndex::none(),
-                            pid: OptionalResourceId::none(),
-                        },
-                        Triangle {
-                            v1: 0,
-                            v2: 2,
-                            v3: 3,
-                            p1: OptionalResourceIndex::none(),
-                            p2: OptionalResourceIndex::none(),
-                            p3: OptionalResourceIndex::none(),
-                            pid: OptionalResourceId::none(),
-                        }
-                    ]
-                },
-                trianglesets: None,
-                beamlattice: None,
-            }
-        )
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::{
-        model::{OptionalResourceId, OptionalResourceIndex},
-        threemf_namespaces::CORE_NS,
-    };
 
     use super::{Mesh, Triangle, Triangles, Vertex, Vertices};
 

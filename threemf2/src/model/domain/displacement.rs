@@ -4,9 +4,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 #[cfg(feature = "memory-optimized-read")]
 use crate::model::domain::constants;
 
@@ -19,8 +16,6 @@ use crate::{
 };
 
 /// Displacement texture resource.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "displacement2d"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -44,7 +39,6 @@ pub struct Displacement2D {
     pub path: PathResource,
 
     /// Color channel to use for displacement.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -52,7 +46,6 @@ pub struct Displacement2D {
     pub channel: Option<ChannelName>,
 
     /// Horizontal tiling style.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -60,7 +53,6 @@ pub struct Displacement2D {
     pub tilestyleu: Option<TileStyle>,
 
     /// Vertical tiling style.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -68,7 +60,6 @@ pub struct Displacement2D {
     pub tilestylev: Option<TileStyle>,
 
     /// Sampling filter for displacement map.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -77,10 +68,8 @@ pub struct Displacement2D {
 }
 
 /// Displacement channel.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
-#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
+#[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
@@ -111,8 +100,6 @@ impl From<String> for ChannelName {
 }
 
 /// Tile style for displacement coordinates outside the `[0,1]` range.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -145,8 +132,6 @@ impl From<String> for TileStyle {
 }
 
 /// Filter used for displacement map sampling.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -176,8 +161,6 @@ impl From<String> for Filter {
 }
 
 /// Group of normalized vectors.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "normvectorgroup"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(
@@ -186,14 +169,10 @@ impl From<String> for Filter {
 )]
 pub struct NormVectorGroup {
     /// Unique identifier for this normal vector group.
-    #[cfg_attr(any(feature = "write"), xml(attribute))]
+    #[cfg_attr(feature = "write", xml(attribute))]
     pub id: ResourceId,
 
     /// Normalized vectors in this group.
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(default, rename = "normvector")
-    )]
     pub normvector: Vec<NormVector>,
 }
 
@@ -267,8 +246,6 @@ impl<'xml> FromXml<'xml> for NormVectorGroup {
 }
 
 /// Normalized displacement vector.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "normvector"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[cfg_attr(feature = "write", xml(ns(DISPLACEMENT_NS), rename = "normvector"))]
@@ -349,8 +326,6 @@ impl<'xml> FromXml<'xml> for NormVector {
 }
 
 /// Group of displacement map coordinates.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "disp2dgroup"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -388,7 +363,6 @@ pub struct Disp2DGroup {
     pub height: Double,
 
     /// Optional displacement offset.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -396,16 +370,10 @@ pub struct Disp2DGroup {
     pub offset: Option<Double>,
 
     /// Displacement coordinates for this group.
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(default, rename = "disp2dcoord")
-    )]
     pub disp2dcoord: Vec<Disp2DCoord>,
 }
 
 /// A displacement map coordinate entry.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "disp2dcoord"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -436,7 +404,6 @@ pub struct Disp2DCoord {
     pub n: ResourceIndex,
 
     /// Optional scaling factor for displacement.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
@@ -445,8 +412,6 @@ pub struct Disp2DCoord {
 }
 
 /// Displacement mesh object payload.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "displacementmesh"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -472,7 +437,6 @@ pub struct DisplacementMesh {
     /// Optional Beam Lattice geometry that is part of this mesh
     ///
     /// See [`BeamLattice`] for more details
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(BEAM_LATTICE_NS))
@@ -481,14 +445,11 @@ pub struct DisplacementMesh {
 }
 
 /// Collection of displacement mesh vertices.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "vertices"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "write", xml(ns(DISPLACEMENT_NS), rename = "vertices"))]
 pub struct Vertices {
     /// Vertex entries in this mesh.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "vertex"))]
     pub vertex: Vec<Vertex>,
 }
 
@@ -544,8 +505,6 @@ impl<'xml> FromXml<'xml> for Vertices {
 }
 
 /// A displacement mesh vertex.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "vertex"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[cfg_attr(feature = "write", xml(ns(DISPLACEMENT_NS), rename = "vertex"))]
@@ -626,19 +585,15 @@ impl<'xml> FromXml<'xml> for Vertex {
 }
 
 /// Collection of displacement mesh triangles.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "triangles"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "write", xml(ns(DISPLACEMENT_NS), rename = "triangles"))]
 pub struct Triangles {
     /// Optional default displacement group id.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(feature = "write", xml(attribute))]
     pub did: OptionalResourceId,
 
     /// Triangle entries in this mesh.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "triangle"))]
     pub triangle: Vec<Triangle>,
 }
 
@@ -705,8 +660,6 @@ impl<'xml> FromXml<'xml> for Triangles {
 }
 
 /// A displacement mesh triangle with optional displacement indices.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "triangle"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(feature = "write", xml(ns(DISPLACEMENT_NS), rename = "triangle"))]
@@ -724,67 +677,35 @@ pub struct Triangle {
     pub v3: ResourceIndex,
 
     /// Optional displacement index for the first vertex.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(feature = "write", xml(attribute))]
     pub d1: OptionalResourceIndex,
 
     /// Optional displacement index for the second vertex.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(feature = "write", xml(attribute))]
     pub d2: OptionalResourceIndex,
 
     /// Optional displacement index for the third vertex.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(feature = "write", xml(attribute))]
     pub d3: OptionalResourceIndex,
 
     /// Optional displacement group id.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(feature = "write", xml(attribute))]
     pub did: OptionalResourceId,
 
     /// Optional property index for the first vertex.
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p1: OptionalResourceIndex,
 
     /// Optional property index for the second vertex.
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p2: OptionalResourceIndex,
 
     /// Optional property index for the third vertex.
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
-    )]
     pub p3: OptionalResourceIndex,
 
     /// Optional property group id.
     #[cfg_attr(feature = "write", xml(attribute))]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 }
 
@@ -1414,267 +1335,6 @@ mod memory_optimized_read_tests {
                     p2: OptionalResourceIndex::new(1),
                     p3: OptionalResourceIndex::new(2),
                     pid: OptionalResourceId::new(6),
-                }],
-            }
-        );
-    }
-
-    #[test]
-    fn fromxml_displacement_mesh_test() {
-        let xml_string = format!(
-            "<displacementmesh xmlns=\"{}\"><vertices><vertex x=\"0.0\" y=\"0.0\" z=\"0.0\" /><vertex x=\"1.0\" y=\"0.0\" z=\"0.0\" /><vertex x=\"0.0\" y=\"1.0\" z=\"0.0\" /></vertices><triangles><triangle v1=\"0\" v2=\"1\" v3=\"2\" /></triangles></displacementmesh>",
-            DISPLACEMENT_NS
-        );
-        let mesh = from_str::<DisplacementMesh>(&xml_string).unwrap();
-
-        assert_eq!(
-            mesh,
-            DisplacementMesh {
-                vertices: Vertices {
-                    vertex: vec![
-                        Vertex {
-                            x: 0.0.into(),
-                            y: 0.0.into(),
-                            z: 0.0.into(),
-                        },
-                        Vertex {
-                            x: 1.0.into(),
-                            y: 0.0.into(),
-                            z: 0.0.into(),
-                        },
-                        Vertex {
-                            x: 0.0.into(),
-                            y: 1.0.into(),
-                            z: 0.0.into(),
-                        },
-                    ],
-                },
-                triangles: Triangles {
-                    did: OptionalResourceId::none(),
-                    triangle: vec![Triangle {
-                        v1: 0,
-                        v2: 1,
-                        v3: 2,
-                        d1: OptionalResourceIndex::none(),
-                        d2: OptionalResourceIndex::none(),
-                        d3: OptionalResourceIndex::none(),
-                        did: OptionalResourceId::none(),
-                        p1: OptionalResourceIndex::none(),
-                        p2: OptionalResourceIndex::none(),
-                        p3: OptionalResourceIndex::none(),
-                        pid: OptionalResourceId::none(),
-                    }],
-                },
-                trianglesets: None,
-                beamlattice: None,
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::threemf_namespaces::DISPLACEMENT_NS;
-
-    use super::*;
-
-    #[test]
-    fn fromxml_displacement2d_test() {
-        let xml_string = format!(
-            "<displacement2d xmlns=\"{}\" id=\"1\" path=\"/3D/Textures/displacement.png\" />",
-            DISPLACEMENT_NS
-        );
-        let displacement2d = from_str::<Displacement2D>(&xml_string).unwrap();
-
-        assert_eq!(
-            displacement2d,
-            Displacement2D {
-                id: 1,
-                path: PathResource::try_from("/3D/Textures/displacement.png").unwrap(),
-                channel: None,
-                tilestyleu: None,
-                tilestylev: None,
-                filter: None,
-            }
-        );
-    }
-
-    #[test]
-    fn fromxml_displacement2d_with_options_test() {
-        let xml_string = format!(
-            "<displacement2d xmlns=\"{}\" id=\"2\" path=\"/textures/disp.png\" channel=\"R\" tilestyleu=\"mirror\" tilestylev=\"clamp\" filter=\"linear\" />",
-            DISPLACEMENT_NS
-        );
-        let displacement2d = from_str::<Displacement2D>(&xml_string).unwrap();
-
-        // Verify required fields are parsed correctly
-        assert_eq!(displacement2d.id, 2);
-        assert_eq!(displacement2d.path.as_str(), "/textures/disp.png");
-        // Note: Optional attributes with custom types may not parse correctly
-        // in memory-optimized-read mode. The write tests verify correct serialization.
-    }
-
-    #[test]
-    fn fromxml_channel_name_test() {
-        for (xml, expected) in [
-            ("R", ChannelName::R),
-            ("G", ChannelName::G),
-            ("B", ChannelName::B),
-            ("A", ChannelName::A),
-        ] {
-            let xml_string = format!("<color xmlns=\"{}\">{}</color>", DISPLACEMENT_NS, xml);
-            let color: ChannelName = from_str(&xml_string).unwrap();
-            assert_eq!(color, expected);
-        }
-    }
-
-    #[test]
-    fn fromxml_tile_style_test() {
-        for (xml, expected) in [
-            ("wrap", TileStyle::Wrap),
-            ("mirror", TileStyle::Mirror),
-            ("clamp", TileStyle::Clamp),
-            ("none", TileStyle::None),
-        ] {
-            let xml_string = format!(
-                "<tilestyle xmlns=\"{}\">{}</tilestyle>",
-                DISPLACEMENT_NS, xml
-            );
-            let tilestyle: TileStyle = from_str(&xml_string).unwrap();
-            assert_eq!(tilestyle, expected);
-        }
-    }
-
-    #[test]
-    fn fromxml_displacement_filter_test() {
-        for (xml, expected) in [
-            ("auto", Filter::Auto),
-            ("linear", Filter::Linear),
-            ("nearest", Filter::Nearest),
-        ] {
-            let xml_string = format!("<filter xmlns=\"{}\">{}</filter>", DISPLACEMENT_NS, xml);
-            let filter: Filter = from_str(&xml_string).unwrap();
-            assert_eq!(filter, expected);
-        }
-    }
-
-    #[test]
-    fn fromxml_norm_vector_group_test() {
-        let xml_string = format!(
-            "<normvectorgroup xmlns=\"{}\" id=\"1\"><normvector x=\"0\" y=\"0\" z=\"1\" /><normvector x=\"0\" y=\"1\" z=\"0\" /></normvectorgroup>",
-            DISPLACEMENT_NS
-        );
-        let group = from_str::<NormVectorGroup>(&xml_string).unwrap();
-
-        assert_eq!(
-            group,
-            NormVectorGroup {
-                id: 1,
-                normvector: vec![
-                    NormVector {
-                        x: 0.0.into(),
-                        y: 0.0.into(),
-                        z: 1.0.into(),
-                    },
-                    NormVector {
-                        x: 0.0.into(),
-                        y: 1.0.into(),
-                        z: 0.0.into(),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    fn fromxml_disp2d_group_test() {
-        let xml_string = format!(
-            "<disp2dgroup xmlns=\"{}\" id=\"1\" dispid=\"2\" nid=\"3\" height=\"0.5\" offset=\"0.1\"><disp2dcoord u=\"0\" v=\"0\" n=\"0\" /><disp2dcoord u=\"1\" v=\"1\" n=\"1\" f=\"0.3\" /></disp2dgroup>",
-            DISPLACEMENT_NS
-        );
-        let group = from_str::<Disp2DGroup>(&xml_string).unwrap();
-
-        assert_eq!(
-            group,
-            Disp2DGroup {
-                id: 1,
-                dispid: 2,
-                nid: 3,
-                height: 0.5.into(),
-                offset: Some(0.1.into()),
-                disp2dcoord: vec![
-                    Disp2DCoord {
-                        u: 0.0.into(),
-                        v: 0.0.into(),
-                        n: 0,
-                        f: None,
-                    },
-                    Disp2DCoord {
-                        u: 1.0.into(),
-                        v: 1.0.into(),
-                        n: 1,
-                        f: Some(0.3.into()),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    fn fromxml_displacement_vertices_test() {
-        let xml_string = format!(
-            "<vertices xmlns=\"{}\"><vertex x=\"0\" y=\"0\" z=\"0\" /><vertex x=\"1\" y=\"0\" z=\"0\" /></vertices>",
-            DISPLACEMENT_NS
-        );
-        let vertices = from_str::<Vertices>(&xml_string).unwrap();
-
-        assert_eq!(
-            vertices,
-            Vertices {
-                vertex: vec![
-                    Vertex {
-                        x: 0.0.into(),
-                        y: 0.0.into(),
-                        z: 0.0.into(),
-                    },
-                    Vertex {
-                        x: 1.0.into(),
-                        y: 0.0.into(),
-                        z: 0.0.into(),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    fn fromxml_displacement_triangles_test() {
-        let xml_string = format!(
-            "<triangles xmlns=\"{}\" did=\"5\"><triangle v1=\"0\" v2=\"1\" v3=\"2\" d1=\"0\" d2=\"1\" d3=\"2\" /></triangles>",
-            DISPLACEMENT_NS
-        );
-        let triangles = from_str::<Triangles>(&xml_string).unwrap();
-
-        assert_eq!(
-            triangles,
-            Triangles {
-                did: OptionalResourceId::new(5),
-                triangle: vec![Triangle {
-                    v1: 0,
-                    v2: 1,
-                    v3: 2,
-                    d1: OptionalResourceIndex::new(0),
-                    d2: OptionalResourceIndex::new(1),
-                    d3: OptionalResourceIndex::new(2),
-                    did: OptionalResourceId::none(),
-                    p1: OptionalResourceIndex::none(),
-                    p2: OptionalResourceIndex::none(),
-                    p3: OptionalResourceIndex::none(),
-                    pid: OptionalResourceId::none(),
                 }],
             }
         );

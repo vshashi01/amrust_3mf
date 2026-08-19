@@ -4,9 +4,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::{
     model::domain::{
         boolean::BooleanShape, component::Components, displacement::DisplacementMesh, mesh::Mesh,
@@ -27,7 +24,6 @@ use crate::{
 /// - Boolean operations defining a shape ([`ObjectKind::BooleanShape`])
 ///
 /// These three options are mutually exclusive - an object can only have one of them set.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
@@ -48,7 +44,6 @@ pub struct Object {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, rename = "type")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "type"))]
     pub objecttype: Option<ObjectType>,
 
     /// Optional path to the thumbnail in the 3MF Package for this object.
@@ -56,7 +51,6 @@ pub struct Object {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub thumbnail: Option<PathResource>,
 
     /// Optional string defining the part number for this object.
@@ -80,13 +74,6 @@ pub struct Object {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
     )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
-    )]
     pub pid: OptionalResourceId,
 
     /// References a zero-based index into the properties
@@ -94,13 +81,6 @@ pub struct Object {
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute)
-    )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_index_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_index_impl::deserialize"
-        )
     )]
     pub pindex: OptionalResourceIndex,
 
@@ -111,7 +91,6 @@ pub struct Object {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, ns(PROD_NS), rename = "UUID")
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(rename = "UUID", default))]
     pub uuid: Option<UuidResource>,
 
     /// Identifies the SliceStack that contains the slice data for this object.
@@ -120,13 +99,6 @@ pub struct Object {
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, ns(SLICE_NS))
-    )]
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            default = "crate::model::domain::types::opt_res_id_impl::default_none",
-            deserialize_with = "crate::model::domain::types::opt_res_id_impl::deserialize"
-        )
     )]
     pub slicestackid: OptionalResourceId,
 
@@ -145,7 +117,6 @@ pub struct Object {
         any(feature = "write", feature = "memory-optimized-read"),
         xml(attribute, ns(SLICE_NS))
     )]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub meshresolution: Option<MeshResolution>,
 
     /// The actual geometry that is contained in this [`Object`].
@@ -153,14 +124,6 @@ pub struct Object {
     /// Rust library ergonomics..
     /// This is optional only for developemnt. In Practice an empty
     /// object is not a valid 3MF Model. This may be changed in the future.
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(
-            rename = "#content",
-            default = "crate::model::domain::object::serde_object_kind::default_none",
-            deserialize_with = "crate::model::domain::object::serde_object_kind::deserialize"
-        )
-    )]
     pub kind: Option<ObjectKind>,
 }
 
@@ -214,8 +177,6 @@ impl Object {
     }
 }
 
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -256,14 +217,12 @@ impl From<String> for ObjectType {
 }
 
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(
     any(feature = "write", feature = "memory-optimized-read"),
     xml(forward)
 )]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename_all = "lowercase"))]
 #[non_exhaustive]
 /// This is not a type found in the 3MF data model but it is introduced here
 /// for better ergonomics of this library. This kind will specify all different variants
@@ -277,35 +236,6 @@ pub enum ObjectKind {
     BooleanShape(BooleanShape),
     /// Object contains displacement mesh geometry.
     DisplacementMesh(DisplacementMesh),
-}
-
-/// Custom deserializer for `Option<ObjectKind>` to handle empty elements
-/// when using speed-optimized-read feature.
-#[cfg(feature = "speed-optimized-read")]
-pub mod serde_object_kind {
-    use super::ObjectKind;
-    use serde::{Deserialize, Deserializer};
-
-    /// Returns `None` as the default value for `Option<ObjectKind>`.
-    pub fn default_none() -> Option<ObjectKind> {
-        None
-    }
-
-    /// Deserializes `Option<ObjectKind>` with fallback to `None` on error.
-    ///
-    /// This handles the case where an `<object>` element has no child elements
-    /// (empty object), which would otherwise fail with `MissingChildOrAttribute`.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<ObjectKind>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // Try to deserialize as Option<ObjectKind>
-        // If it fails (e.g., no child elements match the enum), return None
-        match Option::<ObjectKind>::deserialize(deserializer) {
-            Ok(val) => Ok(val),
-            Err(_) => Ok(None),
-        }
-    }
 }
 
 #[cfg(feature = "write")]
@@ -750,246 +680,6 @@ mod memory_optimized_read_tests {
                     ObjectType::SolidSupport,
                     ObjectType::Support,
                     ObjectType::Other,
-                ],
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde::Deserialize;
-    use serde_roxmltree::from_str;
-
-    use crate::{
-        model::domain::{
-            component::{Component, Components},
-            mesh::{Mesh, Triangles, Vertices},
-            slice,
-        },
-        model::{
-            OptionalResourceId, OptionalResourceIndex, PathResource, StrResource, UuidResource,
-        },
-        threemf_namespaces::{
-            CORE_NS, CORE_TRIANGLESET_NS, CORE_TRIANGLESET_PREFIX, PROD_NS, PROD_PREFIX, SLICE_NS,
-            SLICE_PREFIX,
-        },
-    };
-
-    use super::{Object, ObjectKind, ObjectType};
-
-    use std::vec;
-
-    #[test]
-    pub fn fromxml_simple_object_test() {
-        let xml_string = format!(r#"<object xmlns="{}" id="4"></object>"#, CORE_NS);
-        let object = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            object,
-            Object {
-                id: 4,
-                objecttype: None,
-                thumbnail: None,
-                partnumber: None,
-                name: None,
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                uuid: None,
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-                kind: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_production_object_test() {
-        const CUSTOM_PROD_PREFIX: &str = "custom";
-        let xml_string = format!(
-            r#"<object xmlns="{}" xmlns:{}="{}" id="4" {}:UUID="someUUID"></object>"#,
-            CORE_NS, CUSTOM_PROD_PREFIX, PROD_NS, CUSTOM_PROD_PREFIX,
-        );
-        let object = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            object,
-            Object {
-                id: 4,
-                objecttype: None,
-                thumbnail: None,
-                partnumber: None,
-                name: None,
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                uuid: Some(UuidResource::from("someUUID")),
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-                kind: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_intermediate_object_test() {
-        let xml_string = format!(
-            r#"<object xmlns="{}" id="4" type="model" thumbnail="/thumbnail/part_thumbnail.png" partnumber="part_1" name="Object Part" pid="123" pindex="123"></object>"#,
-            CORE_NS
-        );
-        let object = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            object,
-            Object {
-                id: 4,
-                objecttype: Some(ObjectType::Model),
-                thumbnail: Some(PathResource::try_from("/thumbnail/part_thumbnail.png").unwrap()),
-                partnumber: Some(StrResource::new("part_1")),
-                name: Some(StrResource::new("Object Part")),
-                pid: OptionalResourceId::new(123),
-                pindex: OptionalResourceIndex::new(123),
-                uuid: None,
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-                kind: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_intermediate_object_test_x() {
-        let xml_string = format!(
-            r#"<object xmlns="{}" id="4" type="model" thumbnail="/thumbnail/part_thumbnail.png" partnumber="part_1" name="Object Part" pid="123" pindex="123"></object>"#,
-            CORE_NS
-        );
-        let object = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            object,
-            Object {
-                id: 4,
-                objecttype: Some(ObjectType::Model),
-                thumbnail: Some(PathResource::try_from("/thumbnail/part_thumbnail.png").unwrap()),
-                partnumber: Some(StrResource::new("part_1")),
-                name: Some(StrResource::new("Object Part")),
-                pid: OptionalResourceId::new(123),
-                pindex: OptionalResourceIndex::new(123),
-                uuid: None,
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-                kind: None,
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_advanced_mesh_object_test() {
-        let xml_string = format!(
-            r##"<object xmlns="{}" xmlns:{}="{}" xmlns:{}="{}" id="4" type="model" thumbnail="/thumbnail/part_thumbnail.png" partnumber="part_1" name="Object Part" {}:slicestackid="236" {}:meshresolution="lowres"><mesh xmlns:{}="{}"><vertices></vertices><triangles></triangles></mesh></object>"##,
-            CORE_NS,
-            PROD_PREFIX,
-            PROD_NS,
-            SLICE_PREFIX,
-            SLICE_NS,
-            SLICE_PREFIX,
-            SLICE_PREFIX,
-            CORE_TRIANGLESET_PREFIX,
-            CORE_TRIANGLESET_NS,
-        );
-        let object = from_str::<Object>(&xml_string).unwrap();
-
-        assert_eq!(
-            object,
-            Object {
-                id: 4,
-                objecttype: Some(ObjectType::Model),
-                thumbnail: Some(PathResource::try_from("/thumbnail/part_thumbnail.png").unwrap()),
-                partnumber: Some(StrResource::new("part_1")),
-                name: Some(StrResource::new("Object Part")),
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                uuid: None,
-                slicestackid: OptionalResourceId::new(236),
-                slicepath: None,
-                meshresolution: Some(slice::MeshResolution::LowRes),
-                kind: Some(ObjectKind::Mesh(Mesh {
-                    vertices: Vertices { vertex: vec![] },
-                    triangles: Triangles { triangle: vec![] },
-                    trianglesets: None,
-                    beamlattice: None,
-                }))
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_advanced_component_object_test() {
-        let xml_string = format!(
-            r##"<object xmlns="{}" xmlns:{}="{}" id="4" type="model" thumbnail="/thumbnail/part_thumbnail.png" partnumber="part_1" name="Object Part"><components><component objectid="23" /></components></object>"##,
-            CORE_NS, PROD_PREFIX, PROD_NS
-        );
-        let object = from_str::<Object>(&xml_string);
-        println!("{object:?}");
-        assert_eq!(
-            object.unwrap(),
-            Object {
-                id: 4,
-                objecttype: Some(ObjectType::Model),
-                thumbnail: Some(PathResource::try_from("/thumbnail/part_thumbnail.png").unwrap()),
-                partnumber: Some(StrResource::new("part_1")),
-                name: Some(StrResource::new("Object Part")),
-                pid: OptionalResourceId::none(),
-                pindex: OptionalResourceIndex::none(),
-                uuid: None,
-                slicestackid: OptionalResourceId::none(),
-                slicepath: None,
-                meshresolution: None,
-                kind: Some(ObjectKind::Components(Components {
-                    component: vec![Component {
-                        objectid: 23,
-                        transform: None,
-                        path: None,
-                        uuid: None,
-                    }]
-                }))
-            }
-        );
-    }
-
-    #[derive(Debug, Deserialize, PartialEq)]
-    pub struct ObjectTypes {
-        #[serde(rename = "children")]
-        childs: Vec<ObjectType>,
-
-        #[serde(rename = "attr")]
-        attribute: Option<ObjectType>,
-    }
-
-    #[test]
-    pub fn fromxml_objecttype_test() {
-        let xml_string = format!(
-            r#"<ObjectTypes attr="model"><{s}>model</{s}><{s}>support</{s}><{s}>solidsupport</{s}><{s}>support</{s}><{s}>other</{s}><{s}>somethingelse</{s}></ObjectTypes>"#,
-            s = "children"
-        );
-        let objecttypes = from_str::<ObjectTypes>(&xml_string).unwrap();
-
-        assert_eq!(
-            objecttypes,
-            ObjectTypes {
-                attribute: Some(ObjectType::Model),
-                childs: vec![
-                    ObjectType::Model,
-                    ObjectType::Support,
-                    ObjectType::SolidSupport,
-                    ObjectType::Support,
-                    ObjectType::Other,
-                    ObjectType::Model,
                 ],
             }
         );

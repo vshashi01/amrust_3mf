@@ -2,6 +2,7 @@
 mod tests {
     mod test_utilities;
 
+    use pretty_assertions::assert_eq;
     use std::fs::File;
     use std::path::PathBuf;
 

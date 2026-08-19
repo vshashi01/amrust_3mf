@@ -41,9 +41,4 @@ pub enum Error {
     /// Path validation error.
     #[error("Path Resource error")]
     PathResourceError(#[from] PathResourceError),
-
-    /// Deserialization error from serde-roxmltree.
-    #[cfg(feature = "speed-optimized-read")]
-    #[error("Deserialization error from serde-roxmltree")]
-    SerdeRoxmltreeError(#[from] serde_roxmltree::Error),
 }

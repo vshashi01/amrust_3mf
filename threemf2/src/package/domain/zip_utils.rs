@@ -4,7 +4,7 @@ use compact_str::format_compact;
 use zip::ZipArchive;
 
 use crate::{
-    model::{PathResource, StrResource, domain::model::ThreemfExtensions},
+    model::{PathResource, StrResource},
     package::{
         Error,
         domain::{
@@ -12,26 +12,20 @@ use crate::{
             relationship::Relationships,
         },
     },
-    threemf_namespaces::ThreemfNamespace,
 };
 
 use crate::model::domain::model::Model;
 
+use std::ffi::OsStr;
 use std::io::{Read, Seek};
 use std::path::Path;
-use std::{collections::HashSet, ffi::OsStr};
 
 /// Enum for different XML deserialization strategies
-#[cfg(any(
-    feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read"
-))]
+#[cfg(feature = "package-memory-optimized-read")]
 #[derive(Clone, Copy)]
 pub(crate) enum XmlDeserializer {
     #[cfg(feature = "package-memory-optimized-read")]
     MemoryOptimized,
-    #[cfg(feature = "io-speed-optimized-read")]
-    SpeedOptimized,
 }
 
 impl XmlDeserializer {
@@ -43,10 +37,6 @@ impl XmlDeserializer {
             #[cfg(feature = "package-memory-optimized-read")]
             XmlDeserializer::MemoryOptimized => {
                 instant_xml::from_str::<ContentTypes>(xml_string).map_err(Error::from)
-            }
-            #[cfg(feature = "io-speed-optimized-read")]
-            XmlDeserializer::SpeedOptimized => {
-                serde_roxmltree::from_str::<ContentTypes>(xml_string).map_err(Error::from)
             }
         }
     }
@@ -60,10 +50,6 @@ impl XmlDeserializer {
             XmlDeserializer::MemoryOptimized => {
                 instant_xml::from_str::<Relationships>(xml_string).map_err(Error::from)
             }
-            #[cfg(feature = "io-speed-optimized-read")]
-            XmlDeserializer::SpeedOptimized => {
-                serde_roxmltree::from_str::<Relationships>(xml_string).map_err(Error::from)
-            }
         }
     }
 
@@ -71,75 +57,10 @@ impl XmlDeserializer {
         let model = match self {
             #[cfg(feature = "package-memory-optimized-read")]
             XmlDeserializer::MemoryOptimized => instant_xml::from_str::<Model>(xml_string)?,
-            #[cfg(feature = "io-speed-optimized-read")]
-            XmlDeserializer::SpeedOptimized => speed_optimized_read(xml_string),
         };
 
         Ok(model)
     }
-}
-
-#[cfg(feature = "io-speed-optimized-read")]
-fn speed_optimized_read(xml_string: &str) -> Model {
-    use serde_roxmltree::roxmltree::Document;
-
-    let doc = Document::parse(xml_string).unwrap();
-    let mut model = serde_roxmltree::from_doc::<Model>(&doc).unwrap();
-
-    let mut threemf_namespaces = vec![];
-    let namespaces = doc.root().first_child().unwrap().namespaces();
-    for ns in namespaces.clone() {
-        let threemf_ns = ThreemfNamespace::try_from_uri(ns.uri(), ns.name()).unwrap();
-        threemf_namespaces.push(threemf_ns);
-    }
-
-    let mut new_recommended_extensions = HashSet::new();
-    for ns in model.recommendedextensions.get() {
-        match ns {
-            ThreemfNamespace::Unknown { prefix, uri } => {
-                if let Some(ns) = namespaces.clone().find(|ns| ns.name() == Some(prefix)) {
-                    let threemf_ns = ThreemfNamespace::try_from_uri(ns.uri(), ns.name()).unwrap();
-                    new_recommended_extensions.insert(threemf_ns);
-                } else {
-                    new_recommended_extensions.insert(ThreemfNamespace::Unknown {
-                        prefix: prefix.to_owned(),
-                        uri: uri.to_owned(),
-                    });
-                }
-            }
-            _ => {
-                new_recommended_extensions.insert(ns.clone());
-            }
-        }
-    }
-
-    let mut new_required_extensions = HashSet::new();
-    for ns in model.requiredextensions.get() {
-        match ns {
-            ThreemfNamespace::Unknown { prefix, uri } => {
-                if let Some(ns) = namespaces.clone().find(|ns| ns.name() == Some(prefix)) {
-                    let threemf_ns = ThreemfNamespace::try_from_uri(ns.uri(), ns.name()).unwrap();
-                    new_required_extensions.insert(threemf_ns);
-                } else {
-                    new_required_extensions.insert(ThreemfNamespace::Unknown {
-                        prefix: prefix.to_owned(),
-                        uri: uri.to_owned(),
-                    });
-                }
-            }
-            _ => {
-                new_required_extensions.insert(ns.clone());
-            }
-        }
-    }
-
-    let recommended_extensions =
-        ThreemfExtensions::new_from_iter(new_recommended_extensions.iter());
-    let required_extensions = ThreemfExtensions::new_from_iter(new_required_extensions.iter());
-
-    model.recommendedextensions = recommended_extensions;
-    model.requiredextensions = required_extensions;
-    model
 }
 
 pub(crate) fn read_zipfile_to_string<R: Read>(

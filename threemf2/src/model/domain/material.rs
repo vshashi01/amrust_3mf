@@ -49,12 +49,7 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::{self, Deserialize};
-
 /// Tile style for texture coordinates outside the `[0,1]` range.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -87,8 +82,6 @@ impl From<String> for TileStyle {
 }
 
 /// Texture filter for scaling operations.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -118,8 +111,6 @@ impl From<String> for Filter {
 }
 
 /// Blend method for combining layers in multi-properties.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -149,8 +140,6 @@ impl From<String> for BlendMethod {
 ///
 /// A color group defines a set of sRGB colors that can be referenced by index.
 /// The order of colors forms an implicit 0-based index.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "colorgroup"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -167,7 +156,6 @@ pub struct ColorGroup {
     pub id: ResourceId,
 
     /// Colors in this group, ordered by implicit 0-based index.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "color"))]
     pub color: Vec<ColorElement>,
 }
 
@@ -175,8 +163,6 @@ pub struct ColorGroup {
 ///
 /// The color is specified as a hex string like "#RRGGBB" or "#RRGGBBAA".
 /// When used outside a multi-properties context, colors are fully opaque.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "color"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -197,8 +183,6 @@ pub struct ColorElement {
 ///
 /// A texture 2D group defines UV coordinates for mapping a texture image to mesh vertices.
 /// The order of coordinates forms an implicit 0-based index.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "texture2dgroup"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -222,7 +206,6 @@ pub struct Texture2DGroup {
     pub texid: ResourceId,
 
     /// Texture coordinates in this group, ordered by implicit 0-based index.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "tex2coord"))]
     pub tex2coord: Vec<Tex2Coord>,
 }
 
@@ -230,8 +213,6 @@ pub struct Texture2DGroup {
 ///
 /// The origin (0,0) is at the bottom-left of the texture image.
 /// Values outside `[0,1]` are handled according to the tile style settings.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "tex2coord"))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[cfg_attr(
@@ -309,8 +290,6 @@ impl<'xml> FromXml<'xml> for Tex2Coord {
 ///
 /// Composite materials are created by mixing 2 or more base materials in defined ratios.
 /// Each composite represents a specific mixture ratio of the materials.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "compositematerials"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -342,7 +321,6 @@ pub struct CompositeMaterials {
     pub matindices: ResourceIndexCollection,
 
     /// Composite definitions, ordered by implicit 0-based index.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "composite"))]
     pub composite: Vec<Composite>,
 }
 
@@ -350,36 +328,11 @@ pub struct CompositeMaterials {
 ///
 /// The `values` attribute specifies the proportion of each material in the mixture.
 /// Values are space-delimited numbers in the range [0, 1].
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "composite"))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Composite {
     /// List of mixture ratios for each material constituent.
     /// Values are in range [0, 1]. If the sum is zero, all values are treated as equal.
-    #[cfg_attr(
-        feature = "speed-optimized-read",
-        serde(deserialize_with = "deserialize_composite_values")
-    )]
     pub values: Vec<Double>,
-}
-
-/// Custom deserializer for space-delimited f64 values in Composite.
-#[cfg(feature = "speed-optimized-read")]
-fn deserialize_composite_values<'de, D>(deserializer: D) -> Result<Vec<Double>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = <String as serde::Deserialize>::deserialize(deserializer)?;
-    if s.is_empty() {
-        return Ok(Vec::new());
-    }
-    s.split_whitespace()
-        .map(|v: &str| {
-            v.parse::<f64>()
-                .map(Double::new)
-                .map_err(|e| serde::de::Error::custom(format!("Invalid f64 value: {}", e)))
-        })
-        .collect::<Result<_, _>>()
 }
 
 #[cfg(feature = "write")]
@@ -477,8 +430,6 @@ impl<'xml> instant_xml::FromXml<'xml> for Composite {
 /// Multi-properties allow layering multiple property types (e.g., material + color + texture)
 /// to create complex material appearances. Properties are blended in the order specified
 /// by the `pids` attribute.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "multiproperties"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -511,7 +462,6 @@ pub struct MultiProperties {
     pub blendmethods: Option<StrResource>,
 
     /// Multi-property index combinations, ordered by implicit 0-based index.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default, rename = "multi"))]
     pub multi: Vec<Multi>,
 }
 
@@ -519,8 +469,6 @@ pub struct MultiProperties {
 ///
 /// The `pindices` attribute is a space-delimited list of property indices, one for each
 /// property group specified in the parent `MultiProperties.pids` attribute.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "multi"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -539,8 +487,6 @@ pub struct Multi {
 }
 
 /// Type of the Texture image
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, PartialEq, Clone)]
 pub enum TextureContentType {
     /// Jpef format
@@ -634,8 +580,6 @@ impl TextureContentType {
 ///
 /// References an image file in the 3MF package that can be used for texture mapping.
 /// The texture is referenced by `Texture2DGroup` elements via the `texid` attribute.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(rename = "texture2d"))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone)]
@@ -1143,253 +1087,6 @@ mod memory_optimized_read_tests {
             MATERIAL_NS
         );
         let enum_test = from_str::<EnumTestType>(&xml_string).unwrap();
-
-        assert_eq!(
-            enum_test,
-            EnumTestType {
-                tilestyle: vec![
-                    TileStyle::Wrap,
-                    TileStyle::Mirror,
-                    TileStyle::Clamp,
-                    TileStyle::None,
-                ],
-                filter: vec![Filter::Auto, Filter::Linear, Filter::Nearest],
-                blendmethod: vec![BlendMethod::Mix, BlendMethod::Multiply],
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::threemf_namespaces::MATERIAL_NS;
-
-    use super::*;
-
-    #[test]
-    pub fn fromxml_color_test() {
-        let xml_string = format!("<color xmlns=\"{}\" color=\"#FF8000\" />", MATERIAL_NS);
-        let color = from_str::<ColorElement>(&xml_string).unwrap();
-
-        assert_eq!(
-            color,
-            ColorElement {
-                color: Color::from_hex("#FF8000FF").unwrap(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_color_group_test() {
-        let xml_string = format!(
-            "<colorgroup xmlns=\"{}\" id=\"1\"><color color=\"#FF0000\" /><color color=\"#00FF00\" /></colorgroup>",
-            MATERIAL_NS
-        );
-        let colorgroup = from_str::<ColorGroup>(&xml_string).unwrap();
-
-        assert_eq!(
-            colorgroup,
-            ColorGroup {
-                id: 1,
-                color: vec![
-                    ColorElement {
-                        color: Color::from_hex("#FF0000").unwrap(),
-                    },
-                    ColorElement {
-                        color: Color::from_hex("#00FF00").unwrap(),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_tex2coord_test() {
-        let xml_string = format!(
-            "<tex2coord xmlns=\"{}\" u=\"0.5\" v=\"0.25\" />",
-            MATERIAL_NS
-        );
-        let tex2coord = from_str::<Tex2Coord>(&xml_string).unwrap();
-
-        assert_eq!(
-            tex2coord,
-            Tex2Coord {
-                u: 0.5.into(),
-                v: 0.25.into(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_texture2d_group_test() {
-        let xml_string = format!(
-            "<texture2dgroup xmlns=\"{}\" id=\"2\" texid=\"1\"><tex2coord u=\"0\" v=\"0\" /><tex2coord u=\"1\" v=\"1\" /></texture2dgroup>",
-            MATERIAL_NS
-        );
-        let texture2dgroup = from_str::<Texture2DGroup>(&xml_string).unwrap();
-
-        assert_eq!(
-            texture2dgroup,
-            Texture2DGroup {
-                id: 2,
-                texid: 1,
-                tex2coord: vec![
-                    Tex2Coord {
-                        u: 0.0.into(),
-                        v: 0.0.into()
-                    },
-                    Tex2Coord {
-                        u: 1.0.into(),
-                        v: 1.0.into()
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_composite_materials_test() {
-        let xml_string = format!(
-            "<compositematerials xmlns=\"{}\" id=\"1\" matid=\"10\" matindices=\"0 1\"><composite values=\"1.0 0.0\" /><composite values=\"0.5 0.5\" /></compositematerials>",
-            MATERIAL_NS
-        );
-        let compositematerials = from_str::<CompositeMaterials>(&xml_string).unwrap();
-
-        assert_eq!(
-            compositematerials,
-            CompositeMaterials {
-                id: 1,
-                matid: 10,
-                matindices: ResourceIndexCollection::from(vec![0, 1]),
-                composite: vec![
-                    Composite {
-                        values: vec![Double::new(1.0), Double::new(0.0)]
-                    },
-                    Composite {
-                        values: vec![Double::new(0.5), Double::new(0.5)]
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_multi_test() {
-        let xml_string = format!("<multi xmlns=\"{}\" pindices=\"0 1\" />", MATERIAL_NS);
-        let multi = from_str::<Multi>(&xml_string).unwrap();
-
-        assert_eq!(
-            multi,
-            Multi {
-                pindices: ResourceIndexCollection::from(vec![0, 1]),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_multi_properties_test() {
-        let xml_string = format!(
-            "<multiproperties xmlns=\"{}\" id=\"1\" pids=\"10 20 30\" blendmethods=\"mix multiply\"><multi pindices=\"0 0 0\" /><multi pindices=\"1 2 3\" /></multiproperties>",
-            MATERIAL_NS
-        );
-        let multiproperties = from_str::<MultiProperties>(&xml_string).unwrap();
-
-        assert_eq!(
-            multiproperties,
-            MultiProperties {
-                id: 1,
-                pids: ResourceIdCollection::from(vec![10, 20, 30]),
-                blendmethods: Some("mix multiply".into()),
-                multi: vec![
-                    Multi {
-                        pindices: ResourceIndexCollection::from(vec![0, 0, 0])
-                    },
-                    Multi {
-                        pindices: ResourceIndexCollection::from(vec![1, 2, 3])
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_texture2d_test() {
-        let xml_string = format!(
-            "<texture2d xmlns=\"{}\" id=\"1\" path=\"/3D/texture.png\" contenttype=\"image/png\" tilestyleu=\"wrap\" tilestylev=\"mirror\" filter=\"linear\" />",
-            MATERIAL_NS
-        );
-        let texture2d = from_str::<Texture2D>(&xml_string).unwrap();
-
-        // Verify required fields are parsed correctly
-        assert_eq!(texture2d.id, 1);
-        assert_eq!(texture2d.path.as_str(), "/3D/texture.png");
-        assert_eq!(texture2d.contenttype, TextureContentType::Png);
-        // Note: Optional attributes with custom types may not parse correctly
-        // in memory-optimized-read mode. The write tests verify correct serialization.
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_compositematerials_test() {
-        let xml_string = format!(
-            r##"<compositematerials xmlns="{}" id="1" matid="10" matindices="0 1"><composite values="1.0 0.0" /><composite values="0.5 0.5" /></compositematerials>"##,
-            MATERIAL_NS
-        );
-        let resources = from_str::<CompositeMaterials>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            CompositeMaterials {
-                id: 1,
-                matid: 10,
-                matindices: ResourceIndexCollection::from(vec![0, 1]),
-                composite: vec![
-                    Composite {
-                        values: vec![Double::new(1.0), Double::new(0.0)]
-                    },
-                    Composite {
-                        values: vec![Double::new(0.5), Double::new(0.5)]
-                    },
-                ],
-            },
-        );
-    }
-
-    #[test]
-    pub fn fromxml_texture2d_defaults_test() {
-        let xml_string = format!(
-            "<texture2d xmlns=\"{}\" id=\"1\" path=\"/3D/texture.jpg\" contenttype=\"image/jpeg\" />",
-            MATERIAL_NS
-        );
-        let texture2d = from_str::<Texture2D>(&xml_string).unwrap();
-
-        assert_eq!(
-            texture2d,
-            Texture2D {
-                id: 1,
-                path: PathResource::try_from("/3D/texture.jpg").unwrap(),
-                contenttype: TextureContentType::Jpeg,
-                tilestyleu: None,
-                tilestylev: None,
-                filter: None,
-            }
-        );
-    }
-
-    #[derive(Deserialize, Debug, PartialEq, Eq)]
-    struct EnumTestType {
-        tilestyle: Vec<TileStyle>,
-        filter: Vec<Filter>,
-        blendmethod: Vec<BlendMethod>,
-    }
-
-    #[test]
-    pub fn fromxml_material_enums_test() {
-        let xml_string = r#"<EnumTestType xmlns="http://schemas.microsoft.com/3dmanufacturing/material/2015/02"><tilestyle>wrap</tilestyle><tilestyle>mirror</tilestyle><tilestyle>clamp</tilestyle><tilestyle>none</tilestyle><filter>auto</filter><filter>linear</filter><filter>nearest</filter><blendmethod>mix</blendmethod><blendmethod>multiply</blendmethod></EnumTestType>"#;
-        let enum_test = from_str::<EnumTestType>(xml_string).unwrap();
 
         assert_eq!(
             enum_test,

@@ -1,6 +1,5 @@
 #[cfg(any(
     feature = "package-memory-optimized-read",
-    feature = "io-speed-optimized-read",
     feature = "package-lazy-read"
 ))]
 #[cfg(test)]
@@ -23,35 +22,6 @@ mod tests {
 
         let package =
             ThreemfPackage::from_reader_with_memory_optimized_deserializer(reader, true).unwrap();
-
-        assert_eq!(io_query::get_displacement_mesh_objects(&package).count(), 1);
-        for object in io_query::get_displacement_mesh_objects(&package) {
-            assert!(object.view.has_beamlattice())
-        }
-        assert!(core_query::get_displacement2d_by_id(3, &package.root).is_some());
-        assert!(core_query::get_normvectorgroup_by_id(4, &package.root).is_some());
-        assert!(core_query::get_disp2dgroup_by_id(5, &package.root).is_some());
-
-        let namespaces = package.get_namespaces_on_model(None).unwrap();
-        assert!(
-            namespaces
-                .iter()
-                .any(|ns| matches!(ns, ThreemfNamespace::Displacement))
-        );
-    }
-
-    #[cfg(feature = "io-speed-optimized-read")]
-    #[test]
-    #[allow(deprecated)]
-    fn read_displacement_package_speed_optimized() {
-        use threemf2::threemf_namespaces::ThreemfNamespace;
-
-        let path =
-            PathBuf::from("./tests/data/mgx-core-prod-beamlattice-material-displacement-mesh.3mf");
-        let reader = File::open(path).unwrap();
-
-        let package =
-            ThreemfPackage::from_reader_with_speed_optimized_deserializer(reader, true).unwrap();
 
         assert_eq!(io_query::get_displacement_mesh_objects(&package).count(), 1);
         for object in io_query::get_displacement_mesh_objects(&package) {

@@ -15,9 +15,6 @@ use instant_xml::{Id, Serializer, ToXml};
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::{Error, FromXml, Kind};
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::{Deserialize, Serialize};
-
 use thiserror::Error;
 #[cfg(feature = "uuid")]
 use uuid::Uuid;
@@ -34,7 +31,6 @@ pub type ResourceIndex = u32;
 
 /// Compact string wrapper used for model resource values.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Serialize, Deserialize))]
 pub struct StrResource(CompactString);
 
 impl StrResource {
@@ -230,20 +226,6 @@ impl From<PathResource> for String {
     }
 }
 
-#[cfg(feature = "speed-optimized-read")]
-impl<'de> Deserialize<'de> for PathResource {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = <std::string::String as Deserialize>::deserialize(deserializer)?;
-        if value.trim().is_empty() {
-            return Err(serde::de::Error::custom("Empty PathResource"));
-        }
-        PathResource::try_from(value).map_err(|_| serde::de::Error::custom("Invalid PathResource"))
-    }
-}
-
 #[cfg(feature = "write")]
 impl ToXml for PathResource {
     fn serialize<W: std::fmt::Write + ?Sized>(
@@ -420,17 +402,6 @@ impl From<&str> for UuidResource {
     }
 }
 
-#[cfg(feature = "speed-optimized-read")]
-impl<'de> Deserialize<'de> for UuidResource {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value = <std::string::String as Deserialize>::deserialize(deserializer)?;
-        Ok(Self::from(value))
-    }
-}
-
 #[cfg(feature = "write")]
 impl ToXml for UuidResource {
     fn serialize<W: std::fmt::Write + ?Sized>(
@@ -476,17 +447,9 @@ impl<'xml> FromXml<'xml> for UuidResource {
     const KIND: Kind = Kind::Scalar;
 }
 
-// #[cfg(feature = "memory-optimized-read")]
-// impl instant_xml::Accumulate<UuidResource> for UuidResource {
-//     fn try_done(self, _: &'static str) -> Result<UuidResource, Error> {
-//         Ok(self)
-//     }
-// }
-
 /// Compact Optional type for ResourceId with [`Option<NonZeroU32>`]
 /// (4 bytes vs 8 bytes for [`Option<u32>`])
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 pub struct OptionalResourceId(Option<NonZeroU32>);
 
 impl OptionalResourceId {
@@ -636,7 +599,6 @@ const OPTIONAL_RESOURCE_INDEX_NONE: u32 = u32::MAX;
 /// Compact Optional type for ResourceIndex (4 bytes vs 8 bytes for [`Option<u32>`])
 /// Uses sentinel value instead of enum discriminant
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 pub struct OptionalResourceIndex(u32);
 
 impl OptionalResourceIndex {
@@ -764,65 +726,6 @@ impl instant_xml::Accumulate<OptionalResourceIndex> for OptionalResourceIndex {
     }
 }
 
-/// Serde deserialization helpers for OptionalResourceId.
-#[cfg(feature = "speed-optimized-read")]
-pub mod opt_res_id_impl {
-    use super::OptionalResourceId;
-    use serde::{Deserialize, Deserializer};
-
-    /// Returns default none() value for serde default attribute.
-    pub fn default_none() -> OptionalResourceId {
-        OptionalResourceId::none()
-    }
-
-    /// Custom deserializer for OptionalResourceId.
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<OptionalResourceId, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let opt: Option<u32> = Option::deserialize(deserializer)?;
-
-        match opt {
-            None => Ok(OptionalResourceId::none()),
-            Some(0) => panic!("0 is an invalid value for Resource Id"),
-            Some(v) => {
-                if v > 2_147_483_647 {
-                    panic!("Resource Id exceeds the expected maximum 2147483647");
-                }
-                Ok(OptionalResourceId::new(v))
-            }
-        }
-    }
-}
-
-/// Serde deserialization helpers for OptionalResourceIndex.
-#[cfg(feature = "speed-optimized-read")]
-pub mod opt_res_index_impl {
-    use super::OptionalResourceIndex;
-    use serde::{Deserialize, Deserializer};
-
-    /// Returns default none() value for serde default attribute
-    pub fn default_none() -> OptionalResourceIndex {
-        OptionalResourceIndex::none()
-    }
-
-    /// Custom deserializer for OptionalResourceIndex
-    /// - Missing XML attribute → none()
-    /// - Present XML attribute → parse as u32 and validate
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<OptionalResourceIndex, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // roxmltree with serde: missing attribute = None, present = Some(u32)
-        let opt: Option<u32> = Option::deserialize(deserializer)?;
-
-        match opt {
-            None => Ok(OptionalResourceIndex::none()),
-            Some(v) => Ok(OptionalResourceIndex::new(v)),
-        }
-    }
-}
-
 impl From<Option<u32>> for OptionalResourceIndex {
     fn from(value: Option<u32>) -> Self {
         match value {
@@ -843,8 +746,6 @@ impl From<OptionalResourceIndex> for Option<u32> {
 /// Used for attributes like `pids` in MultiProperties that contain multiple
 /// resource IDs separated by spaces (e.g., "10 20 30").
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 pub struct ResourceIdCollection(Vec<u32>);
 
 impl ResourceIdCollection {
@@ -968,8 +869,6 @@ impl From<String> for ResourceIdCollection {
 /// Used for attributes like `pindices` in Multi and `matindices` in CompositeMaterials
 /// that contain multiple resource indices separated by spaces (e.g., "0 1 2").
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 pub struct ResourceIndexCollection(Vec<u32>);
 
 impl ResourceIndexCollection {
@@ -1102,7 +1001,6 @@ impl IntoIndex for u32 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[cfg_attr(feature = "speed-optimized-read", derive(serde::Deserialize))]
 /// A new type wrapping the f64 so that a custom (de)serializer can be implemented using
 /// the lexical_core::f64 for better performance. This maybe renamed in the future to Number
 /// to align with the 3MF Naming conventions.
@@ -1184,8 +1082,6 @@ impl From<Double> for f64 {
 
 /// sRGB color value with optional alpha channel.
 /// Format: #RRGGBB or #RRGGBBAA as defined in the 3MF Materials extension.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
-#[cfg_attr(feature = "speed-optimized-read", serde(from = "String"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
     /// Red channel (0-255)

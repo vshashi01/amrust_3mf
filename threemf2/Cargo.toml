@@ -23,10 +23,8 @@ default = [
 ]
 write = ["dep:instant-xml"]
 memory-optimized-read = ["dep:instant-xml"]
-# speed-optimized-read = ["dep:serde-roxmltree", "dep:serde"]
 package-write = ["dep:zip", "write"]
 package-memory-optimized-read = ["dep:zip", "memory-optimized-read"]
-# io-speed-optimized-read = ["dep:zip", "speed-optimized-read"]
 package-lazy-read = ["dep:once_cell", "package-memory-optimized-read"]
 uuid = ["dep:uuid"]
 
@@ -36,8 +34,6 @@ thiserror = { version = "2.0.20" }
 zip = { version = "8.6.0", default-features = false, features = [
     "deflate",
 ], optional = true }
-# serde-roxmltree = { version = "0.11.3", optional = true }
-# serde = { version = "1.0.229", optional = true, features = ["derive"] }
 once_cell = { version = "1.21.4", optional = true }
 lexical-core = { version = "1.0.6" }
 uuid = { version = "1.24.1", optional = true }
@@ -46,8 +42,6 @@ compact_str = { version = "0.10.0", features = ["serde"] }
 
 [dev-dependencies]
 pretty_assertions = { version = "1.4.1" }
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = { version = "1.0.151" }
 serde-roxmltree = { version = "0.11.3" }
 
 
@@ -65,12 +59,6 @@ required-features = ["package-lazy-read"]
 name = "package_memory_optimized_read"
 path = "examples/package_memory_optimized_read.rs"
 required-features = ["package-memory-optimized-read"]
-
-
-[[example]]
-name = "io_speed_optimized_read"
-path = "examples/io_speed_optimized_read.rs"
-required-features = ["io-speed-optimized-read"]
 
 [[example]]
 name = "beamlattice_write"

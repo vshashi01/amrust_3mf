@@ -4,9 +4,6 @@ use instant_xml::ToXml;
 #[cfg(feature = "memory-optimized-read")]
 use instant_xml::FromXml;
 
-#[cfg(feature = "speed-optimized-read")]
-use serde::Deserialize;
-
 use crate::{
     model::domain::{
         displacement::{Disp2DGroup, Displacement2D, NormVectorGroup},
@@ -19,7 +16,6 @@ use crate::{
 };
 
 /// A collection of Objects and other properties that are referenced by other elements.
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Debug, Clone)]
@@ -29,15 +25,12 @@ use crate::{
 )]
 pub struct Resources {
     /// Collection of 3D objects. See [`Object`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub object: Vec<Object>,
 
     /// Collection of Materials.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     pub basematerials: Vec<BaseMaterials>,
 
     /// Collection of slice stacks. See [`SliceStack`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(SLICE_NS))
@@ -45,7 +38,6 @@ pub struct Resources {
     pub slicestack: Vec<SliceStack>,
 
     /// Collection of color groups. See [`ColorGroup`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(MATERIAL_NS))
@@ -53,7 +45,6 @@ pub struct Resources {
     pub colorgroup: Vec<ColorGroup>,
 
     /// Collection of texture coordinate groups. See [`Texture2DGroup`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(MATERIAL_NS))
@@ -61,7 +52,6 @@ pub struct Resources {
     pub texture2dgroup: Vec<Texture2DGroup>,
 
     /// Collection of composite materials. See [`CompositeMaterials`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(MATERIAL_NS))
@@ -69,7 +59,6 @@ pub struct Resources {
     pub compositematerials: Vec<CompositeMaterials>,
 
     /// Collection of multi-property definitions. See [`MultiProperties`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(MATERIAL_NS))
@@ -77,7 +66,6 @@ pub struct Resources {
     pub multiproperties: Vec<MultiProperties>,
 
     /// Collection of 2D texture references. See [`Texture2D`]
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(MATERIAL_NS))
@@ -85,7 +73,6 @@ pub struct Resources {
     pub texture2d: Vec<Texture2D>,
 
     /// Collection of displacement texture resources.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(DISPLACEMENT_NS))
@@ -93,7 +80,6 @@ pub struct Resources {
     pub displacement2d: Vec<Displacement2D>,
 
     /// Collection of normalized vector groups for displacement.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(DISPLACEMENT_NS))
@@ -101,7 +87,6 @@ pub struct Resources {
     pub normvectorgroup: Vec<NormVectorGroup>,
 
     /// Collection of displacement coordinate groups.
-    #[cfg_attr(feature = "speed-optimized-read", serde(default))]
     #[cfg_attr(
         any(feature = "write", feature = "memory-optimized-read"),
         xml(ns(DISPLACEMENT_NS))
@@ -109,7 +94,6 @@ pub struct Resources {
     pub disp2dgroup: Vec<Disp2DGroup>,
 }
 
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, PartialEq, Eq, Debug, Clone)]
@@ -134,7 +118,6 @@ pub struct Base {
     pub displaycolor: StrResource, //ToDo: Make this a specific color struct for flexibility
 }
 
-#[cfg_attr(feature = "speed-optimized-read", derive(Deserialize))]
 #[cfg_attr(feature = "memory-optimized-read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -697,429 +680,6 @@ mod memory_optimized_read_tests {
                     slice: vec![],
                     sliceref: vec![slice::SliceRef {
                         slicestackid: 2,
-                        slicepath: PathResource::try_from("/2D/slices.model").unwrap(),
-                    }],
-                }],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_base_test() {
-        let xml_string = format!(
-            r##"<base xmlns="{}" name="Base" displaycolor="#FEF100" />"##,
-            CORE_NS
-        );
-        let base = from_str::<Base>(&xml_string).unwrap();
-
-        assert_eq!(
-            base,
-            Base {
-                name: "Base".into(),
-                displaycolor: "#FEF100".into(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_basematerials_test() {
-        let xml_string = format!(
-            r##"<basematerials xmlns="{}" id="256"><base name="Base 1" displaycolor="#FEF100" /><base name="Base 2" displaycolor="#FEF369" /></basematerials>"##,
-            CORE_NS
-        );
-        let base = from_str::<BaseMaterials>(&xml_string).unwrap();
-
-        assert_eq!(
-            base,
-            BaseMaterials {
-                id: 256,
-                base: vec![
-                    Base {
-                        name: "Base 1".into(),
-                        displaycolor: "#FEF100".into(),
-                    },
-                    Base {
-                        name: "Base 2".into(),
-                        displaycolor: "#FEF369".into(),
-                    },
-                ],
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_colorgroup_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:colorgroup id="1"><{}:color color="#FF0000" /><{}:color color="#00FF00" /></{}:colorgroup></resources>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: vec![ColorGroup {
-                    id: 1,
-                    color: vec![
-                        ColorElement {
-                            color: Color::from_hex("#FF0000").unwrap(),
-                        },
-                        ColorElement {
-                            color: Color::from_hex("#00FF00").unwrap(),
-                        },
-                    ],
-                }],
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_texture2dgroup_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:texture2dgroup id="2" texid="1"><{}:tex2coord u="0" v="0" /><{}:tex2coord u="1" v="1" /></{}:texture2dgroup></resources>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: vec![Texture2DGroup {
-                    id: 2,
-                    texid: 1,
-                    tex2coord: vec![
-                        Tex2Coord {
-                            u: 0.0.into(),
-                            v: 0.0.into()
-                        },
-                        Tex2Coord {
-                            u: 1.0.into(),
-                            v: 1.0.into()
-                        },
-                    ],
-                }],
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_compositematerials_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:compositematerials id="1" matid="10" matindices="0 1"><{}:composite values="1.0 0.0" /><{}:composite values="0.5 0.5" /></{}:compositematerials></resources>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: vec![CompositeMaterials {
-                    id: 1,
-                    matid: 10,
-                    matindices: ResourceIndexCollection::from(vec![0, 1]),
-                    composite: vec![
-                        Composite {
-                            values: vec![Double::new(1.0), Double::new(0.0)]
-                        },
-                        Composite {
-                            values: vec![Double::new(0.5), Double::new(0.5)]
-                        },
-                    ],
-                }],
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_multiproperties_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:multiproperties id="1" pids="10 20 30" blendmethods="mix multiply"><{}:multi pindices="0 0 0" /><{}:multi pindices="1 2 3" /></{}:multiproperties></resources>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: vec![MultiProperties {
-                    id: 1,
-                    pids: ResourceIdCollection::from(vec![10, 20, 30]),
-                    blendmethods: Some("mix multiply".into()),
-                    multi: vec![
-                        Multi {
-                            pindices: ResourceIndexCollection::from(vec![0, 0, 0])
-                        },
-                        Multi {
-                            pindices: ResourceIndexCollection::from(vec![1, 2, 3])
-                        },
-                    ],
-                }],
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_texture2d_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:texture2d id="1" path="/3D/texture.png" contenttype="image/png" /></resources>"##,
-            CORE_NS, MATERIAL_PREFIX, MATERIAL_NS, MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: vec![Texture2D {
-                    id: 1,
-                    path: PathResource::try_from("/3D/texture.png").unwrap(),
-                    contenttype: TextureContentType::Png,
-                    tilestyleu: None,
-                    tilestylev: None,
-                    filter: None,
-                }],
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_multiple_material_types_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:colorgroup id="1"><{}:color color="#FF0000" /></{}:colorgroup><{}:texture2d id="2" path="/3D/texture.png" contenttype="image/png" /></resources>"##,
-            CORE_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_NS,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX,
-            MATERIAL_PREFIX
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: vec![ColorGroup {
-                    id: 1,
-                    color: vec![ColorElement {
-                        color: Color::from_hex("#FF0000").unwrap()
-                    }],
-                }],
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: vec![Texture2D {
-                    id: 2,
-                    path: PathResource::try_from("/3D/texture.png").unwrap(),
-                    contenttype: TextureContentType::Png,
-                    tilestyleu: None,
-                    tilestylev: None,
-                    filter: None,
-                }],
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-}
-
-#[cfg(feature = "speed-optimized-read")]
-#[cfg(test)]
-mod speed_optimized_read_tests {
-    use pretty_assertions::assert_eq;
-    use serde_roxmltree::from_str;
-
-    use crate::{
-        model::domain::{
-            material::{
-                ColorElement, ColorGroup, Composite, CompositeMaterials, Multi, MultiProperties,
-                Tex2Coord, Texture2D, Texture2DGroup, TextureContentType,
-            },
-            object::Object,
-            slice,
-            types::{Double, ResourceIdCollection, ResourceIndexCollection},
-        },
-        model::{Color, OptionalResourceId, OptionalResourceIndex, PathResource},
-        threemf_namespaces::{CORE_NS, MATERIAL_NS, MATERIAL_PREFIX, SLICE_NS, SLICE_PREFIX},
-    };
-
-    use super::{Base, BaseMaterials, Resources};
-
-    #[test]
-    pub fn fromxml_resources_with_object_test() {
-        let xml_string = format!(
-            r#"<resources xmlns="{}"><object id="1"></object></resources>"#,
-            CORE_NS
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![Object {
-                    id: 1,
-                    objecttype: None,
-                    thumbnail: None,
-                    partnumber: None,
-                    name: None,
-                    pid: OptionalResourceId::none(),
-                    pindex: OptionalResourceIndex::none(),
-                    uuid: None,
-                    kind: None,
-                    slicestackid: OptionalResourceId::none(),
-                    slicepath: None,
-                    meshresolution: None,
-                }],
-                basematerials: vec![],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_basematerials_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}"><basematerials id="1"><base name="Base" displaycolor="#FEFEFE00" /></basematerials></resources>"##,
-            CORE_NS
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![BaseMaterials {
-                    id: 1,
-                    base: vec![Base {
-                        name: "Base".into(),
-                        displaycolor: "#FEFEFE00".into(),
-                    }],
-                }],
-                slicestack: vec![],
-                colorgroup: Vec::new(),
-                texture2dgroup: Vec::new(),
-                compositematerials: Vec::new(),
-                multiproperties: Vec::new(),
-                texture2d: Vec::new(),
-                displacement2d: Vec::new(),
-                normvectorgroup: Vec::new(),
-                disp2dgroup: Vec::new(),
-            }
-        );
-    }
-
-    #[test]
-    pub fn fromxml_resources_with_slicestack_test() {
-        let xml_string = format!(
-            r##"<resources xmlns="{}" xmlns:{}="{}"><{}:slicestack id="236" zbottom="0.5"><sliceref slicestackid="154" slicepath="/2D/slices.model" /></{}:slicestack></resources>"##,
-            CORE_NS, SLICE_PREFIX, SLICE_NS, SLICE_PREFIX, SLICE_PREFIX,
-        );
-        let resources = from_str::<Resources>(&xml_string).unwrap();
-
-        assert_eq!(
-            resources,
-            Resources {
-                object: vec![],
-                basematerials: vec![],
-                slicestack: vec![slice::SliceStack {
-                    id: 236,
-                    zbottom: Some(0.5.into()),
-                    slice: vec![],
-                    sliceref: vec![slice::SliceRef {
-                        slicestackid: 154,
                         slicepath: PathResource::try_from("/2D/slices.model").unwrap(),
                     }],
                 }],
