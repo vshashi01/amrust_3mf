@@ -58,4 +58,11 @@ mod tests {
         assert_eq!(jpeg, ImageFormat::Jpeg);
         assert_eq!(unknown, ImageFormat::Unknown("tiff".into()));
     }
+
+    #[test]
+    fn as_str_test() {
+        assert_eq!(ImageFormat::Png.as_str(), "png");
+        assert_eq!(ImageFormat::Jpeg.as_str(), "jpeg");
+        assert_eq!(ImageFormat::Unknown("tiff".into()).as_str(), "tiff");
+    }
 }

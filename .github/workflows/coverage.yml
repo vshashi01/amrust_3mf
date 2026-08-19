@@ -4,32 +4,35 @@ on:
   workflow_dispatch:  # Manual trigger only
 
 jobs:
-  test-and-coverage:
+  coverage:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v5
         with:
           lfs: true
-      
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      
+
       - uses: Swatinem/rust-cache@v2
-      
-      - name: Install cargo-all-features
-        run: cargo install cargo-all-features
-      
-      - name: Run all feature combinations tests
-        run: cargo all-features test
-      
+
       - name: Install cargo-tarpaulin
         run: cargo install cargo-tarpaulin
-      
-      - name: Generate coverage report
-        run: cargo tarpaulin --all-features --out Lcov --output-dir ./coverage/
-      
+
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Generate coverage (all features)
+        run: cargo tarpaulin --workspace --all-features --out Lcov --output-dir ./coverage/all/
+
+      - name: Generate coverage (threemf2 without uuid)
+        run: cargo tarpaulin -p threemf2 --no-default-features --features "package-read,package-write,package-lazy-read,write,read" --out Lcov --output-dir ./coverage/no-uuid/
+
+      - name: Merge coverage reports
+        run: lcov -a ./coverage/all/lcov.info -a ./coverage/no-uuid/lcov.info -o ./coverage/lcov.info
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

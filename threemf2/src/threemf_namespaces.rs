@@ -186,3 +186,58 @@ impl ThreemfNamespace {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ThreemfNamespace;
+
+    #[test]
+    fn try_from_prefix_known() {
+        assert_eq!(
+            ThreemfNamespace::try_from_prefix("b", None),
+            Some(ThreemfNamespace::BeamLattice)
+        );
+        assert_eq!(
+            ThreemfNamespace::try_from_prefix("b2", None),
+            Some(ThreemfNamespace::BeamLatticeBalls)
+        );
+        assert_eq!(
+            ThreemfNamespace::try_from_prefix("s", None),
+            Some(ThreemfNamespace::Slice)
+        );
+    }
+
+    #[test]
+    fn try_from_prefix_unknown_with_uri() {
+        let ns = ThreemfNamespace::try_from_prefix("custom", Some("http://example.com"));
+        assert!(
+            matches!(ns, Some(ThreemfNamespace::Unknown { prefix, uri }) if prefix.as_ref() == "custom" && uri.as_ref() == "http://example.com")
+        );
+    }
+
+    #[test]
+    fn try_from_prefix_unknown_without_uri() {
+        let ns = ThreemfNamespace::try_from_prefix("custom", None);
+        assert!(
+            matches!(ns, Some(ThreemfNamespace::Unknown { prefix, uri }) if prefix.as_ref() == "custom" && uri.as_ref() == "")
+        );
+    }
+
+    #[test]
+    fn xmlns_declaration_core() {
+        let decl = ThreemfNamespace::Core.xmlns_declaration();
+        assert_eq!(
+            decl,
+            format!(r#" xmlns="{}""#, ThreemfNamespace::Core.uri())
+        );
+    }
+
+    #[test]
+    fn xmlns_declaration_slice() {
+        let decl = ThreemfNamespace::Slice.xmlns_declaration();
+        assert_eq!(
+            decl,
+            format!(r#" xmlns:s="{}""#, ThreemfNamespace::Slice.uri())
+        );
+    }
+}

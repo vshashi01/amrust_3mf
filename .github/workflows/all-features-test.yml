@@ -1,0 +1,25 @@
+name: All Features Test
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  all-features-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: true
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-all-features
+        run: cargo install cargo-all-features
+
+      - name: Run all feature combinations tests
+        run: cargo all-features test

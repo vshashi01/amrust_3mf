@@ -259,3 +259,84 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod validator_tests {
+    use crate::model::domain::{
+        build::{Build, Item},
+        mesh::{Mesh, Triangles, Vertex, Vertices},
+        model::{Model, Unit},
+        object::{Object, ObjectKind, ObjectType},
+        resources::Resources,
+    };
+    use crate::package::domain::validator::Validator;
+
+    #[test]
+    fn default_validator_equals_new() {
+        let v1 = Validator::default();
+        let v2 = Validator::new();
+        assert_eq!(v1.rules, v2.rules);
+    }
+
+    #[test]
+    fn validate_model_basic() {
+        let model = Model {
+            unit: Some(Unit::Millimeter),
+            requiredextensions: Default::default(),
+            recommendedextensions: Default::default(),
+            metadata: vec![],
+            resources: Resources {
+                object: vec![Object {
+                    id: 1,
+                    objecttype: Some(ObjectType::Model),
+                    thumbnail: None,
+                    partnumber: None,
+                    name: None,
+                    pid: Default::default(),
+                    pindex: Default::default(),
+                    uuid: None,
+                    kind: Some(ObjectKind::Mesh(Mesh {
+                        vertices: Vertices {
+                            vertex: vec![
+                                Vertex::new(0.0, 0.0, 0.0),
+                                Vertex::new(1.0, 0.0, 0.0),
+                                Vertex::new(0.0, 1.0, 0.0),
+                            ],
+                        },
+                        triangles: Triangles { triangle: vec![] },
+                        trianglesets: None,
+                        beamlattice: None,
+                    })),
+                    slicestackid: Default::default(),
+                    slicepath: None,
+                    meshresolution: None,
+                }],
+                basematerials: vec![],
+                slicestack: vec![],
+                colorgroup: Vec::new(),
+                texture2dgroup: Vec::new(),
+                compositematerials: Vec::new(),
+                multiproperties: Vec::new(),
+                texture2d: Vec::new(),
+                displacement2d: Vec::new(),
+                normvectorgroup: Vec::new(),
+                disp2dgroup: Vec::new(),
+            },
+            build: Build {
+                uuid: None,
+                item: vec![Item {
+                    objectid: 1,
+                    transform: None,
+                    partnumber: None,
+                    path: None,
+                    uuid: None,
+                }],
+            },
+        };
+
+        let validator = Validator::new();
+        let result = validator.validate_model(&model);
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+}

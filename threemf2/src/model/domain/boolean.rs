@@ -532,3 +532,40 @@ mod memory_optimized_read_tests {
         )
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::BooleanOperation;
+
+    #[test]
+    fn boolean_operation_from_string() {
+        assert_eq!(
+            BooleanOperation::from("union".to_string()),
+            BooleanOperation::Union
+        );
+        assert_eq!(
+            BooleanOperation::from("UNION".to_string()),
+            BooleanOperation::Union
+        );
+        assert_eq!(
+            BooleanOperation::from("difference".to_string()),
+            BooleanOperation::Difference
+        );
+        assert_eq!(
+            BooleanOperation::from("DIFFERENCE".to_string()),
+            BooleanOperation::Difference
+        );
+        assert_eq!(
+            BooleanOperation::from("intersection".to_string()),
+            BooleanOperation::Intersection
+        );
+        assert_eq!(
+            BooleanOperation::from("INTERSECTION".to_string()),
+            BooleanOperation::Intersection
+        );
+        assert_eq!(
+            BooleanOperation::from("unknown".to_string()),
+            BooleanOperation::Union
+        );
+    }
+}

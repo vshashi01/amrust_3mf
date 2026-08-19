@@ -1357,3 +1357,33 @@ fn str_resource_option_size() {
     use std::mem::size_of;
     assert_eq!(size_of::<Option<StrResource>>(), size_of::<StrResource>());
 }
+
+#[cfg(test)]
+mod types_tests {
+    use super::{PathResource, StrResource, UuidResource};
+
+    #[test]
+    fn str_resource_from_str() {
+        let res: StrResource = "hello".parse().unwrap();
+        assert_eq!(res.as_ref(), "hello");
+    }
+
+    #[test]
+    fn path_resource_try_from() {
+        let res = PathResource::try_from("/3D/model.model").unwrap();
+        assert_eq!(res.as_str(), "/3D/model.model");
+    }
+
+    #[test]
+    fn string_from_str_resource() {
+        let res = StrResource::new("world");
+        let s: String = res.into();
+        assert_eq!(s, "world");
+    }
+
+    #[test]
+    fn uuid_resource_as_str() {
+        let uuid = UuidResource::from("some-uuid");
+        assert_eq!(uuid.as_str(), Some("some-uuid"));
+    }
+}

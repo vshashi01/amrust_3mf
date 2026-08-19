@@ -655,3 +655,21 @@ mod memory_optimized_read_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::ObjectType;
+
+    #[test]
+    fn object_type_from_string() {
+        assert_eq!(ObjectType::from("model".to_string()), ObjectType::Model);
+        assert_eq!(ObjectType::from("MODEL".to_string()), ObjectType::Model);
+        assert_eq!(ObjectType::from("support".to_string()), ObjectType::Support);
+        assert_eq!(
+            ObjectType::from("solidsupport".to_string()),
+            ObjectType::SolidSupport
+        );
+        assert_eq!(ObjectType::from("other".to_string()), ObjectType::Other);
+        assert_eq!(ObjectType::from("unknown".to_string()), ObjectType::Model);
+    }
+}

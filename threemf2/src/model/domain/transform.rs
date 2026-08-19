@@ -293,3 +293,30 @@ mod memory_optimized_read_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod transform_tests {
+    use super::Transform;
+
+    #[test]
+    fn from_column_major_matrix() {
+        let matrix = [
+            1.0, 0.0, 0.0, 10.0, 0.0, 1.0, 0.0, 20.0, 0.0, 0.0, 1.0, 30.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        let t = Transform::from_column_major_matrix(&matrix);
+        assert_eq!(t.0[0], 1.0);
+        assert_eq!(t.0[9], 10.0);
+        assert_eq!(t.0[10], 20.0);
+        assert_eq!(t.0[11], 30.0);
+    }
+
+    #[test]
+    fn index_impl() {
+        let t = Transform([
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
+        ]);
+        assert_eq!(t[0], 1.0);
+        assert_eq!(t[5], 6.0);
+        assert_eq!(t[11], 12.0);
+    }
+}
