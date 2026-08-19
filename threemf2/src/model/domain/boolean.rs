@@ -34,33 +34,21 @@ pub struct BooleanShape {
 
     /// The boolean operation to perform on the base object with the operands.
     /// Default is `BooleanOperation::Union`.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub operation: BooleanOperation,
 
     /// Optional transform to apply to the base object.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Optional path to the base object file (for Production extension).
     /// Only valid in root model files when used with Production extension.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: Option<PathResource>,
 
     /// The sequence of boolean operations to apply to the base object.
     /// Must contain at least one boolean operation.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(rename = "boolean")
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(rename = "boolean"))]
     pub booleans: Vec<Boolean>,
 }
 
@@ -86,18 +74,12 @@ pub struct Boolean {
     pub objectid: ResourceId,
 
     /// Optional transform to apply to the operand object.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Optional path to the operand object file (for Production extension).
     /// Only valid in root model files when used with Production extension.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub path: Option<PathResource>,
 }
 

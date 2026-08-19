@@ -110,18 +110,12 @@ impl From<String> for MeshResolution {
 )]
 pub struct SliceStack {
     /// Unique identifier for this slice stack within the model part.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Starting level relative to the build platform in model units.
     /// This allows alignment between mesh vertices and slice data.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub zbottom: Option<Double>,
 
     /// Owned slice data entries.
@@ -152,17 +146,11 @@ impl SliceStack {
 )]
 pub struct SliceRef {
     /// Identifies the SliceStack in the referenced file.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub slicestackid: ResourceId,
 
     /// Absolute path to the model file containing the slice data.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub slicepath: PathResource,
 }
 
@@ -181,10 +169,7 @@ pub struct SliceRef {
 pub struct Slice {
     /// Z-position of the top of this slice relative to the build platform.
     /// Must be monotonically increasing throughout the slice stack.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub ztop: Double,
 
     /// 2D vertices for this slice. Required if slice contains geometry.
@@ -340,10 +325,7 @@ impl<'xml> FromXml<'xml> for Vertex {
 )]
 pub struct Polygon {
     /// Index of the first vertex of the first segment.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub startv: ResourceIndex,
 
     /// Segments defining this polygon.

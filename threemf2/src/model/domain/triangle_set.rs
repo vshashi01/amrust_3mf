@@ -141,10 +141,7 @@ impl ToXml for TriangleSet {
 )]
 pub struct TriangleRef {
     /// Index of the Triangle
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub index: ResourceIndex,
 }
 
@@ -158,17 +155,11 @@ pub struct TriangleRef {
 )]
 pub struct TriangleRefRange {
     /// The start index of the range.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub startindex: ResourceIndex,
 
     /// The end idnex of the range.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub endindex: ResourceIndex,
 }
 

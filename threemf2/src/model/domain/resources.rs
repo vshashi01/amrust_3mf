@@ -31,66 +31,39 @@ pub struct Resources {
     pub basematerials: Vec<BaseMaterials>,
 
     /// Collection of slice stacks. See [`SliceStack`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(SLICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(SLICE_NS)))]
     pub slicestack: Vec<SliceStack>,
 
     /// Collection of color groups. See [`ColorGroup`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(MATERIAL_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(MATERIAL_NS)))]
     pub colorgroup: Vec<ColorGroup>,
 
     /// Collection of texture coordinate groups. See [`Texture2DGroup`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(MATERIAL_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(MATERIAL_NS)))]
     pub texture2dgroup: Vec<Texture2DGroup>,
 
     /// Collection of composite materials. See [`CompositeMaterials`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(MATERIAL_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(MATERIAL_NS)))]
     pub compositematerials: Vec<CompositeMaterials>,
 
     /// Collection of multi-property definitions. See [`MultiProperties`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(MATERIAL_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(MATERIAL_NS)))]
     pub multiproperties: Vec<MultiProperties>,
 
     /// Collection of 2D texture references. See [`Texture2D`]
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(MATERIAL_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(MATERIAL_NS)))]
     pub texture2d: Vec<Texture2D>,
 
     /// Collection of displacement texture resources.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(DISPLACEMENT_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(DISPLACEMENT_NS)))]
     pub displacement2d: Vec<Displacement2D>,
 
     /// Collection of normalized vector groups for displacement.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(DISPLACEMENT_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(DISPLACEMENT_NS)))]
     pub normvectorgroup: Vec<NormVectorGroup>,
 
     /// Collection of displacement coordinate groups.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(DISPLACEMENT_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(DISPLACEMENT_NS)))]
     pub disp2dgroup: Vec<Disp2DGroup>,
 }
 
@@ -104,17 +77,11 @@ pub struct Resources {
 /// A single base material entry with name and color.
 pub struct Base {
     /// Name of the base material.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub name: StrResource,
 
     /// Display color of the base material in hex format.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub displaycolor: StrResource, //ToDo: Make this a specific color struct for flexibility
 }
 
@@ -128,10 +95,7 @@ pub struct Base {
 /// A group of base materials referenced by objects.
 pub struct BaseMaterials {
     /// Unique identifier for this base materials group.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub id: ResourceId,
 
     /// Base material entries in this group.

@@ -16,10 +16,7 @@ use crate::{model::StrResource, threemf_namespaces::CORE_NS};
 #[cfg_attr(feature = "read", derive(FromXml))]
 // #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, PartialEq, Clone, Eq)]
-#[cfg_attr(
-    any(feature = "read"),
-    xml(ns(CORE_NS), rename = "metadata")
-)]
+#[cfg_attr(any(feature = "read"), xml(ns(CORE_NS), rename = "metadata"))]
 pub struct Metadata {
     /// Name of the metadata entry.
     #[cfg_attr(any(feature = "read"), xml(attribute))]

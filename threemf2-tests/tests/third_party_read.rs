@@ -25,8 +25,7 @@ mod tests {
             // println!("{:?}", filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package =
-                ThreemfPackage::from_reader(file, true);
+            let package = ThreemfPackage::from_reader(file, true);
 
             match package {
                 Ok(threemf) => {
@@ -64,10 +63,7 @@ mod tests {
             let filepath = folder_path.join(fixture.filepath);
             let file = File::open(&filepath).unwrap();
 
-            let package = ThreemfPackageLazyReader::from_reader(
-                file,
-                CachePolicy::NoCache,
-            );
+            let package = ThreemfPackageLazyReader::from_reader(file, CachePolicy::NoCache);
 
             match package {
                 Ok(threemf) => {

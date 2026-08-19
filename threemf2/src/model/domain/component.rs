@@ -37,25 +37,16 @@ pub struct Components {
 #[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(CORE_NS, p=PROD_NS), rename = "component"))]
 pub struct Component {
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Unique identifier of the referenced object.
     pub objectid: ResourceId,
 
     /// Optional transform applied to the referenced object.
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     pub transform: Option<Transform>,
 
     /// Optional path to the referenced object (Production extension).
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute, ns(PROD_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute, ns(PROD_NS)))]
     pub path: Option<PathResource>,
 
     /// Optional UUID for the referenced object (Production extension).

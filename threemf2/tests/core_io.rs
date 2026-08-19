@@ -1,7 +1,4 @@
-#[cfg(any(
-    feature = "package-read",
-    feature = "package-lazy-read"
-))]
+#[cfg(any(feature = "package-read", feature = "package-lazy-read"))]
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -66,10 +63,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(
-        feature = "package-lazy-read",
-        feature = "package-read"
-    ))]
+    #[cfg(all(feature = "package-lazy-read", feature = "package-read"))]
     #[test]
     fn read_threemf_package_lazy_memory_optimized() {
         use threemf2::package::{CachePolicy, ThreemfPackageLazyReader};
@@ -77,10 +71,7 @@ mod tests {
         let path = PathBuf::from("./tests/data/mesh-composedpart.3mf");
         let reader = File::open(path).unwrap();
 
-        let result = ThreemfPackageLazyReader::from_reader(
-            reader,
-            CachePolicy::NoCache,
-        );
+        let result = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache);
 
         assert!(result.is_ok());
 

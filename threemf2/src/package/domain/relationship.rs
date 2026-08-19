@@ -21,10 +21,7 @@ const RELATIONSHIP_NS: &str = "http://schemas.openxmlformats.org/package/2006/re
 #[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    any(feature = "write", feature = "read"),
-    xml(ns(RELATIONSHIP_NS))
-)]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(RELATIONSHIP_NS)))]
 pub struct Relationship {
     /// The unique identifier of the relationship.
     #[cfg_attr(
@@ -53,10 +50,7 @@ pub struct Relationship {
 #[cfg_attr(feature = "read", derive(FromXml))]
 #[cfg_attr(feature = "write", derive(ToXml))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    any(feature = "write", feature = "read"),
-    xml(ns(RELATIONSHIP_NS))
-)]
+#[cfg_attr(any(feature = "write", feature = "read"), xml(ns(RELATIONSHIP_NS)))]
 pub struct Relationships {
     /// Field of relationship
     pub relationships: Vec<Relationship>,

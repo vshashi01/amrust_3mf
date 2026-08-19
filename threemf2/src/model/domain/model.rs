@@ -24,24 +24,15 @@ use crate::{
 #[cfg_attr(any(feature="write", feature="read"), 
 xml(ns(CORE_NS, p = PROD_NS, t = CORE_TRIANGLESET_NS, b = BEAM_LATTICE_NS, bo = BOOLEAN_NS, s = SLICE_NS, m = MATERIAL_NS, d = DISPLACEMENT_NS), rename = "model"))]
 pub struct Model {
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Measurement unit for the model.
     pub unit: Option<Unit>,
 
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Required extension namespaces for this model.
     pub requiredextensions: ThreemfExtensions,
 
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(attribute)
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(attribute))]
     /// Recommended extension namespaces for this model.
     pub recommendedextensions: ThreemfExtensions,
 

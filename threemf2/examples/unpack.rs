@@ -14,10 +14,7 @@ fn main() {
         .join("tests/data/mesh-composedpart-separate-model-files.3mf");
     let reader = File::open(path).unwrap();
 
-    let result = ThreemfPackageLazyReader::from_reader(
-        reader,
-        CachePolicy::NoCache,
-    );
+    let result = ThreemfPackageLazyReader::from_reader(reader, CachePolicy::NoCache);
 
     match result {
         Ok(unpacked) => {

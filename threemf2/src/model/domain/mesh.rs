@@ -36,19 +36,13 @@ pub struct Mesh {
     /// Optional TriangleSets that allows to create identifiable group of triangles
     ///
     /// See [`TriangleSet`](crate::model::domain::triangle_set::TriangleSet) for more details
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(CORE_TRIANGLESET_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(CORE_TRIANGLESET_NS)))]
     pub trianglesets: Option<TriangleSets>,
 
     /// Optional Beam Lattice geometry that is part of this mesh
     ///
     /// See [`BeamLattice`] for more details
-    #[cfg_attr(
-        any(feature = "write", feature = "read"),
-        xml(ns(BEAM_LATTICE_NS))
-    )]
+    #[cfg_attr(any(feature = "write", feature = "read"), xml(ns(BEAM_LATTICE_NS)))]
     pub beamlattice: Option<BeamLattice>,
 }
 

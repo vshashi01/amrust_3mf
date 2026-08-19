@@ -103,8 +103,7 @@ mod tests {
         #[cfg(feature = "package-read")]
         {
             let package =
-                ThreemfPackage::from_reader(&mut buf, false)
-                    .expect("Error reading package");
+                ThreemfPackage::from_reader(&mut buf, false).expect("Error reading package");
             assert_eq!(package, write_package);
 
             let ns = package.get_namespaces_on_model(None).unwrap();
@@ -116,11 +115,8 @@ mod tests {
 
             buf.set_position(0); // Reset cursor position
             let lazy_package =
-                ThreemfPackageLazyReader::from_reader(
-                    &mut buf,
-                    CachePolicy::NoCache,
-                )
-                .expect("Error reading package with lazy reader");
+                ThreemfPackageLazyReader::from_reader(&mut buf, CachePolicy::NoCache)
+                    .expect("Error reading package with lazy reader");
 
             // Verify basic structure
             assert_eq!(lazy_package.relationships().len(), 1);
