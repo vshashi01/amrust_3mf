@@ -1058,3 +1058,54 @@ mod memory_optimized_read_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::{BlendMethod, Filter, TextureContentType, TileStyle};
+
+    #[test]
+    fn tile_style_from_string() {
+        assert_eq!(TileStyle::from("wrap".to_string()), TileStyle::Wrap);
+        assert_eq!(TileStyle::from("WRAP".to_string()), TileStyle::Wrap);
+        assert_eq!(TileStyle::from("mirror".to_string()), TileStyle::Mirror);
+        assert_eq!(TileStyle::from("clamp".to_string()), TileStyle::Clamp);
+        assert_eq!(TileStyle::from("none".to_string()), TileStyle::None);
+        assert_eq!(TileStyle::from("unknown".to_string()), TileStyle::Wrap);
+    }
+
+    #[test]
+    fn filter_from_string() {
+        assert_eq!(Filter::from("auto".to_string()), Filter::Auto);
+        assert_eq!(Filter::from("AUTO".to_string()), Filter::Auto);
+        assert_eq!(Filter::from("linear".to_string()), Filter::Linear);
+        assert_eq!(Filter::from("nearest".to_string()), Filter::Nearest);
+        assert_eq!(Filter::from("unknown".to_string()), Filter::Auto);
+    }
+
+    #[test]
+    fn blend_method_from_string() {
+        assert_eq!(BlendMethod::from("mix".to_string()), BlendMethod::Mix);
+        assert_eq!(BlendMethod::from("MIX".to_string()), BlendMethod::Mix);
+        assert_eq!(
+            BlendMethod::from("multiply".to_string()),
+            BlendMethod::Multiply
+        );
+        assert_eq!(BlendMethod::from("unknown".to_string()), BlendMethod::Mix);
+    }
+
+    #[test]
+    fn texture_content_type_from_string() {
+        assert_eq!(
+            TextureContentType::from("image/png".to_string()),
+            TextureContentType::Png
+        );
+        assert_eq!(
+            TextureContentType::from("image/jpeg".to_string()),
+            TextureContentType::Jpeg
+        );
+        assert_eq!(
+            TextureContentType::from("unknown".to_string()),
+            TextureContentType::Jpeg
+        );
+    }
+}

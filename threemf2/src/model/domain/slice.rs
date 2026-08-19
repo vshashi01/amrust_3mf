@@ -747,3 +747,32 @@ mod memory_optimized_read_tests {
         assert!(!slicestack.has_owned_slices());
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::MeshResolution;
+
+    #[test]
+    fn mesh_resolution_from_string() {
+        assert_eq!(
+            MeshResolution::from("lowres".to_string()),
+            MeshResolution::LowRes
+        );
+        assert_eq!(
+            MeshResolution::from("LOWRES".to_string()),
+            MeshResolution::LowRes
+        );
+        assert_eq!(
+            MeshResolution::from("fullres".to_string()),
+            MeshResolution::FullRes
+        );
+        assert_eq!(
+            MeshResolution::from("FULLRES".to_string()),
+            MeshResolution::FullRes
+        );
+        assert_eq!(
+            MeshResolution::from("unknown".to_string()),
+            MeshResolution::FullRes
+        );
+    }
+}

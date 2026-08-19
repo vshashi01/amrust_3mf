@@ -270,4 +270,31 @@ mod memory_optimized_read_tests {
             }
         )
     }
+
+    #[test]
+    pub fn fromxml_metadata_with_preserve_test() {
+        let xml_string = format!(
+            r#"<metadata xmlns="{}" name="Test" preserve="true">value</metadata>"#,
+            CORE_NS
+        );
+        let metadata = from_str::<Metadata>(&xml_string).unwrap();
+
+        assert_eq!(metadata.name.as_ref(), "Test");
+        assert_eq!(metadata.value.as_deref(), Some("value"));
+        assert!(metadata.preserve.is_some());
+        assert_eq!(metadata.preserve.as_ref().unwrap().0, true);
+    }
+
+    #[test]
+    pub fn fromxml_metadata_preserve_false_test() {
+        let xml_string = format!(
+            r#"<metadata xmlns="{}" name="Test2" preserve="false"></metadata>"#,
+            CORE_NS
+        );
+        let metadata = from_str::<Metadata>(&xml_string).unwrap();
+
+        assert_eq!(metadata.name.as_ref(), "Test2");
+        assert!(metadata.preserve.is_some());
+        assert_eq!(metadata.preserve.as_ref().unwrap().0, false);
+    }
 }

@@ -1497,3 +1497,51 @@ mod memory_optimized_read_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use crate::threemf_namespaces::ThreemfNamespace;
+
+    use super::{ThreemfExtensions, Unit};
+
+    #[test]
+    fn unit_from_string() {
+        assert_eq!(Unit::from("millimeter".to_string()), Unit::Millimeter);
+        assert_eq!(Unit::from("MILLIMETER".to_string()), Unit::Millimeter);
+        assert_eq!(Unit::from("micron".to_string()), Unit::Micron);
+        assert_eq!(Unit::from("centimeter".to_string()), Unit::Centimeter);
+        assert_eq!(Unit::from("inch".to_string()), Unit::Inch);
+        assert_eq!(Unit::from("foot".to_string()), Unit::Foot);
+        assert_eq!(Unit::from("meter".to_string()), Unit::Meter);
+        assert_eq!(Unit::from("unknown".to_string()), Unit::Millimeter);
+    }
+
+    #[test]
+    fn threemf_extensions_new_from_iter() {
+        let ext = ThreemfExtensions::new_from_iter(&[
+            ThreemfNamespace::Core,
+            ThreemfNamespace::Slice,
+            ThreemfNamespace::Slice,
+        ]);
+        assert_eq!(ext.get(), &[ThreemfNamespace::Slice]);
+    }
+
+    #[test]
+    fn threemf_extensions_get() {
+        let ext = ThreemfExtensions::new(&[ThreemfNamespace::Material]);
+        assert_eq!(ext.get(), &[ThreemfNamespace::Material]);
+    }
+
+    #[test]
+    fn threemf_extensions_from_string() {
+        let ext = ThreemfExtensions::from("b b2 s".to_string());
+        assert_eq!(
+            ext.get(),
+            &[
+                ThreemfNamespace::BeamLattice,
+                ThreemfNamespace::BeamLatticeBalls,
+                ThreemfNamespace::Slice,
+            ]
+        );
+    }
+}

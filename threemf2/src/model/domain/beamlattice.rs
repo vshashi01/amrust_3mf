@@ -916,3 +916,47 @@ mod memory_optimized_read_tests {
         )
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::{BallMode, CapMode, ClippingMode};
+
+    #[test]
+    fn ball_mode_from_string() {
+        assert_eq!(BallMode::from("none".to_string()), BallMode::None);
+        assert_eq!(BallMode::from("NONE".to_string()), BallMode::None);
+        assert_eq!(BallMode::from("mixed".to_string()), BallMode::Mixed);
+        assert_eq!(BallMode::from("all".to_string()), BallMode::All);
+        assert_eq!(BallMode::from("unknown".to_string()), BallMode::None);
+    }
+
+    #[test]
+    fn clipping_mode_from_string() {
+        assert_eq!(ClippingMode::from("none".to_string()), ClippingMode::None);
+        assert_eq!(
+            ClippingMode::from("inside".to_string()),
+            ClippingMode::Inside
+        );
+        assert_eq!(
+            ClippingMode::from("outside".to_string()),
+            ClippingMode::Outside
+        );
+        assert_eq!(
+            ClippingMode::from("OUTSIDE".to_string()),
+            ClippingMode::Outside
+        );
+        assert_eq!(
+            ClippingMode::from("unknown".to_string()),
+            ClippingMode::None
+        );
+    }
+
+    #[test]
+    fn cap_mode_from_string() {
+        assert_eq!(CapMode::from("hemisphere".to_string()), CapMode::Hemisphere);
+        assert_eq!(CapMode::from("sphere".to_string()), CapMode::Sphere);
+        assert_eq!(CapMode::from("butt".to_string()), CapMode::Butt);
+        assert_eq!(CapMode::from("BUTT".to_string()), CapMode::Butt);
+        assert_eq!(CapMode::from("unknown".to_string()), CapMode::Sphere);
+    }
+}

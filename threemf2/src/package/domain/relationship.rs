@@ -228,3 +228,29 @@ mod memory_optimized_read_tests {
         );
     }
 }
+
+#[cfg(test)]
+mod from_string_tests {
+    use super::RelationshipType;
+
+    #[test]
+    fn relationship_type_from_string() {
+        assert_eq!(
+            RelationshipType::from(
+                "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel".to_string()
+            ),
+            RelationshipType::Model
+        );
+        assert_eq!(
+            RelationshipType::from(
+                "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail"
+                    .to_string()
+            ),
+            RelationshipType::Thumbnail
+        );
+        assert_eq!(
+            RelationshipType::from("unknown".to_string()),
+            RelationshipType::Unknown("unknown".into())
+        );
+    }
+}
