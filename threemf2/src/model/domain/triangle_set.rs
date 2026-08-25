@@ -1,5 +1,5 @@
 #[cfg(feature = "write")]
-use instant_xml::{Error, Id, Serializer, ToXml};
+use instant_xml::ToXml;
 
 #[cfg(feature = "read")]
 use instant_xml::FromXml;
@@ -11,9 +11,10 @@ use crate::{
 
 /// Collection of Triangle Set. See [`TriangleSet`] for more details.
 #[cfg_attr(feature = "read", derive(FromXml))]
+#[cfg_attr(feature = "write", derive(ToXml))]
 #[cfg_attr(
-    feature = "read",
-    xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets")
+    any(feature = "read", feature = "write"),
+    xml(ns(CORE_TRIANGLESET_NS), rename = "trianglesets", force_prefix)
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TriangleSets {
@@ -21,63 +22,22 @@ pub struct TriangleSets {
     pub trianglesets: Vec<TriangleSet>,
 }
 
-#[cfg(feature = "write")]
-impl ToXml for TriangleSets {
-    fn serialize<W: std::fmt::Write + ?Sized>(
-        &self,
-        field: Option<Id<'_>>,
-        serializer: &mut Serializer<W>,
-    ) -> Result<(), Error> {
-        let prefix = match field {
-            Some(id) => {
-                let prefix =
-                    serializer.write_start(id.name, id.ns, None::<instant_xml::ser::Context<0>>)?;
-                serializer.end_start()?;
-                Some(prefix)
-            }
-            None => {
-                let mut cx = instant_xml::ser::Context::default();
-                cx.default_ns = CORE_TRIANGLESET_NS;
-                let prefix =
-                    serializer.write_start("trianglesets", CORE_TRIANGLESET_NS, Some(cx))?;
-                serializer.end_start()?;
-                Some(prefix)
-            }
-        };
-
-        for set in &self.trianglesets {
-            set.serialize(
-                Some(Id {
-                    ns: CORE_TRIANGLESET_NS,
-                    name: "triangleset",
-                }),
-                serializer,
-            )?;
-        }
-
-        if let Some(prefix) = prefix {
-            serializer.write_close(prefix)?;
-        }
-
-        Ok(())
-    }
-}
-
 /// Triangle Set allows to define a collection of triangles as grouped collection
 /// with a unique identifier for reusable references.
 #[cfg_attr(feature = "read", derive(FromXml))]
+#[cfg_attr(feature = "write", derive(ToXml))]
 #[cfg_attr(
-    feature = "read",
+    any(feature = "read", feature = "write"),
     xml(ns(CORE_TRIANGLESET_NS), rename = "triangleset", force_prefix)
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TriangleSet {
     /// Name of this set.
-    #[cfg_attr(feature = "read", xml(attribute))]
+    #[cfg_attr(any(feature = "read", feature = "write"), xml(attribute))]
     pub name: StrResource,
 
     /// A string based unique identifier of this set.
-    #[cfg_attr(feature = "read", xml(attribute))]
+    #[cfg_attr(any(feature = "read", feature = "write"), xml(attribute))]
     pub identifier: StrResource,
 
     /// A collection of Triangle references. See [`TriangleRef`] for more details.
@@ -85,50 +45,6 @@ pub struct TriangleSet {
 
     /// A collection of Triangle range references. See [`TriangleRefRange`] for more details.
     pub triangle_refrange: Vec<TriangleRefRange>,
-}
-
-#[cfg(feature = "write")]
-impl ToXml for TriangleSet {
-    fn serialize<W: std::fmt::Write + ?Sized>(
-        &self,
-        field: Option<Id<'_>>,
-        serializer: &mut Serializer<W>,
-    ) -> Result<(), Error> {
-        let prefix = match field {
-            Some(id) => {
-                let prefix =
-                    serializer.write_start(id.name, id.ns, None::<instant_xml::ser::Context<0>>)?;
-                Some((prefix, id.name))
-            }
-            None => None,
-        };
-
-        //work around to ensure the attributes do not get the prefix
-        //in the case that default root namespace is not triangleset namespace
-        let attr_ns = if let CORE_TRIANGLESET_NS = serializer.default_ns() {
-            CORE_TRIANGLESET_NS
-        } else {
-            serializer.default_ns()
-        };
-
-        serializer.write_attr("name", attr_ns, &self.name)?;
-        serializer.write_attr("identifier", attr_ns, &self.identifier)?;
-        serializer.end_start()?;
-
-        for triangle_ref in &self.triangle_ref {
-            triangle_ref.serialize(field, serializer)?;
-        }
-
-        for triangle_refrange in &self.triangle_refrange {
-            triangle_refrange.serialize(field, serializer)?;
-        }
-
-        if let Some((prefix, _)) = prefix {
-            serializer.write_close(prefix)?;
-        }
-
-        Ok(())
-    }
 }
 
 /// A reference to a Triangle in the Mesh as an index into [`Triangles`](crate::model::domain::mesh::Triangles).
